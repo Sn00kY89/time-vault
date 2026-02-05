@@ -169,28 +169,38 @@ export default function App() {
     </div>
   );
 
-  if (!user) {
+f (!user) {
     return (
       <div className="min-h-screen bg-slate-950 flex items-center justify-center p-6">
         <div className="bg-white p-10 rounded-[2.5rem] w-full max-w-md shadow-2xl">
           <div className="text-center mb-10">
-            <div className="inline-flex p-5 bg-blue-600 rounded-3xl text-white mb-6 shadow-xl shadow-blue-500/30">
+            <div className="inline-flex p-5 bg-blue-600 rounded-3xl text-white mb-6">
               <Clock size={40} />
             </div>
-            <h1 className="text-4xl font-black italic tracking-tighter text-slate-900 leading-none">MY DIARY</h1>
-            <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.3em] mt-3">Registro Personale Ore</p>
+            <h1 className="text-4xl font-black italic tracking-tighter text-slate-900">TIMEVAULT</h1>
+            <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.3em] mt-3">Accesso Team Autorizzato</p>
           </div>
           <form onSubmit={handleAuth} className="space-y-5">
-{/* ... existing code ... */}
-            <button type="submit" disabled={isSubmitting} className="w-full bg-blue-600 text-white p-5 rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-blue-500/20 active:scale-95 transition-all">
-              {isSubmitting ? 'Verifica...' : authMode === 'login' ? 'Apri Diario' : 'Crea Diario'}
+            <input 
+              type="text" placeholder="nome.cognome" required
+              className="w-full p-4.5 bg-slate-100 rounded-2xl font-bold outline-none focus:ring-2 focus:ring-blue-600 transition-all"
+              value={authData.username} onChange={e => setAuthData({...authData, username: e.target.value})}
+            />
+            <input 
+              type="password" placeholder="Password" required
+              className="w-full p-4.5 bg-slate-100 rounded-2xl font-bold outline-none focus:ring-2 focus:ring-blue-600 transition-all"
+              value={authData.password} onChange={e => setAuthData({...authData, password: e.target.value})}
+            />
+            {authError && <div className="text-red-600 text-[11px] font-black bg-red-50 p-3 rounded-xl">{authError}</div>}
+            <button type="submit" disabled={isSubmitting} className="w-full bg-blue-600 text-white p-5 rounded-2xl font-black uppercase tracking-widest shadow-xl">
+              {isSubmitting ? 'Verifica...' : authMode === 'login' ? 'Accedi' : 'Registrati'}
             </button>
           </form>
           <button 
             onClick={() => setAuthMode(authMode === 'login' ? 'register' : 'login')}
-            className="w-full mt-8 text-slate-400 font-bold text-[10px] uppercase tracking-widest hover:text-blue-600 transition-colors"
+            className="w-full mt-8 text-slate-400 font-bold text-[10px] uppercase tracking-widest"
           >
-            {authMode === 'login' ? "Non hai un diario? Inizia ora" : "Hai già un account? Accedi"}
+            {authMode === 'login' ? "Nuovo operatore? Clicca qui" : "Hai già un ID? Accedi"}
           </button>
         </div>
       </div>
