@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { initializeApp } from 'firebase/app';
 import { 
   getAuth, 
@@ -21,7 +21,8 @@ import {
 } from 'firebase/firestore';
 import { 
   Clock, Plus, Trash2, Calendar as CalendarIcon, LogOut, TrendingUp, 
-  Briefcase, Sun, Moon, ChevronLeft, ChevronRight, ArrowLeft, CheckCircle2
+  Briefcase, Sun, Moon, ChevronLeft, ChevronRight, ArrowLeft, CheckCircle2,
+  Menu, Home, FileText, Settings, X
 } from 'lucide-react';
 
 // --- CONFIGURAZIONE FIREBASE ---
@@ -49,9 +50,11 @@ export default function App() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   // STATI PER IL CALENDARIO E NAVIGAZIONE
-  const [view, setView] = useState('calendar'); // 'calendar' | 'day'
-  const [selectedDate, setSelectedDate] = useState(new Date()); // Data selezionata
-  const [currentMonth, setCurrentMonth] = useState(new Date()); // Mese visualizzato nel calendario
+  const [view, setView] = useState('calendar'); // 'calendar' | 'day' | 'report' | 'settings'
+  const [selectedDate, setSelectedDate] = useState(new Date()); 
+  const [currentMonth, setCurrentMonth] = useState(new Date()); 
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const menuRef = useRef(null);
 
   // Gestione Tema
   const [theme, setTheme] = useState(() => {
@@ -73,6 +76,17 @@ export default function App() {
     else root.classList.remove('dark');
     localStorage.setItem('theme', theme);
   }, [theme]);
+
+  // Chiudi menu se clicco fuori
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
+        setIsMenuOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const toggleTheme = () => setTheme(prev => prev === 'light' ? 'dark' : 'light');
 
@@ -138,7 +152,6 @@ export default function App() {
     if (!user) return;
     try {
       const logsCollection = collection(db, 'artifacts', APP_ID, 'users', user.uid, 'work_logs');
-      // Usiamo la data selezionata nel calendario
       const dateString = selectedDate.toISOString().split('T')[0];
       
       await addDoc(logsCollection, {
@@ -157,22 +170,34 @@ export default function App() {
     catch (e) { console.error(e); }
   };
 
-  // CALCOLI
-  const stats = useMemo(() => {
-    return logs.reduce((acc, log) => {
-      acc.std += Number(log.standardHours || 0);
-      acc.ext += Number(log.overtimeHours || 0);
-      return acc;
-    }, { std: 0, ext: 0 });
-  }, [logs]);
+  // CALCOLI MENSILI (Nuova Logica)
+  const monthlyStats = useMemo(() => {
+    const targetMonth = currentMonth.getMonth();
+    const targetYear = currentMonth.getFullYear();
+    const uniqueDays = new Set();
+    let totalOvertime = 0;
+
+    logs.forEach(log => {
+      const logDate = new Date(log.date);
+      // Filtra solo per il mese corrente visualizzato
+      if (logDate.getMonth() === targetMonth && logDate.getFullYear() === targetYear) {
+        uniqueDays.add(log.date); // Aggiunge al set (rimuove duplicati giornalieri se presenti)
+        totalOvertime += Number(log.overtimeHours || 0);
+      }
+    });
+
+    return { 
+      daysWorked: uniqueDays.size, 
+      ext: totalOvertime 
+    };
+  }, [logs, currentMonth]);
 
   // LOGICA CALENDARIO
   const getDaysInMonth = (date) => {
     const year = date.getFullYear();
     const month = date.getMonth();
     const days = new Date(year, month + 1, 0).getDate();
-    const firstDay = new Date(year, month, 1).getDay(); // 0 = Dom, 1 = Lun...
-    // Aggiustiamo per far partire Lunedì come primo giorno (0)
+    const firstDay = new Date(year, month, 1).getDay();
     const offset = firstDay === 0 ? 6 : firstDay - 1; 
     return { days, offset };
   };
@@ -184,20 +209,22 @@ export default function App() {
   const selectDay = (day) => {
     const newDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
     setSelectedDate(newDate);
-    // Reset form data quando cambio giorno? Opzionale.
     setView('day');
   };
 
-  // Filtra i log per la visualizzazione giornaliera
   const dailyLogs = useMemo(() => {
     const dateString = selectedDate.toISOString().split('T')[0];
     return logs.filter(l => l.date === dateString);
   }, [logs, selectedDate]);
 
-  // Controlla se un giorno ha dati (per il pallino nel calendario)
   const hasData = (day) => {
     const checkDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day).toISOString().split('T')[0];
     return logs.some(l => l.date === checkDate);
+  };
+
+  const handleMenuNavigation = (targetView) => {
+    setView(targetView);
+    setIsMenuOpen(false);
   };
 
   if (loading) return <div className="h-screen flex items-center justify-center bg-slate-900 text-blue-500 font-bold animate-pulse uppercase tracking-widest italic">Caricamento Vault...</div>;
@@ -236,36 +263,70 @@ export default function App() {
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-300">
       
-      {/* HEADER */}
-      <header className="bg-white dark:bg-slate-900/80 backdrop-blur-md border-b dark:border-slate-800 sticky top-0 z-20 px-4 md:px-8 h-20 flex justify-between items-center shadow-sm">
-        <div className="flex items-center gap-3 cursor-pointer" onClick={() => setView('calendar')}>
-          <div className="bg-slate-950 dark:bg-white p-2.5 rounded-2xl text-white dark:text-slate-950 shadow-lg"><Clock size={20} /></div>
-          <h1 className="text-xl md:text-2xl font-black tracking-tighter italic leading-none hidden sm:block">TIMEVAULT</h1>
+      {/* HEADER NAVIGAZIONE */}
+      <header className="bg-white dark:bg-slate-900/80 backdrop-blur-md border-b dark:border-slate-800 sticky top-0 z-30 px-4 md:px-8 h-20 flex justify-between items-center shadow-sm">
+        
+        {/* MENU TOGGLE */}
+        <div className="relative" ref={menuRef}>
+          <button 
+            onClick={() => setIsMenuOpen(!isMenuOpen)}
+            className="flex items-center gap-3 cursor-pointer group p-2 -ml-2 rounded-2xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-all"
+          >
+            <div className="bg-slate-950 dark:bg-white p-2.5 rounded-2xl text-white dark:text-slate-950 shadow-lg group-hover:scale-95 transition-transform"><Clock size={20} /></div>
+            <div className="hidden sm:block text-left">
+              <h1 className="text-xl font-black tracking-tighter italic leading-none">TIMEVAULT</h1>
+              <p className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Menu Principale</p>
+            </div>
+            <Menu size={16} className="text-slate-400 ml-1" />
+          </button>
+
+          {/* DROPDOWN MENU */}
+          {isMenuOpen && (
+            <div className="absolute top-full left-0 mt-2 w-56 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-100 dark:border-slate-800 p-2 animate-in fade-in slide-in-from-top-2 z-50">
+               <div className="px-3 py-2 mb-2 border-b border-slate-100 dark:border-slate-800 sm:hidden">
+                 <p className="text-xs font-black text-slate-900 dark:text-white">TIMEVAULT</p>
+               </div>
+               <button onClick={() => handleMenuNavigation('calendar')} className={`w-full flex items-center gap-3 p-3 rounded-xl text-sm font-bold transition-colors ${view === 'calendar' ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'}`}>
+                 <Home size={18} /> Home
+               </button>
+               <button onClick={() => handleMenuNavigation('report')} className={`w-full flex items-center gap-3 p-3 rounded-xl text-sm font-bold transition-colors ${view === 'report' ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'}`}>
+                 <FileText size={18} /> Resoconto
+               </button>
+               <button onClick={() => handleMenuNavigation('settings')} className={`w-full flex items-center gap-3 p-3 rounded-xl text-sm font-bold transition-colors ${view === 'settings' ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'}`}>
+                 <Settings size={18} /> Impostazioni
+               </button>
+            </div>
+          )}
         </div>
+
         <div className="flex items-center gap-3">
           <div className="bg-blue-50 dark:bg-slate-800 px-4 py-2 rounded-2xl border border-blue-100 dark:border-slate-700 hidden sm:block">
-            <p className="text-[9px] text-blue-400 dark:text-blue-300 font-black uppercase mb-0.5 leading-none text-right">Utente</p>
+            <p className="text-[9px] text-blue-400 dark:text-blue-300 font-black uppercase mb-0.5 leading-none text-right">Ciao</p>
             <p className="text-sm font-black text-blue-700 dark:text-blue-400 uppercase italic leading-none">{user.displayName}</p>
           </div>
-          <button onClick={toggleTheme} className="p-3 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 rounded-2xl hover:bg-slate-200 dark:hover:bg-slate-700">{theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}</button>
-          <button onClick={handleLogout} className="p-3 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-2xl border border-slate-100 dark:border-slate-800 hover:border-red-100"><LogOut size={20} /></button>
         </div>
       </header>
 
       <main className="max-w-4xl mx-auto p-4 md:p-8 space-y-8">
         
-        {/* VISTA CALENDARIO */}
+        {/* --- VISTA CALENDARIO (HOME) --- */}
         {view === 'calendar' && (
           <div className="space-y-8 animate-in fade-in zoom-in duration-300">
-            {/* KPI MENSILI GLOBALI */}
+            {/* KPI MENSILI AGGIORNATE */}
             <div className="grid grid-cols-2 gap-4">
               <div className="bg-white dark:bg-slate-900 p-6 rounded-[2rem] shadow-sm border border-slate-200 dark:border-slate-800">
-                <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-1">Totale Standard</p>
-                <p className="text-3xl font-black text-slate-800 dark:text-white">{stats.std}h</p>
+                <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-1">Giornate Lavorate</p>
+                <div className="flex items-baseline gap-2">
+                  <p className="text-3xl font-black text-slate-800 dark:text-white">{monthlyStats.daysWorked}</p>
+                  <span className="text-xs font-bold text-slate-300 dark:text-slate-600 uppercase">Giorni a {monthName}</span>
+                </div>
               </div>
               <div className="bg-white dark:bg-slate-900 p-6 rounded-[2rem] shadow-sm border border-slate-200 dark:border-slate-800">
-                <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-1">Totale Extra</p>
-                <p className="text-3xl font-black text-orange-600 dark:text-orange-500">+{stats.ext}h</p>
+                <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-1">Extra Mese</p>
+                <div className="flex items-baseline gap-2">
+                  <p className="text-3xl font-black text-orange-600 dark:text-orange-500">+{monthlyStats.ext}<span className="text-sm">h</span></p>
+                  <span className="text-xs font-bold text-orange-200 dark:text-orange-900/50 uppercase">Accumulati</span>
+                </div>
               </div>
             </div>
 
@@ -313,7 +374,7 @@ export default function App() {
           </div>
         )}
 
-        {/* VISTA GIORNALIERA (DAY) */}
+        {/* --- VISTA GIORNALIERA (DAY) --- */}
         {view === 'day' && (
           <div className="space-y-6 animate-in slide-in-from-right duration-300">
             <button onClick={() => setView('calendar')} className="flex items-center gap-2 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white transition-colors font-bold uppercase text-xs tracking-widest mb-4">
@@ -324,12 +385,8 @@ export default function App() {
               <h2 className="text-3xl font-black italic text-slate-800 dark:text-white capitalize">
                 {selectedDate.toLocaleDateString('it-IT', { day: 'numeric', month: 'long' })}
               </h2>
-              <div className="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-4 py-2 rounded-xl font-bold text-xs uppercase tracking-wider">
-                {dailyLogs.length > 0 ? `${dailyLogs.length} Attività` : 'Nessuna attività'}
-              </div>
             </div>
 
-            {/* FORM INSERIMENTO PER IL GIORNO SELEZIONATO */}
             <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] shadow-sm border border-slate-200 dark:border-slate-800">
               <h3 className="text-xs font-black mb-6 uppercase text-slate-400 tracking-widest">Aggiungi Ore</h3>
               <form onSubmit={handleSubmitLog} className="space-y-6">
@@ -353,7 +410,6 @@ export default function App() {
               </form>
             </div>
 
-            {/* LISTA LOG DEL GIORNO */}
             <div className="space-y-4">
               {dailyLogs.map(log => (
                 <div key={log.id} className="bg-white dark:bg-slate-900 p-6 rounded-[2rem] border border-slate-200 dark:border-slate-800 flex items-center justify-between group hover:border-blue-200 dark:hover:border-blue-800 transition-colors">
@@ -371,8 +427,65 @@ export default function App() {
           </div>
         )}
 
+        {/* --- VISTA RESOCONTO --- */}
+        {view === 'report' && (
+          <div className="space-y-8 animate-in fade-in zoom-in duration-300">
+             <div className="flex justify-between items-center">
+                 <h2 className="text-2xl font-black italic text-slate-800 dark:text-white uppercase tracking-tight">Resoconto Mese</h2>
+                 <p className="text-sm font-bold text-slate-500 dark:text-slate-400 capitalize">{monthName}</p>
+             </div>
+             
+             <div className="bg-white dark:bg-slate-900 p-10 rounded-[2.5rem] shadow-xl border border-slate-200 dark:border-slate-800 text-center">
+                 <div className="inline-flex p-6 bg-blue-50 dark:bg-slate-800 rounded-full text-blue-600 dark:text-blue-400 mb-6"><FileText size={48} /></div>
+                 
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-12 mt-4">
+                    <div>
+                        <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Giornate Lavorate</p>
+                        <p className="text-6xl font-black text-slate-800 dark:text-white">{monthlyStats.daysWorked}</p>
+                        <p className="text-sm font-bold text-slate-400 mt-2">Su {getDaysInMonth(currentMonth).days} giorni totali</p>
+                    </div>
+                    <div>
+                        <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Straordinari Totali</p>
+                        <p className="text-6xl font-black text-orange-600 dark:text-orange-500">{monthlyStats.ext}<span className="text-lg">h</span></p>
+                        <p className="text-sm font-bold text-slate-400 mt-2">Accumulati questo mese</p>
+                    </div>
+                 </div>
+             </div>
+          </div>
+        )}
+
+        {/* --- VISTA IMPOSTAZIONI --- */}
+        {view === 'settings' && (
+          <div className="space-y-8 animate-in fade-in zoom-in duration-300">
+            <h2 className="text-2xl font-black italic text-slate-800 dark:text-white uppercase tracking-tight">Impostazioni</h2>
+            
+            <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] shadow-sm border border-slate-200 dark:border-slate-800 space-y-8">
+               
+               <div className="flex items-center justify-between pb-8 border-b border-slate-100 dark:border-slate-800">
+                  <div>
+                    <h3 className="font-bold text-slate-900 dark:text-white mb-1">Aspetto Applicazione</h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Scegli tra modalità chiara e scura</p>
+                  </div>
+                  <button onClick={toggleTheme} className="flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-slate-800 rounded-xl font-bold text-sm text-slate-600 dark:text-slate-300">
+                    {theme === 'light' ? <><Moon size={16}/> Dark Mode</> : <><Sun size={16}/> Light Mode</>}
+                  </button>
+               </div>
+
+               <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="font-bold text-slate-900 dark:text-white mb-1">Sessione Utente</h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Esci dal tuo account TimeVault</p>
+                  </div>
+                  <button onClick={handleLogout} className="flex items-center gap-2 px-4 py-2 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-xl font-bold text-sm hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors">
+                    <LogOut size={16}/> Disconnetti
+                  </button>
+               </div>
+            </div>
+          </div>
+        )}
+
       </main>
-      <footer className="max-w-6xl mx-auto p-12 text-center text-[10px] font-black text-slate-300 dark:text-slate-600 uppercase tracking-[0.5em]">TimeVault Calendar • v5.0</footer>
+      <footer className="max-w-6xl mx-auto p-12 text-center text-[10px] font-black text-slate-300 dark:text-slate-600 uppercase tracking-[0.5em]">TimeVault v5.1</footer>
     </div>
   );
 }
