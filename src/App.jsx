@@ -29,12 +29,12 @@ import {
 // Per risolvere l'errore di compatibilità con "import.meta", 
 // utilizziamo variabili dirette. Incolla qui i tuoi dati reali.
 const firebaseConfig = {
-  apiKey: "INCOLLA_QUI_IL_TUO_API_KEY",
-  authDomain: "IL_TUO_PROJECT_ID.firebaseapp.com",
-  projectId: "IL_TUO_PROJECT_ID",
-  storageBucket: "IL_TUO_PROJECT_ID.appspot.com",
-  messagingSenderId: "000000000000",
-  appId: "1:000000000000:web:abcdef"
+  apiKey: "AIzaSyDdxN05Yj1CtPOY69x3JJjuFuhEUelXWsc",
+  authDomain: "work-time-vault.firebaseapp.com",
+  projectId: "work-time-vault",
+  storageBucket: "work-time-vault.firebasestorage.app",
+  messagingSenderId: "957496336579",
+  appId: "1:957496336579:web:f82df8f2d580b92ec58276"
 };
 
 const APP_ID = "time-vault-pro"; // ID per il path nel database
