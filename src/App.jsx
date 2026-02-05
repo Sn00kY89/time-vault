@@ -83,7 +83,7 @@ export default function App() {
       return;
     }
 
-    // MODIFICA 1: Percorso Privato (users/{uid}/work_logs) invece di public
+    // MODIFICA 1: Percorso Privato (users/{uid}/work_logs)
     const logsCollection = collection(db, 'artifacts', APP_ID, 'users', user.uid, 'work_logs');
     
     const unsubscribe = onSnapshot(logsCollection, 
@@ -169,16 +169,17 @@ export default function App() {
     </div>
   );
 
-f (!user) {
+  if (!user) {
     return (
       <div className="min-h-screen bg-slate-950 flex items-center justify-center p-6">
         <div className="bg-white p-10 rounded-[2.5rem] w-full max-w-md shadow-2xl">
           <div className="text-center mb-10">
-            <div className="inline-flex p-5 bg-blue-600 rounded-3xl text-white mb-6">
+            <div className="inline-flex p-5 bg-blue-600 rounded-3xl text-white mb-6 shadow-xl shadow-blue-500/30">
               <Clock size={40} />
             </div>
-            <h1 className="text-4xl font-black italic tracking-tighter text-slate-900">TIMEVAULT</h1>
-            <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.3em] mt-3">Accesso Team Autorizzato</p>
+            {/* RIPRISTINATO NOME TIMEVAULT */}
+            <h1 className="text-4xl font-black italic tracking-tighter text-slate-900 leading-none">TIMEVAULT</h1>
+            <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.3em] mt-3">Personal Edition</p>
           </div>
           <form onSubmit={handleAuth} className="space-y-5">
             <input 
@@ -192,15 +193,15 @@ f (!user) {
               value={authData.password} onChange={e => setAuthData({...authData, password: e.target.value})}
             />
             {authError && <div className="text-red-600 text-[11px] font-black bg-red-50 p-3 rounded-xl">{authError}</div>}
-            <button type="submit" disabled={isSubmitting} className="w-full bg-blue-600 text-white p-5 rounded-2xl font-black uppercase tracking-widest shadow-xl">
-              {isSubmitting ? 'Verifica...' : authMode === 'login' ? 'Accedi' : 'Registrati'}
+            <button type="submit" disabled={isSubmitting} className="w-full bg-blue-600 text-white p-5 rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-blue-500/20 active:scale-95 transition-all">
+              {isSubmitting ? 'Verifica...' : authMode === 'login' ? 'Entra nel Vault' : 'Crea Credenziali'}
             </button>
           </form>
           <button 
             onClick={() => setAuthMode(authMode === 'login' ? 'register' : 'login')}
-            className="w-full mt-8 text-slate-400 font-bold text-[10px] uppercase tracking-widest"
+            className="w-full mt-8 text-slate-400 font-bold text-[10px] uppercase tracking-widest hover:text-blue-600 transition-colors"
           >
-            {authMode === 'login' ? "Nuovo operatore? Clicca qui" : "Hai già un ID? Accedi"}
+            {authMode === 'login' ? "Nuovo utente? Registrati ora" : "Hai già un ID? Accedi"}
           </button>
         </div>
       </div>
@@ -212,7 +213,8 @@ f (!user) {
       <header className="bg-white border-b sticky top-0 z-10 px-8 h-20 flex justify-between items-center shadow-sm">
         <div className="flex items-center gap-3">
           <div className="bg-slate-950 p-2.5 rounded-2xl text-white shadow-lg"><Clock size={20} /></div>
-          <h1 className="text-2xl font-black tracking-tighter italic leading-none">MY DIARY</h1>
+          {/* RIPRISTINATO NOME TIMEVAULT */}
+          <h1 className="text-2xl font-black tracking-tighter italic leading-none">TIMEVAULT</h1>
         </div>
         <div className="flex items-center gap-4">
           <div className="bg-blue-50 px-4 py-2 rounded-2xl border border-blue-100">
@@ -260,7 +262,7 @@ f (!user) {
                 <textarea placeholder="Cosa hai fatto oggi?" className="w-full p-4.5 bg-slate-50 border border-slate-200 rounded-[1.25rem] font-medium outline-none" rows="3" value={formData.notes} onChange={e => setFormData({...formData, notes: e.target.value})}></textarea>
               </div>
               <button className="w-full bg-slate-900 hover:bg-black text-white p-5 rounded-[1.25rem] font-black uppercase tracking-widest shadow-xl shadow-slate-200 active:scale-95 transition-all flex items-center justify-center gap-2">
-                <Plus size={18} /> Salva nel Diario
+                <Plus size={18} /> Salva nel Vault
               </button>
             </form>
           </div>
@@ -274,7 +276,6 @@ f (!user) {
                 <thead>
                   <tr className="text-[9px] text-slate-400 uppercase font-black border-b border-slate-50">
                     <th className="px-8 py-5">Data</th>
-                    {/* RIMOSSO COLONNA COLLEGA */}
                     <th className="px-8 py-5 text-center">Std</th>
                     <th className="px-8 py-5 text-center">Ext</th>
                     <th className="px-8 py-5 text-right">Azione</th>
@@ -282,12 +283,11 @@ f (!user) {
                 </thead>
                 <tbody className="divide-y divide-slate-50 text-sm">
                   {logs.length === 0 ? (
-                    <tr><td colSpan="4" className="px-8 py-20 text-center italic text-slate-300 font-bold uppercase tracking-widest">Il tuo diario è vuoto</td></tr>
+                    <tr><td colSpan="4" className="px-8 py-20 text-center italic text-slate-300 font-bold uppercase tracking-widest">Nessun record presente</td></tr>
                   ) : (
                     logs.map(log => (
                       <tr key={log.id} className="hover:bg-slate-50/50 group transition-colors">
                         <td className="px-8 py-5 font-bold text-slate-500 italic">{new Date(log.date).toLocaleDateString('it-IT')}</td>
-                        {/* RIMOSSO CELLA NOME UTENTE */}
                         <td className="px-8 py-5 text-center font-black text-slate-700">{log.standardHours}h</td>
                         <td className="px-8 py-5 text-center font-black text-orange-600">{log.overtimeHours > 0 ? `+${log.overtimeHours}h` : '—'}</td>
                         <td className="px-8 py-5 text-right">
@@ -304,7 +304,7 @@ f (!user) {
           </div>
         </div>
       </main>
-      <footer className="max-w-6xl mx-auto p-12 text-center text-[10px] font-black text-slate-300 uppercase tracking-[0.5em]">My Private Diary • v4.0</footer>
+      <footer className="max-w-6xl mx-auto p-12 text-center text-[10px] font-black text-slate-300 uppercase tracking-[0.5em]">TimeVault Personal • v4.1</footer>
     </div>
   );
 }
