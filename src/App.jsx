@@ -17,7 +17,9 @@ import {
   addDoc, 
   onSnapshot, 
   deleteDoc,
-  serverTimestamp 
+  serverTimestamp,
+  getDoc,
+  setDoc
 } from 'firebase/firestore';
 import { 
   Clock, Plus, Trash2, Calendar as CalendarIcon, LogOut, TrendingUp, 
@@ -56,7 +58,7 @@ export default function App() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef(null);
 
-  // Gestione Tema
+  // Gestione Tema (Inizializzato da localStorage per evitare flash)
   const [theme, setTheme] = useState(() => {
     if (typeof window !== 'undefined') return localStorage.getItem('theme') || 'light';
     return 'light';
@@ -69,13 +71,34 @@ export default function App() {
     notes: ''
   });
 
-  // Effetto Tema
+  // Effetto Tema: Applica la classe al documento HTML
   useEffect(() => {
     const root = window.document.documentElement;
     if (theme === 'dark') root.classList.add('dark');
     else root.classList.remove('dark');
     localStorage.setItem('theme', theme);
   }, [theme]);
+
+  // Effetto Sync Tema: Carica preferenza dal DB quando l'utente si logga
+  useEffect(() => {
+    if (!user) return;
+    
+    const loadUserTheme = async () => {
+      try {
+        const themeDocRef = doc(db, 'artifacts', APP_ID, 'users', user.uid, 'settings', 'theme');
+        const themeSnap = await getDoc(themeDocRef);
+        
+        if (themeSnap.exists()) {
+          const savedTheme = themeSnap.data().mode;
+          if (savedTheme) setTheme(savedTheme);
+        }
+      } catch (error) {
+        console.error("Errore nel caricamento del tema:", error);
+      }
+    };
+
+    loadUserTheme();
+  }, [user]);
 
   // Chiudi menu se clicco fuori
   useEffect(() => {
@@ -88,7 +111,22 @@ export default function App() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const toggleTheme = () => setTheme(prev => prev === 'light' ? 'dark' : 'light');
+  // Funzione Toggle Tema aggiornata con salvataggio DB
+  const toggleTheme = async () => {
+    const newTheme = theme === 'light' ? 'dark' : 'light';
+    setTheme(newTheme); // Aggiorna UI immediatamente
+    
+    if (user) {
+      try {
+        await setDoc(doc(db, 'artifacts', APP_ID, 'users', user.uid, 'settings', 'theme'), {
+          mode: newTheme,
+          updatedAt: serverTimestamp()
+        }, { merge: true });
+      } catch (error) {
+        console.error("Impossibile salvare il tema nel cloud:", error);
+      }
+    }
+  };
 
   // Effetto Auth
   useEffect(() => {
