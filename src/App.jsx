@@ -26,7 +26,7 @@ import {
 } from 'firebase/firestore';
 import { 
   Clock, Plus, Trash2, Calendar as CalendarIcon, LogOut, TrendingUp, 
-  Briefcase, Sun, Moon, ChevronLeft, ChevronRight, ArrowLeft, CheckCircle2,
+  Briefcase, Sun, Moon, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, ArrowLeft, CheckCircle2,
   Menu, Home, FileText, Settings, X, Zap, Palmtree, Thermometer, AlertTriangle, Download, Eye, ShieldAlert, Lock, LogIn, UserPlus, Key, Copy, AlertOctagon, ShieldCheck, Unlock, RefreshCw
 } from 'lucide-react';
 
@@ -131,8 +131,9 @@ export default function App() {
     type: 'work' // 'work', 'ferie', 'malattia'
   });
   
-  // Stato visibilità input straordinario
+  // Stato visibilità input
   const [showOvertimeInput, setShowOvertimeInput] = useState(false);
+  const [showNotesInput, setShowNotesInput] = useState(false); // Nuovo stato per accordion note
 
   // Calcolo se è weekend
   const isWeekend = useMemo(() => {
@@ -357,6 +358,7 @@ export default function App() {
       // Reset form
       setFormData({ standardHours: 0, overtimeHours: '', notes: '', type: 'work' });
       setShowOvertimeInput(false);
+      setShowNotesInput(false); // Reset accordion note
     } catch (e) { console.error(e); }
   };
 
@@ -500,6 +502,7 @@ export default function App() {
     setSelectedDate(newDate);
     setFormData({ standardHours: 0, overtimeHours: '', notes: '', type: 'work' });
     setShowOvertimeInput(false);
+    setShowNotesInput(false); // Reset accordion note
     setFormError('');
     setView('day');
   };
@@ -1142,9 +1145,32 @@ export default function App() {
                    </div>
                 )}
 
-                <div>
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Note (Opzionale)</label>
-                  <textarea placeholder="Dettagli..." className="w-full p-4.5 bg-slate-50 dark:bg-slate-800 dark:text-white border border-slate-200 dark:border-slate-700 rounded-[1.25rem] font-medium outline-none placeholder:text-slate-300 dark:placeholder:text-slate-600 focus:border-blue-500" rows="2" value={formData.notes} onChange={e => setFormData({...formData, notes: e.target.value})}></textarea>
+                <div className="border-t border-slate-100 dark:border-slate-800 pt-4">
+                  <button 
+                    type="button" 
+                    onClick={() => setShowNotesInput(!showNotesInput)}
+                    className="w-full flex items-center justify-between text-left group"
+                  >
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest group-hover:text-blue-500 transition-colors">
+                       Note (Opzionale)
+                    </span>
+                    <div className={`p-2 rounded-full bg-slate-50 dark:bg-slate-800 text-slate-400 group-hover:text-blue-500 transition-colors ${showNotesInput ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-500' : ''}`}>
+                       {showNotesInput ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                    </div>
+                  </button>
+
+                  {showNotesInput && (
+                      <div className="mt-4 animate-in slide-in-from-top-2 fade-in">
+                        <textarea 
+                          placeholder="Dettagli attività..." 
+                          className="w-full p-4.5 bg-slate-50 dark:bg-slate-800 dark:text-white border border-slate-200 dark:border-slate-700 rounded-[1.25rem] font-medium outline-none placeholder:text-slate-300 dark:placeholder:text-slate-600 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900/20 transition-all" 
+                          rows="3" 
+                          autoFocus
+                          value={formData.notes} 
+                          onChange={e => setFormData({...formData, notes: e.target.value})}
+                        ></textarea>
+                      </div>
+                  )}
                 </div>
                 
                 <button 
@@ -1266,7 +1292,7 @@ export default function App() {
         )}
 
       </main>
-      <footer className="max-w-6xl mx-auto p-12 text-center text-[10px] font-black text-slate-300 dark:text-slate-600 uppercase tracking-[0.5em]">TimeVault v0.6.5</footer>
+      <footer className="max-w-6xl mx-auto p-12 text-center text-[10px] font-black text-slate-300 dark:text-slate-600 uppercase tracking-[0.5em]">TimeVault v0.6.6</footer>
     </div>
 
     {/* --- SEZIONE STAMPABILE NASCOSTA (VISIBILE SOLO IN STAMPA) --- */}
