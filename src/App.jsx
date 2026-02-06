@@ -24,7 +24,7 @@ import {
 import { 
   Clock, Plus, Trash2, Calendar as CalendarIcon, LogOut, TrendingUp, 
   Briefcase, Sun, Moon, ChevronLeft, ChevronRight, ArrowLeft, CheckCircle2,
-  Menu, Home, FileText, Settings, X, Zap
+  Menu, Home, FileText, Settings, X, Zap, Palmtree, Thermometer
 } from 'lucide-react';
 
 // --- CONFIGURAZIONE FIREBASE ---
@@ -77,12 +77,16 @@ export default function App() {
 
   const [authData, setAuthData] = useState({ username: '', password: '' });
   
-  // Modifica: Inizializzo standardHours a vuoto o 0 per lasciare la scelta all'utente
+  // Stato del form
   const [formData, setFormData] = useState({
-    standardHours: '', 
+    standardHours: 0, 
     overtimeHours: '',
-    notes: ''
+    notes: '',
+    type: 'work' // 'work', 'ferie', 'malattia'
   });
+  
+  // Stato visibilità input straordinario
+  const [showOvertimeInput, setShowOvertimeInput] = useState(false);
 
   // Calcolo se è weekend
   const isWeekend = useMemo(() => {
@@ -206,7 +210,9 @@ export default function App() {
         userName: user.displayName,
         createdAt: serverTimestamp()
       });
-      setFormData({ standardHours: '', overtimeHours: '', notes: '' });
+      // Reset form
+      setFormData({ standardHours: 0, overtimeHours: '', notes: '', type: 'work' });
+      setShowOvertimeInput(false);
     } catch (e) { console.error(e); }
   };
 
@@ -215,9 +221,31 @@ export default function App() {
     catch (e) { console.error(e); }
   };
 
-  // Funzione per riempimento rapido
-  const fillStandardDay = () => {
-    setFormData(prev => ({ ...prev, standardHours: STANDARD_HOURS_VALUE }));
+  // --- LOGICA PULSANTI ---
+  const handleSetStandard = () => {
+    setFormData(prev => ({ 
+      ...prev, 
+      standardHours: STANDARD_HOURS_VALUE, 
+      type: 'work',
+      // Se si clicca standard, potremmo voler resettare ferie/malattia, ma manteniamo note/extra se presenti
+    }));
+  };
+
+  const handleSetFerie = () => {
+    setFormData({ standardHours: 0, overtimeHours: '', notes: 'Ferie', type: 'ferie' });
+    setShowOvertimeInput(false);
+  };
+
+  const handleSetMalattia = () => {
+    setFormData({ standardHours: 0, overtimeHours: '', notes: 'Malattia', type: 'malattia' });
+    setShowOvertimeInput(false);
+  };
+
+  const toggleOvertime = () => {
+    setShowOvertimeInput(!showOvertimeInput);
+    if (showOvertimeInput) {
+        // Se nascondo, azzero anche il valore? Meglio di no per UX, ma nel submit sarà gestito
+    }
   };
 
   const monthlyStats = useMemo(() => {
@@ -229,7 +257,10 @@ export default function App() {
     logs.forEach(log => {
       const [year, month, day] = log.date.split('-').map(Number);
       if ((month - 1) === targetMonth && year === targetYear) {
-        uniqueDays.add(log.date);
+        // Conta come giornata lavorata solo se NON è ferie o malattia e ha ore > 0
+        if (log.type !== 'ferie' && log.type !== 'malattia') {
+           uniqueDays.add(log.date);
+        }
         totalOvertime += Number(log.overtimeHours || 0);
       }
     });
@@ -257,7 +288,8 @@ export default function App() {
     const newDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
     setSelectedDate(newDate);
     // Reset form data quando cambio giorno
-    setFormData({ standardHours: '', overtimeHours: '', notes: '' });
+    setFormData({ standardHours: 0, overtimeHours: '', notes: '', type: 'work' });
+    setShowOvertimeInput(false);
     setView('day');
   };
 
@@ -430,44 +462,75 @@ export default function App() {
             </div>
 
             <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] shadow-sm border border-slate-200 dark:border-slate-800">
-              <div className="flex justify-between items-center mb-6">
-                 <h3 className="text-xs font-black uppercase text-slate-400 tracking-widest">Aggiungi Ore</h3>
-                 {/* PULSANTE GIORNATA STANDARD: Solo se NON è weekend */}
-                 {!isWeekend && (
-                   <button 
-                     type="button" 
-                     onClick={fillStandardDay}
-                     className="bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center gap-2 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors"
-                   >
-                     <Zap size={14} /> Giornata Intera ({STANDARD_HOURS_VALUE}h)
-                   </button>
-                 )}
-              </div>
+              <h3 className="text-xs font-black mb-6 uppercase text-slate-400 tracking-widest">Aggiungi Ore</h3>
               
+              {/* GRIGLIA PULSANTI */}
+              <div className="grid grid-cols-2 gap-4 mb-6">
+                 {/* TASTI LUN-VEN */}
+                 {!isWeekend && (
+                   <>
+                     <button 
+                       type="button"
+                       onClick={handleSetStandard}
+                       className={`p-4 rounded-2xl font-black uppercase text-[10px] tracking-widest flex flex-col items-center gap-2 transition-all ${formData.type === 'work' && formData.standardHours === STANDARD_HOURS_VALUE ? 'bg-blue-600 text-white shadow-xl shadow-blue-500/30' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'}`}
+                     >
+                        <Briefcase size={20} />
+                        Standard ({STANDARD_HOURS_VALUE}h)
+                     </button>
+                     <button 
+                       type="button"
+                       onClick={handleSetFerie}
+                       className={`p-4 rounded-2xl font-black uppercase text-[10px] tracking-widest flex flex-col items-center gap-2 transition-all ${formData.type === 'ferie' ? 'bg-emerald-500 text-white shadow-xl shadow-emerald-500/30' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'}`}
+                     >
+                        <Palmtree size={20} />
+                        Ferie
+                     </button>
+                   </>
+                 )}
+                 
+                 {/* TASTI SEMPRE VISIBILI (O specifici weekend) */}
+                 <button 
+                   type="button"
+                   onClick={handleSetMalattia}
+                   className={`p-4 rounded-2xl font-black uppercase text-[10px] tracking-widest flex flex-col items-center gap-2 transition-all ${formData.type === 'malattia' ? 'bg-pink-500 text-white shadow-xl shadow-pink-500/30' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'}`}
+                 >
+                    <Thermometer size={20} />
+                    Malattia
+                 </button>
+
+                 <button 
+                   type="button"
+                   onClick={toggleOvertime}
+                   className={`p-4 rounded-2xl font-black uppercase text-[10px] tracking-widest flex flex-col items-center gap-2 transition-all ${showOvertimeInput ? 'bg-orange-500 text-white shadow-xl shadow-orange-500/30' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'}`}
+                 >
+                    <Zap size={20} />
+                    Straordinario
+                 </button>
+              </div>
+
               <form onSubmit={handleSubmitLog} className="space-y-6">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Standard (h)</label>
-                    <input 
-                      type="number" 
-                      step="0.01" 
-                      required={!isWeekend} // Se weekend, non obbligatorio (o gestito diversamente)
-                      placeholder={isWeekend ? "Weekend" : "8"} 
-                      disabled={isWeekend} // Disabilitato nel weekend
-                      className={`w-full p-4.5 bg-slate-50 dark:bg-slate-800 dark:text-white border border-slate-200 dark:border-slate-700 rounded-[1.25rem] font-black outline-none placeholder:text-slate-300 dark:placeholder:text-slate-600 focus:border-blue-500 ${isWeekend ? 'opacity-50 cursor-not-allowed' : ''}`}
-                      value={formData.standardHours} 
-                      onChange={e => setFormData({...formData, standardHours: e.target.value})}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Extra (h)</label>
-                    <input type="number" step="0.5" required={isWeekend} placeholder="0" className="w-full p-4.5 bg-slate-50 dark:bg-slate-800 dark:text-white border border-slate-200 dark:border-slate-700 rounded-[1.25rem] font-black text-orange-600 dark:text-orange-500 outline-none placeholder:text-slate-300 dark:placeholder:text-slate-600 focus:border-orange-500" value={formData.overtimeHours} onChange={e => setFormData({...formData, overtimeHours: e.target.value})}/>
-                  </div>
-                </div>
+                
+                {/* INPUT STRAORDINARIO (Mostra solo se toggled) */}
+                {showOvertimeInput && (
+                   <div className="animate-in slide-in-from-top-2 fade-in">
+                     <label className="block text-[10px] font-black text-orange-500 uppercase tracking-widest mb-2 ml-1">Ore Extra</label>
+                     <input 
+                       type="number" 
+                       step="0.5" 
+                       autoFocus
+                       className="w-full p-4.5 bg-orange-50 dark:bg-orange-900/10 text-orange-600 dark:text-orange-400 border border-orange-100 dark:border-orange-900/20 rounded-[1.25rem] font-black outline-none focus:ring-2 focus:ring-orange-500 placeholder:text-orange-300" 
+                       placeholder="0.0"
+                       value={formData.overtimeHours} 
+                       onChange={e => setFormData({...formData, overtimeHours: e.target.value})}
+                     />
+                   </div>
+                )}
+
                 <div>
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Note</label>
-                  <textarea placeholder="Dettagli attività..." className="w-full p-4.5 bg-slate-50 dark:bg-slate-800 dark:text-white border border-slate-200 dark:border-slate-700 rounded-[1.25rem] font-medium outline-none placeholder:text-slate-300 dark:placeholder:text-slate-600 focus:border-blue-500" rows="2" value={formData.notes} onChange={e => setFormData({...formData, notes: e.target.value})}></textarea>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Note (Opzionale)</label>
+                  <textarea placeholder="Dettagli..." className="w-full p-4.5 bg-slate-50 dark:bg-slate-800 dark:text-white border border-slate-200 dark:border-slate-700 rounded-[1.25rem] font-medium outline-none placeholder:text-slate-300 dark:placeholder:text-slate-600 focus:border-blue-500" rows="2" value={formData.notes} onChange={e => setFormData({...formData, notes: e.target.value})}></textarea>
                 </div>
+                
                 <button className="w-full bg-slate-900 dark:bg-blue-600 hover:bg-black dark:hover:bg-blue-700 text-white p-4 rounded-[1.25rem] font-black uppercase tracking-widest shadow-xl shadow-slate-200 dark:shadow-none active:scale-95 transition-all flex items-center justify-center gap-2">
                   <CheckCircle2 size={18} /> Salva Voce
                 </button>
@@ -479,7 +542,11 @@ export default function App() {
                 <div key={log.id} className="bg-white dark:bg-slate-900 p-6 rounded-[2rem] border border-slate-200 dark:border-slate-800 flex items-center justify-between group hover:border-blue-200 dark:hover:border-blue-800 transition-colors">
                   <div>
                     <div className="flex items-center gap-2 mb-1">
-                      <span className="text-xl font-black text-slate-800 dark:text-white">{log.standardHours}h</span>
+                      {/* BADGE TIPO */}
+                      {log.type === 'ferie' && <span className="text-xs font-black bg-emerald-100 text-emerald-600 px-2 py-1 rounded-lg uppercase">Ferie</span>}
+                      {log.type === 'malattia' && <span className="text-xs font-black bg-pink-100 text-pink-600 px-2 py-1 rounded-lg uppercase">Malattia</span>}
+                      {log.type === 'work' && log.standardHours > 0 && <span className="text-xl font-black text-slate-800 dark:text-white">{log.standardHours}h</span>}
+                      
                       {log.overtimeHours > 0 && <span className="text-sm font-black text-orange-600 dark:text-orange-500 bg-orange-50 dark:bg-orange-900/20 px-2 py-0.5 rounded-lg">+{log.overtimeHours}h Extra</span>}
                     </div>
                     <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">{log.notes || "Nessuna nota"}</p>
@@ -549,7 +616,7 @@ export default function App() {
         )}
 
       </main>
-      <footer className="max-w-6xl mx-auto p-12 text-center text-[10px] font-black text-slate-300 dark:text-slate-600 uppercase tracking-[0.5em]">TimeVault v0.5.3</footer>
+      <footer className="max-w-6xl mx-auto p-12 text-center text-[10px] font-black text-slate-300 dark:text-slate-600 uppercase tracking-[0.5em]">TimeVault v0.5.4</footer>
     </div>
   );
 }
