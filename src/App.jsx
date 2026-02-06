@@ -758,18 +758,18 @@ export default function App() {
         </div>
       )}
 
-      <header className="bg-white dark:bg-slate-900/80 backdrop-blur-md border-b dark:border-slate-800 sticky top-0 z-30 px-4 md:px-8 h-20 flex justify-between items-center shadow-sm">
-        <div className="relative" ref={menuRef}>
+      <header className="bg-white dark:bg-slate-900/80 backdrop-blur-md border-b dark:border-slate-800 sticky top-0 z-30 px-4 md:px-8 h-20 flex items-center justify-between shadow-sm">
+        
+        {/* LEFT: Menu Button */}
+        <div className="relative flex items-center z-20" ref={menuRef}>
           <button 
             onClick={() => setIsMenuOpen(!isMenuOpen)}
             className="flex items-center gap-3 cursor-pointer group p-2 -ml-2 rounded-2xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-all"
           >
-            <div className="bg-slate-950 dark:bg-white p-2.5 rounded-2xl text-white dark:text-slate-950 shadow-lg group-hover:scale-95 transition-transform"><Clock size={20} /></div>
-            <div className="hidden sm:block text-left">
-              <h1 className="text-xl font-black tracking-tighter italic leading-none">TIMEVAULT</h1>
-              <p className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Menu Principale</p>
+            <Menu size={24} className="text-slate-600 dark:text-slate-300" />
+            <div className="bg-slate-950 dark:bg-white p-2.5 rounded-2xl text-white dark:text-slate-950 shadow-lg group-hover:scale-95 transition-transform">
+              <Clock size={20} />
             </div>
-            <Menu size={16} className="text-slate-400 ml-1" />
           </button>
 
           {isMenuOpen && (
@@ -790,7 +790,13 @@ export default function App() {
           )}
         </div>
 
-        <div className="flex items-center gap-3">
+        {/* CENTER: Title */}
+        <div className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10">
+          <h1 className="text-2xl font-black tracking-tighter italic leading-none text-slate-900 dark:text-white">TIMEVAULT</h1>
+        </div>
+
+        {/* RIGHT: User Profile */}
+        <div className="flex items-center gap-3 z-20">
           <div className="bg-blue-50 dark:bg-slate-800 px-4 py-2 rounded-2xl border border-blue-100 dark:border-slate-700 hidden sm:block">
             <p className="text-[9px] text-blue-400 dark:text-blue-300 font-black uppercase mb-0.5 leading-none text-right">Ciao</p>
             <p className="text-sm font-black text-blue-700 dark:text-blue-400 uppercase italic leading-none">{user.displayName}</p>
@@ -1068,7 +1074,7 @@ export default function App() {
         )}
 
       </main>
-      <footer className="max-w-6xl mx-auto p-12 text-center text-[10px] font-black text-slate-300 dark:text-slate-600 uppercase tracking-[0.5em]">TimeVault v0.6.2</footer>
+      <footer className="max-w-6xl mx-auto p-12 text-center text-[10px] font-black text-slate-300 dark:text-slate-600 uppercase tracking-[0.5em]">TimeVault v0.6.3</footer>
     </div>
 
     {/* --- SEZIONE STAMPABILE NASCOSTA (VISIBILE SOLO IN STAMPA) --- */}
