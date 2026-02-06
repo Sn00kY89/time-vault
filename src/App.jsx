@@ -43,6 +43,14 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const INTERNAL_DOMAIN = "@time.vault";
 
+// Funzione helper per formattare la data in LOCALE (senza shift UTC)
+const formatDateAsLocal = (date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 export default function App() {
   const [user, setUser] = useState(null);
   const [logs, setLogs] = useState([]);
@@ -58,7 +66,7 @@ export default function App() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef(null);
 
-  // Gestione Tema (Inizializzato da localStorage per evitare flash)
+  // Gestione Tema
   const [theme, setTheme] = useState(() => {
     if (typeof window !== 'undefined') return localStorage.getItem('theme') || 'light';
     return 'light';
@@ -71,7 +79,7 @@ export default function App() {
     notes: ''
   });
 
-  // Effetto Tema: Applica la classe al documento HTML
+  // Effetto Tema
   useEffect(() => {
     const root = window.document.documentElement;
     if (theme === 'dark') root.classList.add('dark');
@@ -79,24 +87,19 @@ export default function App() {
     localStorage.setItem('theme', theme);
   }, [theme]);
 
-  // Effetto Sync Tema: Carica preferenza dal DB quando l'utente si logga
+  // Effetto Sync Tema
   useEffect(() => {
     if (!user) return;
-    
     const loadUserTheme = async () => {
       try {
         const themeDocRef = doc(db, 'artifacts', APP_ID, 'users', user.uid, 'settings', 'theme');
         const themeSnap = await getDoc(themeDocRef);
-        
         if (themeSnap.exists()) {
           const savedTheme = themeSnap.data().mode;
           if (savedTheme) setTheme(savedTheme);
         }
-      } catch (error) {
-        console.error("Errore nel caricamento del tema:", error);
-      }
+      } catch (error) { console.error("Errore tema:", error); }
     };
-
     loadUserTheme();
   }, [user]);
 
@@ -111,20 +114,16 @@ export default function App() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Funzione Toggle Tema aggiornata con salvataggio DB
   const toggleTheme = async () => {
     const newTheme = theme === 'light' ? 'dark' : 'light';
-    setTheme(newTheme); // Aggiorna UI immediatamente
-    
+    setTheme(newTheme);
     if (user) {
       try {
         await setDoc(doc(db, 'artifacts', APP_ID, 'users', user.uid, 'settings', 'theme'), {
           mode: newTheme,
           updatedAt: serverTimestamp()
         }, { merge: true });
-      } catch (error) {
-        console.error("Impossibile salvare il tema nel cloud:", error);
-      }
+      } catch (e) { console.error(e); }
     }
   };
 
@@ -190,7 +189,8 @@ export default function App() {
     if (!user) return;
     try {
       const logsCollection = collection(db, 'artifacts', APP_ID, 'users', user.uid, 'work_logs');
-      const dateString = selectedDate.toISOString().split('T')[0];
+      // FIX: Uso la funzione locale invece di toISOString() per evitare il salto di giorno
+      const dateString = formatDateAsLocal(selectedDate);
       
       await addDoc(logsCollection, {
         ...formData,
@@ -208,18 +208,19 @@ export default function App() {
     catch (e) { console.error(e); }
   };
 
-  // CALCOLI MENSILI (Nuova Logica)
+  // CALCOLI MENSILI (Corretto problema Timezone)
   const monthlyStats = useMemo(() => {
-    const targetMonth = currentMonth.getMonth();
+    const targetMonth = currentMonth.getMonth(); // 0-based
     const targetYear = currentMonth.getFullYear();
     const uniqueDays = new Set();
     let totalOvertime = 0;
 
     logs.forEach(log => {
-      const logDate = new Date(log.date);
-      // Filtra solo per il mese corrente visualizzato
-      if (logDate.getMonth() === targetMonth && logDate.getFullYear() === targetYear) {
-        uniqueDays.add(log.date); // Aggiunge al set (rimuove duplicati giornalieri se presenti)
+      // Parse robusto della stringa YYYY-MM-DD
+      const [year, month, day] = log.date.split('-').map(Number);
+      // month nelle stringhe è 1-based (01=Gen), targetMonth è 0-based
+      if ((month - 1) === targetMonth && year === targetYear) {
+        uniqueDays.add(log.date);
         totalOvertime += Number(log.overtimeHours || 0);
       }
     });
@@ -251,13 +252,16 @@ export default function App() {
   };
 
   const dailyLogs = useMemo(() => {
-    const dateString = selectedDate.toISOString().split('T')[0];
+    // FIX: Uso formattazione locale
+    const dateString = formatDateAsLocal(selectedDate);
     return logs.filter(l => l.date === dateString);
   }, [logs, selectedDate]);
 
   const hasData = (day) => {
-    const checkDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day).toISOString().split('T')[0];
-    return logs.some(l => l.date === checkDate);
+    const checkDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
+    // FIX: Uso formattazione locale
+    const dateString = formatDateAsLocal(checkDate);
+    return logs.some(l => l.date === dateString);
   };
 
   const handleMenuNavigation = (targetView) => {
@@ -523,7 +527,7 @@ export default function App() {
         )}
 
       </main>
-      <footer className="max-w-6xl mx-auto p-12 text-center text-[10px] font-black text-slate-300 dark:text-slate-600 uppercase tracking-[0.5em]">TimeVault v5.1</footer>
+      <footer className="max-w-6xl mx-auto p-12 text-center text-[10px] font-black text-slate-300 dark:text-slate-600 uppercase tracking-[0.5em]">TimeVault v5.2 (Fix Timezone)</footer>
     </div>
   );
 }
