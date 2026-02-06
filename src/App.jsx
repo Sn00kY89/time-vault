@@ -24,7 +24,7 @@ import {
 import { 
   Clock, Plus, Trash2, Calendar as CalendarIcon, LogOut, TrendingUp, 
   Briefcase, Sun, Moon, ChevronLeft, ChevronRight, ArrowLeft, CheckCircle2,
-  Menu, Home, FileText, Settings, X
+  Menu, Home, FileText, Settings, X, Zap
 } from 'lucide-react';
 
 // --- CONFIGURAZIONE FIREBASE ---
@@ -43,6 +43,9 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const INTERNAL_DOMAIN = "@time.vault";
 
+// Valore ore standard (modificabile per CCNL Chimico)
+const STANDARD_HOURS_VALUE = 8; 
+
 // Funzione helper per formattare la data in LOCALE (senza shift UTC)
 const formatDateAsLocal = (date) => {
   const year = date.getFullYear();
@@ -60,7 +63,7 @@ export default function App() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   // STATI PER IL CALENDARIO E NAVIGAZIONE
-  const [view, setView] = useState('calendar'); // 'calendar' | 'day' | 'report' | 'settings'
+  const [view, setView] = useState('calendar'); 
   const [selectedDate, setSelectedDate] = useState(new Date()); 
   const [currentMonth, setCurrentMonth] = useState(new Date()); 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -73,11 +76,19 @@ export default function App() {
   });
 
   const [authData, setAuthData] = useState({ username: '', password: '' });
+  
+  // Modifica: Inizializzo standardHours a vuoto o 0 per lasciare la scelta all'utente
   const [formData, setFormData] = useState({
-    standardHours: 8,
-    overtimeHours: 0,
+    standardHours: '', 
+    overtimeHours: '',
     notes: ''
   });
+
+  // Calcolo se è weekend
+  const isWeekend = useMemo(() => {
+    const day = selectedDate.getDay();
+    return day === 0 || day === 6; // 0 = Domenica, 6 = Sabato
+  }, [selectedDate]);
 
   // Effetto Tema
   useEffect(() => {
@@ -103,7 +114,6 @@ export default function App() {
     loadUserTheme();
   }, [user]);
 
-  // Chiudi menu se clicco fuori
   useEffect(() => {
     function handleClickOutside(event) {
       if (menuRef.current && !menuRef.current.contains(event.target)) {
@@ -127,7 +137,6 @@ export default function App() {
     }
   };
 
-  // Effetto Auth
   useEffect(() => {
     const initAuth = async () => {
       try { await setPersistence(auth, browserLocalPersistence); } 
@@ -141,7 +150,6 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
-  // Effetto Dati
   useEffect(() => {
     if (!user) { setLogs([]); return; }
     const logsCollection = collection(db, 'artifacts', APP_ID, 'users', user.uid, 'work_logs');
@@ -155,7 +163,6 @@ export default function App() {
     return () => unsubscribe();
   }, [user]);
 
-  // AUTH ACTIONS
   const handleAuth = async (e) => {
     e.preventDefault();
     setAuthError('');
@@ -183,23 +190,23 @@ export default function App() {
 
   const handleLogout = () => { signOut(auth); setView('calendar'); };
 
-  // LOG ACTIONS
   const handleSubmitLog = async (e) => {
     e.preventDefault();
     if (!user) return;
     try {
       const logsCollection = collection(db, 'artifacts', APP_ID, 'users', user.uid, 'work_logs');
-      // FIX: Uso la funzione locale invece di toISOString() per evitare il salto di giorno
       const dateString = formatDateAsLocal(selectedDate);
       
       await addDoc(logsCollection, {
         ...formData,
+        standardHours: Number(formData.standardHours) || 0,
+        overtimeHours: Number(formData.overtimeHours) || 0,
         date: dateString,
         userId: user.uid,
         userName: user.displayName,
         createdAt: serverTimestamp()
       });
-      setFormData({ ...formData, overtimeHours: 0, notes: '' });
+      setFormData({ standardHours: '', overtimeHours: '', notes: '' });
     } catch (e) { console.error(e); }
   };
 
@@ -208,17 +215,19 @@ export default function App() {
     catch (e) { console.error(e); }
   };
 
-  // CALCOLI MENSILI (Corretto problema Timezone)
+  // Funzione per riempimento rapido
+  const fillStandardDay = () => {
+    setFormData(prev => ({ ...prev, standardHours: STANDARD_HOURS_VALUE }));
+  };
+
   const monthlyStats = useMemo(() => {
-    const targetMonth = currentMonth.getMonth(); // 0-based
+    const targetMonth = currentMonth.getMonth(); 
     const targetYear = currentMonth.getFullYear();
     const uniqueDays = new Set();
     let totalOvertime = 0;
 
     logs.forEach(log => {
-      // Parse robusto della stringa YYYY-MM-DD
       const [year, month, day] = log.date.split('-').map(Number);
-      // month nelle stringhe è 1-based (01=Gen), targetMonth è 0-based
       if ((month - 1) === targetMonth && year === targetYear) {
         uniqueDays.add(log.date);
         totalOvertime += Number(log.overtimeHours || 0);
@@ -231,7 +240,6 @@ export default function App() {
     };
   }, [logs, currentMonth]);
 
-  // LOGICA CALENDARIO
   const getDaysInMonth = (date) => {
     const year = date.getFullYear();
     const month = date.getMonth();
@@ -248,18 +256,18 @@ export default function App() {
   const selectDay = (day) => {
     const newDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
     setSelectedDate(newDate);
+    // Reset form data quando cambio giorno
+    setFormData({ standardHours: '', overtimeHours: '', notes: '' });
     setView('day');
   };
 
   const dailyLogs = useMemo(() => {
-    // FIX: Uso formattazione locale
     const dateString = formatDateAsLocal(selectedDate);
     return logs.filter(l => l.date === dateString);
   }, [logs, selectedDate]);
 
   const hasData = (day) => {
     const checkDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
-    // FIX: Uso formattazione locale
     const dateString = formatDateAsLocal(checkDate);
     return logs.some(l => l.date === dateString);
   };
@@ -271,7 +279,6 @@ export default function App() {
 
   if (loading) return <div className="h-screen flex items-center justify-center bg-slate-900 text-blue-500 font-bold animate-pulse uppercase tracking-widest italic">Caricamento Vault...</div>;
 
-  // LOGIN SCREEN
   if (!user) {
     return (
       <div className="min-h-screen bg-slate-50 dark:bg-slate-950 transition-colors duration-300 flex items-center justify-center p-6">
@@ -298,17 +305,13 @@ export default function App() {
     );
   }
 
-  // --- APP PRINCIPALE ---
   const { days, offset } = getDaysInMonth(currentMonth);
   const monthName = currentMonth.toLocaleString('it-IT', { month: 'long', year: 'numeric' });
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-300">
       
-      {/* HEADER NAVIGAZIONE */}
       <header className="bg-white dark:bg-slate-900/80 backdrop-blur-md border-b dark:border-slate-800 sticky top-0 z-30 px-4 md:px-8 h-20 flex justify-between items-center shadow-sm">
-        
-        {/* MENU TOGGLE */}
         <div className="relative" ref={menuRef}>
           <button 
             onClick={() => setIsMenuOpen(!isMenuOpen)}
@@ -322,7 +325,6 @@ export default function App() {
             <Menu size={16} className="text-slate-400 ml-1" />
           </button>
 
-          {/* DROPDOWN MENU */}
           {isMenuOpen && (
             <div className="absolute top-full left-0 mt-2 w-56 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-100 dark:border-slate-800 p-2 animate-in fade-in slide-in-from-top-2 z-50">
                <div className="px-3 py-2 mb-2 border-b border-slate-100 dark:border-slate-800 sm:hidden">
@@ -351,10 +353,8 @@ export default function App() {
 
       <main className="max-w-4xl mx-auto p-4 md:p-8 space-y-8">
         
-        {/* --- VISTA CALENDARIO (HOME) --- */}
         {view === 'calendar' && (
           <div className="space-y-8 animate-in fade-in zoom-in duration-300">
-            {/* KPI MENSILI AGGIORNATE */}
             <div className="grid grid-cols-2 gap-4">
               <div className="bg-white dark:bg-slate-900 p-6 rounded-[2rem] shadow-sm border border-slate-200 dark:border-slate-800">
                 <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-1">Giornate Lavorate</p>
@@ -372,7 +372,6 @@ export default function App() {
               </div>
             </div>
 
-            {/* CALENDARIO */}
             <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-xl border border-slate-200 dark:border-slate-800 overflow-hidden p-6 md:p-8">
               <div className="flex items-center justify-between mb-8">
                 <h2 className="text-2xl font-black capitalize italic text-slate-800 dark:text-white">{monthName}</h2>
@@ -426,20 +425,43 @@ export default function App() {
             <div className="flex items-center justify-between">
               <h2 className="text-3xl font-black italic text-slate-800 dark:text-white capitalize">
                 {selectedDate.toLocaleDateString('it-IT', { day: 'numeric', month: 'long' })}
+                {isWeekend && <span className="block text-xs font-bold text-orange-500 not-italic mt-1 uppercase tracking-widest">Weekend • Straordinario</span>}
               </h2>
             </div>
 
             <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] shadow-sm border border-slate-200 dark:border-slate-800">
-              <h3 className="text-xs font-black mb-6 uppercase text-slate-400 tracking-widest">Aggiungi Ore</h3>
+              <div className="flex justify-between items-center mb-6">
+                 <h3 className="text-xs font-black uppercase text-slate-400 tracking-widest">Aggiungi Ore</h3>
+                 {/* PULSANTE GIORNATA STANDARD: Solo se NON è weekend */}
+                 {!isWeekend && (
+                   <button 
+                     type="button" 
+                     onClick={fillStandardDay}
+                     className="bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center gap-2 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors"
+                   >
+                     <Zap size={14} /> Giornata Intera ({STANDARD_HOURS_VALUE}h)
+                   </button>
+                 )}
+              </div>
+              
               <form onSubmit={handleSubmitLog} className="space-y-6">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Standard (h)</label>
-                    <input type="number" step="0.5" required placeholder="8" className="w-full p-4.5 bg-slate-50 dark:bg-slate-800 dark:text-white border border-slate-200 dark:border-slate-700 rounded-[1.25rem] font-black outline-none placeholder:text-slate-300 dark:placeholder:text-slate-600 focus:border-blue-500" value={formData.standardHours} onChange={e => setFormData({...formData, standardHours: e.target.value})}/>
+                    <input 
+                      type="number" 
+                      step="0.01" 
+                      required={!isWeekend} // Se weekend, non obbligatorio (o gestito diversamente)
+                      placeholder={isWeekend ? "Weekend" : "8"} 
+                      disabled={isWeekend} // Disabilitato nel weekend
+                      className={`w-full p-4.5 bg-slate-50 dark:bg-slate-800 dark:text-white border border-slate-200 dark:border-slate-700 rounded-[1.25rem] font-black outline-none placeholder:text-slate-300 dark:placeholder:text-slate-600 focus:border-blue-500 ${isWeekend ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      value={formData.standardHours} 
+                      onChange={e => setFormData({...formData, standardHours: e.target.value})}
+                    />
                   </div>
                   <div>
                     <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Extra (h)</label>
-                    <input type="number" step="0.5" required placeholder="0" className="w-full p-4.5 bg-slate-50 dark:bg-slate-800 dark:text-white border border-slate-200 dark:border-slate-700 rounded-[1.25rem] font-black text-orange-600 dark:text-orange-500 outline-none placeholder:text-slate-300 dark:placeholder:text-slate-600 focus:border-orange-500" value={formData.overtimeHours} onChange={e => setFormData({...formData, overtimeHours: e.target.value})}/>
+                    <input type="number" step="0.5" required={isWeekend} placeholder="0" className="w-full p-4.5 bg-slate-50 dark:bg-slate-800 dark:text-white border border-slate-200 dark:border-slate-700 rounded-[1.25rem] font-black text-orange-600 dark:text-orange-500 outline-none placeholder:text-slate-300 dark:placeholder:text-slate-600 focus:border-orange-500" value={formData.overtimeHours} onChange={e => setFormData({...formData, overtimeHours: e.target.value})}/>
                   </div>
                 </div>
                 <div>
@@ -527,7 +549,7 @@ export default function App() {
         )}
 
       </main>
-      <footer className="max-w-6xl mx-auto p-12 text-center text-[10px] font-black text-slate-300 dark:text-slate-600 uppercase tracking-[0.5em]">TimeVault v5.2 (Fix Timezone)</footer>
+      <footer className="max-w-6xl mx-auto p-12 text-center text-[10px] font-black text-slate-300 dark:text-slate-600 uppercase tracking-[0.5em]">TimeVault v5.3 (CCNL Logic)</footer>
     </div>
   );
 }
