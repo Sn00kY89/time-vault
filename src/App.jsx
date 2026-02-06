@@ -27,7 +27,7 @@ import {
 import { 
   Clock, Plus, Trash2, Calendar as CalendarIcon, LogOut, TrendingUp, 
   Briefcase, Sun, Moon, ChevronLeft, ChevronRight, ArrowLeft, CheckCircle2,
-  Menu, Home, FileText, Settings, X, Zap, Palmtree, Thermometer, AlertTriangle, Download, Eye, ShieldAlert, Lock, LogIn
+  Menu, Home, FileText, Settings, X, Zap, Palmtree, Thermometer, AlertTriangle, Download, Eye, ShieldAlert, Lock, LogIn, UserPlus
 } from 'lucide-react';
 
 // --- CONFIGURAZIONE FIREBASE ---
@@ -424,6 +424,14 @@ export default function App() {
     setIsMenuOpen(false);
   };
 
+  // --- LOGICA APERTURA MODALE AUTH ---
+  const openAuthModal = (mode) => {
+    setAuthMode(mode);
+    setAuthError('');
+    setAuthData({ username: '', password: '' });
+    setShowAuthModal(true);
+  };
+
   if (loading) return <div className="h-screen flex items-center justify-center bg-slate-900 text-blue-500 font-bold animate-pulse uppercase tracking-widest italic">Caricamento Vault...</div>;
 
   if (!user) {
@@ -446,12 +454,21 @@ export default function App() {
              <p className="text-slate-400 dark:text-slate-500 text-xs font-black uppercase tracking-[0.4em]">Personal Edition</p>
           </div>
 
-          <button 
-            onClick={() => setShowAuthModal(true)}
-            className="w-full bg-slate-900 dark:bg-white text-white dark:text-slate-900 p-5 rounded-2xl font-black uppercase tracking-widest shadow-xl hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-3"
-          >
-             <LogIn size={20} /> Accedi al Vault
-          </button>
+          <div className="space-y-4">
+            <button 
+              onClick={() => openAuthModal('login')}
+              className="w-full bg-slate-900 dark:bg-white text-white dark:text-slate-900 p-5 rounded-2xl font-black uppercase tracking-widest shadow-xl hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-3"
+            >
+              <LogIn size={20} /> Accedi al Vault
+            </button>
+
+            <button 
+              onClick={() => openAuthModal('register')}
+              className="w-full bg-transparent border-2 border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 p-5 rounded-2xl font-black uppercase tracking-widest hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white transition-all flex items-center justify-center gap-3"
+            >
+              <UserPlus size={20} /> Nuovo Account
+            </button>
+          </div>
           
           <p className="mt-8 text-[10px] text-slate-400 font-medium">Gestisci il tuo tempo, monitora gli straordinari.</p>
         </div>
@@ -459,7 +476,7 @@ export default function App() {
         {/* --- AUTH MODAL POPUP --- */}
         {showAuthModal && (
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
-             <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] w-full max-w-sm shadow-2xl border border-slate-100 dark:border-slate-800 relative animate-in zoom-in-95 duration-300">
+             <div className={`bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] w-full max-w-sm shadow-2xl border relative animate-in zoom-in-95 duration-300 ${authMode === 'login' ? 'border-slate-100 dark:border-slate-800' : 'border-purple-100 dark:border-purple-900/30'}`}>
                 <button 
                   onClick={() => setShowAuthModal(false)}
                   className="absolute top-6 right-6 p-2 bg-slate-100 dark:bg-slate-800 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
@@ -468,24 +485,53 @@ export default function App() {
                 </button>
 
                 <div className="text-center mb-8">
+                  {/* Icona dinamica in base alla modalità */}
+                  <div className={`inline-flex p-4 rounded-2xl text-white mb-4 shadow-lg ${authMode === 'login' ? 'bg-blue-500 shadow-blue-500/30' : 'bg-purple-600 shadow-purple-500/30'}`}>
+                    {authMode === 'login' ? <LogIn size={28} /> : <UserPlus size={28} />}
+                  </div>
+
                   <h2 className="text-2xl font-black italic text-slate-900 dark:text-white uppercase tracking-tight">
-                    {authMode === 'login' ? 'Bentornato' : 'Crea Account'}
+                    {authMode === 'login' ? 'Bentornato' : 'Nuovo Utente'}
                   </h2>
                   <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-1">
-                    {authMode === 'login' ? 'Inserisci le credenziali' : 'Inizia a tracciare il tempo'}
+                    {authMode === 'login' ? 'Inserisci le tue credenziali' : 'Crea il tuo spazio personale'}
                   </p>
                 </div>
 
                 <form onSubmit={handleAuth} className="space-y-4">
-                  <input type="text" placeholder="nome.cognome" required className="w-full p-4.5 bg-slate-100 dark:bg-slate-800 dark:text-white rounded-2xl font-bold outline-none focus:ring-2 focus:ring-blue-600 transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500" value={authData.username} onChange={e => setAuthData({...authData, username: e.target.value})} />
-                  <input type="password" placeholder="Password" required className="w-full p-4.5 bg-slate-100 dark:bg-slate-800 dark:text-white rounded-2xl font-bold outline-none focus:ring-2 focus:ring-blue-600 transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500" value={authData.password} onChange={e => setAuthData({...authData, password: e.target.value})} />
-                  {authError && <div className="text-red-600 dark:text-red-400 text-[11px] font-black bg-red-50 dark:bg-red-900/20 p-3 rounded-xl">{authError}</div>}
-                  <button type="submit" disabled={isSubmitting} className="w-full bg-blue-600 hover:bg-blue-700 text-white p-5 rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-blue-500/20 active:scale-95 transition-all">{isSubmitting ? 'Verifica...' : authMode === 'login' ? 'Entra nel Vault' : 'Crea Credenziali'}</button>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">ID Utente</label>
+                    <input type="text" placeholder="nome.cognome" required className="w-full p-4.5 bg-slate-100 dark:bg-slate-800 dark:text-white rounded-2xl font-bold outline-none focus:ring-2 focus:ring-blue-600 transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500" value={authData.username} onChange={e => setAuthData({...authData, username: e.target.value})} />
+                  </div>
+                  
+                  <div className="space-y-1">
+                     <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Password</label>
+                     <input type="password" placeholder="••••••••" required className="w-full p-4.5 bg-slate-100 dark:bg-slate-800 dark:text-white rounded-2xl font-bold outline-none focus:ring-2 focus:ring-blue-600 transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500" value={authData.password} onChange={e => setAuthData({...authData, password: e.target.value})} />
+                  </div>
+
+                  {authError && <div className="text-red-600 dark:text-red-400 text-[11px] font-black bg-red-50 dark:bg-red-900/20 p-3 rounded-xl flex items-center gap-2"><AlertTriangle size={14}/> {authError}</div>}
+                  
+                  <button 
+                    type="submit" 
+                    disabled={isSubmitting} 
+                    className={`w-full text-white p-5 rounded-2xl font-black uppercase tracking-widest shadow-xl active:scale-95 transition-all ${
+                      authMode === 'login' 
+                        ? 'bg-blue-600 hover:bg-blue-700 shadow-blue-500/20' 
+                        : 'bg-purple-600 hover:bg-purple-700 shadow-purple-500/20'
+                    }`}
+                  >
+                    {isSubmitting ? 'Elaborazione...' : authMode === 'login' ? 'Entra nel Vault' : 'Registra Account'}
+                  </button>
                 </form>
                 
-                <button onClick={() => setAuthMode(authMode === 'login' ? 'register' : 'login')} className="w-full mt-6 text-slate-400 dark:text-slate-500 font-bold text-[10px] uppercase tracking-widest hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
-                  {authMode === 'login' ? "Nuovo utente? Registrati ora" : "Hai già un ID? Accedi"}
-                </button>
+                <div className="mt-6 text-center">
+                  <button 
+                    onClick={() => setAuthMode(authMode === 'login' ? 'register' : 'login')} 
+                    className="text-slate-400 dark:text-slate-500 font-bold text-[10px] uppercase tracking-widest hover:text-slate-800 dark:hover:text-white transition-colors"
+                  >
+                    {authMode === 'login' ? "Non hai un account? Crealo ora" : "Hai già un account? Accedi"}
+                  </button>
+                </div>
              </div>
           </div>
         )}
@@ -1022,7 +1068,7 @@ export default function App() {
         )}
 
       </main>
-      <footer className="max-w-6xl mx-auto p-12 text-center text-[10px] font-black text-slate-300 dark:text-slate-600 uppercase tracking-[0.5em]">TimeVault v0.6.1</footer>
+      <footer className="max-w-6xl mx-auto p-12 text-center text-[10px] font-black text-slate-300 dark:text-slate-600 uppercase tracking-[0.5em]">TimeVault v0.6.2</footer>
     </div>
 
     {/* --- SEZIONE STAMPABILE NASCOSTA (VISIBILE SOLO IN STAMPA) --- */}
