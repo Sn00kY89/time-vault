@@ -54,6 +54,13 @@ const formatDateAsLocal = (date) => {
   return `${year}-${month}-${day}`;
 };
 
+// Funzione helper per formattare la data nel formato italiano DD/MM/YYYY per la stampa
+const formatDateIT = (dateString) => {
+  if (!dateString) return '';
+  const [year, month, day] = dateString.split('-');
+  return `${day}/${month}/${year}`;
+};
+
 export default function App() {
   const [user, setUser] = useState(null);
   const [logs, setLogs] = useState([]);
@@ -743,12 +750,12 @@ export default function App() {
         )}
 
       </main>
-      <footer className="max-w-6xl mx-auto p-12 text-center text-[10px] font-black text-slate-300 dark:text-slate-600 uppercase tracking-[0.5em]">TimeVault v0.5.6</footer>
+      <footer className="max-w-6xl mx-auto p-12 text-center text-[10px] font-black text-slate-300 dark:text-slate-600 uppercase tracking-[0.5em]">TimeVault v0.5.7</footer>
     </div>
 
     {/* --- SEZIONE STAMPABILE NASCOSTA (VISIBILE SOLO IN STAMPA) --- */}
-    <div className="hidden print:block fixed inset-0 bg-white z-[9999] p-8 font-sans text-black">
-        <div className="flex justify-between items-end border-b-2 border-slate-900 pb-4 mb-8">
+    <div className="hidden print:block fixed inset-0 bg-white z-[9999] p-6 font-sans text-black overflow-hidden">
+        <div className="flex justify-between items-end border-b-2 border-slate-900 pb-2 mb-4">
            <div>
               <h1 className="text-3xl font-black italic tracking-tighter mb-1">TIMEVAULT REPORT</h1>
               <p className="text-sm font-medium text-slate-500 uppercase tracking-widest">Resoconto Ore Lavorative</p>
@@ -759,7 +766,7 @@ export default function App() {
            </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-8 mb-8">
+        <div className="grid grid-cols-2 gap-4 mb-4">
            <div className="p-4 border border-slate-200 rounded-xl bg-slate-50">
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Giorni Lavorati</p>
               <p className="text-3xl font-black">{monthlyStats.daysWorked}</p>
@@ -770,40 +777,42 @@ export default function App() {
            </div>
         </div>
 
-        <table className="w-full text-left text-sm">
+        <table className="w-full text-left text-xs">
            <thead>
               <tr className="border-b border-slate-900">
-                 <th className="py-2 font-black uppercase text-xs">Data</th>
-                 <th className="py-2 font-black uppercase text-xs">Tipo</th>
-                 <th className="py-2 font-black uppercase text-xs">Ore Std</th>
-                 <th className="py-2 font-black uppercase text-xs">Extra</th>
-                 <th className="py-2 font-black uppercase text-xs">Note</th>
+                 <th className="py-1 font-black uppercase">Data</th>
+                 <th className="py-1 font-black uppercase">Tipo</th>
+                 <th className="py-1 font-black uppercase text-right">Extra</th>
               </tr>
            </thead>
            <tbody>
               {currentMonthLogs.map(log => (
                  <tr key={log.id} className="border-b border-slate-100">
-                    <td className="py-3 font-medium">{log.date}</td>
-                    <td className="py-3">
-                       {log.type === 'work' && <span className="font-bold">Lavoro</span>}
-                       {log.type === 'ferie' && <span className="font-bold text-emerald-600">FERIE</span>}
-                       {log.type === 'malattia' && <span className="font-bold text-pink-600">MALATTIA</span>}
+                    <td className="py-1 font-medium">{formatDateIT(log.date)}</td>
+                    <td className="py-1 uppercase font-bold tracking-wider text-[10px]">
+                       {log.type === 'work' && "Lavoro"}
+                       {log.type === 'ferie' && <span className="text-emerald-700">FERIE</span>}
+                       {log.type === 'malattia' && <span className="text-pink-700">MALATTIA</span>}
                     </td>
-                    <td className="py-3">{log.standardHours > 0 ? `${log.standardHours}h` : '-'}</td>
-                    <td className="py-3 font-bold text-orange-600">{log.overtimeHours > 0 ? `+${log.overtimeHours}h` : '-'}</td>
-                    <td className="py-3 text-slate-500 italic text-xs truncate max-w-[150px]">{log.notes}</td>
+                    <td className="py-1 font-bold text-right">
+                      {log.overtimeHours > 0 ? (
+                        <span className="text-orange-700">+{log.overtimeHours}h</span>
+                      ) : (
+                        <span className="text-slate-300">-</span>
+                      )}
+                    </td>
                  </tr>
               ))}
               {currentMonthLogs.length === 0 && (
                 <tr>
-                   <td colSpan="5" className="py-8 text-center text-slate-400 italic">Nessun dato registrato per questo mese.</td>
+                   <td colSpan="3" className="py-8 text-center text-slate-400 italic">Nessun dato registrato per questo mese.</td>
                 </tr>
               )}
            </tbody>
         </table>
         
-        <div className="fixed bottom-8 left-8 right-8 text-center border-t border-slate-100 pt-4">
-           <p className="text-[10px] text-slate-400 uppercase tracking-widest">Generato da TimeVault App • {new Date().toLocaleDateString()}</p>
+        <div className="fixed bottom-4 left-6 right-6 text-center border-t border-slate-100 pt-2">
+           <p className="text-[8px] text-slate-400 uppercase tracking-widest">Generato da TimeVault App • {new Date().toLocaleDateString()}</p>
         </div>
     </div>
     </>
