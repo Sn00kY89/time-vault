@@ -8,7 +8,10 @@ import {
   onAuthStateChanged,
   updateProfile,
   setPersistence,
-  browserLocalPersistence
+  browserLocalPersistence,
+  EmailAuthProvider,
+  reauthenticateWithCredential,
+  deleteUser
 } from 'firebase/auth';
 import { 
   getFirestore, 
@@ -24,7 +27,7 @@ import {
 import { 
   Clock, Plus, Trash2, Calendar as CalendarIcon, LogOut, TrendingUp, 
   Briefcase, Sun, Moon, ChevronLeft, ChevronRight, ArrowLeft, CheckCircle2,
-  Menu, Home, FileText, Settings, X, Zap, Palmtree, Thermometer, AlertTriangle, Download, Eye
+  Menu, Home, FileText, Settings, X, Zap, Palmtree, Thermometer, AlertTriangle, Download, Eye, ShieldAlert, Lock
 } from 'lucide-react';
 
 // --- CONFIGURAZIONE FIREBASE ---
@@ -81,6 +84,13 @@ export default function App() {
   const [logToDelete, setLogToDelete] = useState(null); // ID del log da cancellare
   const [showDownloadConfirm, setShowDownloadConfirm] = useState(false); // Nuovo stato per conferma PDF
   const [showPreviewModal, setShowPreviewModal] = useState(false); // Nuovo stato per anteprima dati
+
+  // STATI PER ELIMINAZIONE ACCOUNT
+  const [showDeleteAuthModal, setShowDeleteAuthModal] = useState(false); // Step 1: Password
+  const [showDeleteFinalConfirm, setShowDeleteFinalConfirm] = useState(false); // Step 2: Conferma Finale
+  const [deletePassword, setDeletePassword] = useState('');
+  const [deleteError, setDeleteError] = useState('');
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Gestione Tema
   const [theme, setTheme] = useState(() => {
@@ -263,6 +273,50 @@ export default function App() {
     } catch (e) { console.error(e); }
   };
 
+  // --- LOGICA ELIMINAZIONE ACCOUNT ---
+  const handleInitiateDeleteAccount = () => {
+    setShowDeleteAuthModal(true);
+    setDeletePassword('');
+    setDeleteError('');
+  };
+
+  const verifyPasswordAndDelete = async (e) => {
+    e.preventDefault();
+    setDeleteError('');
+    if (!deletePassword) {
+      setDeleteError("Inserisci la password per confermare.");
+      return;
+    }
+
+    setIsDeleting(true);
+    try {
+      // Re-autenticazione necessaria per operazioni sensibili come deleteUser
+      const credential = EmailAuthProvider.credential(user.email, deletePassword);
+      await reauthenticateWithCredential(user, credential);
+      
+      // Se successo, chiudi modale password e apri conferma finale
+      setIsDeleting(false);
+      setShowDeleteAuthModal(false);
+      setShowDeleteFinalConfirm(true);
+    } catch (error) {
+      console.error(error);
+      setIsDeleting(false);
+      setDeleteError("Password non corretta. Riprova.");
+    }
+  };
+
+  const confirmFinalAccountDeletion = async () => {
+    setIsDeleting(true);
+    try {
+      await deleteUser(user);
+      // Auth state change gestirà il logout e redirect
+    } catch (error) {
+      console.error("Errore eliminazione account:", error);
+      setIsDeleting(false);
+      alert("Si è verificato un errore durante l'eliminazione. Riprova più tardi.");
+    }
+  };
+
   // --- LOGICA PDF ---
   const handleDownloadRequest = () => {
     setShowDownloadConfirm(true);
@@ -270,7 +324,6 @@ export default function App() {
 
   const confirmDownload = () => {
     setShowDownloadConfirm(false);
-    // Piccolo ritardo per permettere al modale di chiudersi visivamente
     setTimeout(() => {
       window.print();
     }, 300);
@@ -310,7 +363,7 @@ export default function App() {
     return logs.filter(log => {
       const [year, month, day] = log.date.split('-').map(Number);
       return (month - 1) === targetMonth && year === targetYear;
-    }).sort((a, b) => new Date(a.date) - new Date(b.date)); // Ordine cronologico per il PDF
+    }).sort((a, b) => new Date(a.date) - new Date(b.date)); 
   }, [logs, currentMonth]);
 
   const monthlyStats = useMemo(() => {
@@ -404,7 +457,7 @@ export default function App() {
     <>
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-300 print:hidden">
       
-      {/* --- POPUP CONFERMA CANCELLAZIONE --- */}
+      {/* --- POPUP CONFERMA CANCELLAZIONE LOG --- */}
       {logToDelete && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
           <div className="bg-white dark:bg-slate-900 p-8 rounded-[2rem] shadow-2xl max-w-sm w-full border border-slate-100 dark:border-slate-800 transform scale-100 animate-in zoom-in-95 duration-200">
@@ -429,6 +482,88 @@ export default function App() {
                 className="p-4 rounded-xl font-black text-xs uppercase tracking-widest bg-red-500 text-white hover:bg-red-600 shadow-lg shadow-red-500/30 transition-colors"
               >
                 Sì, Cancella
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- POPUP ELIMINAZIONE ACCOUNT STEP 1 (PASSWORD) --- */}
+      {showDeleteAuthModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[60] flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-slate-900 p-8 rounded-[2rem] shadow-2xl max-w-sm w-full border border-slate-100 dark:border-slate-800 transform scale-100 animate-in zoom-in-95 duration-200">
+            <div className="flex flex-col items-center text-center mb-6">
+               <div className="w-12 h-12 bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white rounded-full flex items-center justify-center mb-4">
+                <Lock size={24} />
+              </div>
+              <h3 className="text-lg font-black text-slate-800 dark:text-white mb-2">Verifica Identità</h3>
+              <p className="text-sm text-slate-500 dark:text-slate-400 font-medium leading-relaxed mb-4">
+                Per sicurezza, inserisci la tua password attuale per continuare.
+              </p>
+              
+              <form onSubmit={verifyPasswordAndDelete} className="w-full space-y-3">
+                 <input 
+                   type="password" 
+                   autoFocus
+                   placeholder="Password attuale"
+                   className="w-full p-3 bg-slate-100 dark:bg-slate-800 dark:text-white rounded-xl font-bold outline-none focus:ring-2 focus:ring-red-500 transition-all placeholder:text-slate-400"
+                   value={deletePassword}
+                   onChange={e => setDeletePassword(e.target.value)}
+                 />
+                 {deleteError && (
+                   <p className="text-[10px] font-black text-red-500 uppercase tracking-wide">{deleteError}</p>
+                 )}
+                 
+                 <div className="grid grid-cols-2 gap-3 mt-4">
+                    <button 
+                      type="button"
+                      onClick={() => setShowDeleteAuthModal(false)}
+                      className="p-3 rounded-xl font-black text-xs uppercase tracking-widest bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+                    >
+                      Annulla
+                    </button>
+                    <button 
+                      type="submit"
+                      disabled={isDeleting}
+                      className="p-3 rounded-xl font-black text-xs uppercase tracking-widest bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:opacity-90 transition-opacity"
+                    >
+                      {isDeleting ? '...' : 'Verifica'}
+                    </button>
+                 </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- POPUP ELIMINAZIONE ACCOUNT STEP 2 (CONFERMA FINALE) --- */}
+      {showDeleteFinalConfirm && (
+        <div className="fixed inset-0 bg-red-900/40 backdrop-blur-md z-[70] flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-slate-900 p-8 rounded-[2rem] shadow-2xl max-w-sm w-full border-2 border-red-500 transform scale-100 animate-in zoom-in-95 duration-200">
+            <div className="flex flex-col items-center text-center mb-6">
+               <div className="w-14 h-14 bg-red-100 dark:bg-red-900/30 text-red-600 rounded-full flex items-center justify-center mb-4 animate-bounce">
+                <ShieldAlert size={32} />
+              </div>
+              <h3 className="text-xl font-black text-red-600 mb-2 uppercase tracking-tight">Zona Pericolo</h3>
+              <p className="text-sm text-slate-600 dark:text-slate-300 font-bold leading-relaxed">
+                Stai per eliminare definitivamente il tuo account e tutti i dati associati.
+                <br/><br/>
+                <span className="text-red-600 uppercase text-xs tracking-widest">Questa azione è irreversibile.</span>
+              </p>
+            </div>
+            <div className="grid grid-cols-1 gap-3">
+              <button 
+                onClick={confirmFinalAccountDeletion}
+                disabled={isDeleting}
+                className="w-full p-4 rounded-xl font-black text-sm uppercase tracking-widest bg-red-600 text-white hover:bg-red-700 shadow-xl shadow-red-500/30 transition-all active:scale-95"
+              >
+                {isDeleting ? 'Eliminazione...' : 'Sì, Elimina Account'}
+              </button>
+              <button 
+                onClick={() => setShowDeleteFinalConfirm(false)}
+                className="w-full p-4 rounded-xl font-black text-sm uppercase tracking-widest bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+              >
+                No, Ho cambiato idea
               </button>
             </div>
           </div>
@@ -466,7 +601,7 @@ export default function App() {
         </div>
       )}
 
-      {/* --- POPUP ANTEPRIMA DATI (NUOVO) --- */}
+      {/* --- POPUP ANTEPRIMA DATI --- */}
       {showPreviewModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
           <div className="bg-white dark:bg-slate-900 w-full max-w-2xl max-h-[80vh] rounded-[2.5rem] shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col overflow-hidden animate-in zoom-in-95 duration-300">
@@ -809,13 +944,29 @@ export default function App() {
                   </button>
                </div>
 
-               <div className="flex items-center justify-between">
+               <div className="flex items-center justify-between pb-8 border-b border-slate-100 dark:border-slate-800">
                   <div>
                     <h3 className="font-bold text-slate-900 dark:text-white mb-1">Sessione Utente</h3>
                     <p className="text-xs text-slate-500 dark:text-slate-400">Esci dal tuo account TimeVault</p>
                   </div>
-                  <button onClick={handleLogout} className="flex items-center gap-2 px-4 py-2 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-xl font-bold text-sm hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors">
+                  <button onClick={handleLogout} className="flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-xl font-bold text-sm hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
                     <LogOut size={16}/> Disconnetti
+                  </button>
+               </div>
+
+               {/* --- ZONA PERICOLO: ELIMINA ACCOUNT --- */}
+               <div className="flex items-center justify-between pt-2">
+                  <div>
+                    <h3 className="font-bold text-red-600 dark:text-red-500 mb-1 flex items-center gap-2">
+                        <AlertTriangle size={16}/> Zona Pericolo
+                    </h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Eliminazione definitiva account</p>
+                  </div>
+                  <button 
+                    onClick={handleInitiateDeleteAccount}
+                    className="flex items-center gap-2 px-4 py-2 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-xl font-bold text-sm hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors"
+                  >
+                    Elimina Account
                   </button>
                </div>
             </div>
@@ -823,7 +974,7 @@ export default function App() {
         )}
 
       </main>
-      <footer className="max-w-6xl mx-auto p-12 text-center text-[10px] font-black text-slate-300 dark:text-slate-600 uppercase tracking-[0.5em]">TimeVault v0.5.8</footer>
+      <footer className="max-w-6xl mx-auto p-12 text-center text-[10px] font-black text-slate-300 dark:text-slate-600 uppercase tracking-[0.5em]">TimeVault v0.5.9</footer>
     </div>
 
     {/* --- SEZIONE STAMPABILE NASCOSTA (VISIBILE SOLO IN STAMPA) --- */}
