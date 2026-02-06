@@ -24,7 +24,7 @@ import {
 import { 
   Clock, Plus, Trash2, Calendar as CalendarIcon, LogOut, TrendingUp, 
   Briefcase, Sun, Moon, ChevronLeft, ChevronRight, ArrowLeft, CheckCircle2,
-  Menu, Home, FileText, Settings, X, Zap, Palmtree, Thermometer
+  Menu, Home, FileText, Settings, X, Zap, Palmtree, Thermometer, AlertTriangle
 } from 'lucide-react';
 
 // --- CONFIGURAZIONE FIREBASE ---
@@ -68,6 +68,10 @@ export default function App() {
   const [currentMonth, setCurrentMonth] = useState(new Date()); 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef(null);
+
+  // STATI PER GESTIONE ERRORI E CONFERME
+  const [formError, setFormError] = useState('');
+  const [logToDelete, setLogToDelete] = useState(null); // ID del log da cancellare
 
   // Gestione Tema
   const [theme, setTheme] = useState(() => {
@@ -124,7 +128,6 @@ export default function App() {
       const link = document.querySelector("link[rel*='icon']") || document.createElement('link');
       link.type = 'image/svg+xml';
       link.rel = 'shortcut icon';
-      // SVG encoded: Cerchio blu (#2563eb) con lancette bianche
       link.href = `data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><circle cx=%2250%22 cy=%2250%22 r=%2250%22 fill=%22%232563eb%22/><path d=%22M50 25V50L65 65%22 stroke=%22white%22 stroke-width=%228%22 stroke-linecap=%22round%22 fill=%22none%22/></svg>`;
       document.getElementsByTagName('head')[0].appendChild(link);
     };
@@ -210,9 +213,19 @@ export default function App() {
   const handleSubmitLog = async (e) => {
     e.preventDefault();
     if (!user) return;
+    setFormError('');
+
+    const dateString = formatDateAsLocal(selectedDate);
+    
+    // CONTROLLO DUPLICATI
+    const alreadyExists = logs.some(l => l.date === dateString);
+    if (alreadyExists) {
+      setFormError("Attenzione: Esiste già una voce per questa data! Cancella quella esistente se vuoi modificarla.");
+      return;
+    }
+
     try {
       const logsCollection = collection(db, 'artifacts', APP_ID, 'users', user.uid, 'work_logs');
-      const dateString = formatDateAsLocal(selectedDate);
       
       await addDoc(logsCollection, {
         ...formData,
@@ -229,36 +242,45 @@ export default function App() {
     } catch (e) { console.error(e); }
   };
 
-  const deleteLog = async (id) => {
-    try { await deleteDoc(doc(db, 'artifacts', APP_ID, 'users', user.uid, 'work_logs', id)); } 
-    catch (e) { console.error(e); }
+  // Funzione che apre il popup di conferma
+  const requestDeleteLog = (id) => {
+    setLogToDelete(id);
+  };
+
+  // Funzione che esegue effettivamente la cancellazione
+  const confirmDelete = async () => {
+    if (!logToDelete) return;
+    try {
+      await deleteDoc(doc(db, 'artifacts', APP_ID, 'users', user.uid, 'work_logs', logToDelete));
+      setLogToDelete(null); // Chiudi popup
+    } catch (e) { console.error(e); }
   };
 
   // --- LOGICA PULSANTI ---
   const handleSetStandard = () => {
+    setFormError(''); // Reset errori quando l'utente interagisce
     setFormData(prev => ({ 
       ...prev, 
       standardHours: STANDARD_HOURS_VALUE, 
       type: 'work',
-      // Se si clicca standard, potremmo voler resettare ferie/malattia, ma manteniamo note/extra se presenti
     }));
   };
 
   const handleSetFerie = () => {
+    setFormError('');
     setFormData({ standardHours: 0, overtimeHours: '', notes: 'Ferie', type: 'ferie' });
     setShowOvertimeInput(false);
   };
 
   const handleSetMalattia = () => {
+    setFormError('');
     setFormData({ standardHours: 0, overtimeHours: '', notes: 'Malattia', type: 'malattia' });
     setShowOvertimeInput(false);
   };
 
   const toggleOvertime = () => {
+    setFormError('');
     setShowOvertimeInput(!showOvertimeInput);
-    if (showOvertimeInput) {
-        // Se nascondo, azzero anche il valore? Meglio di no per UX, ma nel submit sarà gestito
-    }
   };
 
   const monthlyStats = useMemo(() => {
@@ -270,7 +292,6 @@ export default function App() {
     logs.forEach(log => {
       const [year, month, day] = log.date.split('-').map(Number);
       if ((month - 1) === targetMonth && year === targetYear) {
-        // Conta come giornata lavorata solo se NON è ferie o malattia e ha ore > 0
         if (log.type !== 'ferie' && log.type !== 'malattia') {
            uniqueDays.add(log.date);
         }
@@ -300,9 +321,10 @@ export default function App() {
   const selectDay = (day) => {
     const newDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
     setSelectedDate(newDate);
-    // Reset form data quando cambio giorno
+    // Reset form data e errori quando cambio giorno
     setFormData({ standardHours: 0, overtimeHours: '', notes: '', type: 'work' });
     setShowOvertimeInput(false);
+    setFormError('');
     setView('day');
   };
 
@@ -356,6 +378,37 @@ export default function App() {
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-300">
       
+      {/* --- POPUP CONFERMA CANCELLAZIONE --- */}
+      {logToDelete && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-slate-900 p-8 rounded-[2rem] shadow-2xl max-w-sm w-full border border-slate-100 dark:border-slate-800 transform scale-100 animate-in zoom-in-95 duration-200">
+            <div className="flex flex-col items-center text-center mb-6">
+              <div className="w-12 h-12 bg-red-50 dark:bg-red-900/20 text-red-500 rounded-full flex items-center justify-center mb-4">
+                <AlertTriangle size={24} />
+              </div>
+              <h3 className="text-lg font-black text-slate-800 dark:text-white mb-2">Sei sicuro?</h3>
+              <p className="text-sm text-slate-500 dark:text-slate-400 font-medium leading-relaxed">
+                Stai per cancellare questa voce. L'operazione non può essere annullata.
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <button 
+                onClick={() => setLogToDelete(null)}
+                className="p-4 rounded-xl font-black text-xs uppercase tracking-widest bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+              >
+                No, Annulla
+              </button>
+              <button 
+                onClick={confirmDelete}
+                className="p-4 rounded-xl font-black text-xs uppercase tracking-widest bg-red-500 text-white hover:bg-red-600 shadow-lg shadow-red-500/30 transition-colors"
+              >
+                Sì, Cancella
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <header className="bg-white dark:bg-slate-900/80 backdrop-blur-md border-b dark:border-slate-800 sticky top-0 z-30 px-4 md:px-8 h-20 flex justify-between items-center shadow-sm">
         <div className="relative" ref={menuRef}>
           <button 
@@ -477,6 +530,14 @@ export default function App() {
             <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] shadow-sm border border-slate-200 dark:border-slate-800">
               <h3 className="text-xs font-black mb-6 uppercase text-slate-400 tracking-widest">Aggiungi Ore</h3>
               
+              {/* Messaggio Errore Duplicati */}
+              {formError && (
+                 <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-2xl text-sm font-bold flex items-center gap-2">
+                    <AlertTriangle size={18} className="shrink-0" />
+                    {formError}
+                 </div>
+              )}
+              
               {/* GRIGLIA PULSANTI */}
               <div className="grid grid-cols-2 gap-4 mb-6">
                  {/* TASTI LUN-VEN */}
@@ -544,7 +605,10 @@ export default function App() {
                   <textarea placeholder="Dettagli..." className="w-full p-4.5 bg-slate-50 dark:bg-slate-800 dark:text-white border border-slate-200 dark:border-slate-700 rounded-[1.25rem] font-medium outline-none placeholder:text-slate-300 dark:placeholder:text-slate-600 focus:border-blue-500" rows="2" value={formData.notes} onChange={e => setFormData({...formData, notes: e.target.value})}></textarea>
                 </div>
                 
-                <button className="w-full bg-slate-900 dark:bg-blue-600 hover:bg-black dark:hover:bg-blue-700 text-white p-4 rounded-[1.25rem] font-black uppercase tracking-widest shadow-xl shadow-slate-200 dark:shadow-none active:scale-95 transition-all flex items-center justify-center gap-2">
+                <button 
+                   disabled={!!formError}
+                   className={`w-full p-4 rounded-[1.25rem] font-black uppercase tracking-widest shadow-xl transition-all flex items-center justify-center gap-2 ${formError ? 'bg-slate-200 dark:bg-slate-800 text-slate-400 cursor-not-allowed shadow-none' : 'bg-slate-900 dark:bg-blue-600 hover:bg-black dark:hover:bg-blue-700 text-white shadow-slate-200 dark:shadow-none active:scale-95'}`}
+                >
                   <CheckCircle2 size={18} /> Salva Voce
                 </button>
               </form>
@@ -564,7 +628,8 @@ export default function App() {
                     </div>
                     <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">{log.notes || "Nessuna nota"}</p>
                   </div>
-                  <button onClick={() => deleteLog(log.id)} className="p-3 text-slate-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-all"><Trash2 size={18} /></button>
+                  {/* MODIFICA: Invece di cancellare subito, chiedo conferma */}
+                  <button onClick={() => requestDeleteLog(log.id)} className="p-3 text-slate-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-all"><Trash2 size={18} /></button>
                 </div>
               ))}
             </div>
@@ -629,7 +694,7 @@ export default function App() {
         )}
 
       </main>
-      <footer className="max-w-6xl mx-auto p-12 text-center text-[10px] font-black text-slate-300 dark:text-slate-600 uppercase tracking-[0.5em]">TimeVault v0.5.4</footer>
+      <footer className="max-w-6xl mx-auto p-12 text-center text-[10px] font-black text-slate-300 dark:text-slate-600 uppercase tracking-[0.5em]">TimeVault v0.5.5</footer>
     </div>
   );
 }
