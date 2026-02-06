@@ -1149,18 +1149,18 @@ export default function App() {
                   <button 
                     type="button" 
                     onClick={() => setShowNotesInput(!showNotesInput)}
-                    className="w-full flex items-center justify-between text-left group"
+                    className="w-full flex items-center justify-center group p-2"
                   >
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest group-hover:text-blue-500 transition-colors">
-                       Note (Opzionale)
-                    </span>
                     <div className={`p-2 rounded-full bg-slate-50 dark:bg-slate-800 text-slate-400 group-hover:text-blue-500 transition-colors ${showNotesInput ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-500' : ''}`}>
                        {showNotesInput ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                     </div>
                   </button>
 
                   {showNotesInput && (
-                      <div className="mt-4 animate-in slide-in-from-top-2 fade-in">
+                      <div className="mt-2 animate-in slide-in-from-top-2 fade-in">
+                        <label className="block text-center text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">
+                           Note (Opzionale)
+                        </label>
                         <textarea 
                           placeholder="Dettagli attività..." 
                           className="w-full p-4.5 bg-slate-50 dark:bg-slate-800 dark:text-white border border-slate-200 dark:border-slate-700 rounded-[1.25rem] font-medium outline-none placeholder:text-slate-300 dark:placeholder:text-slate-600 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900/20 transition-all" 
@@ -1292,7 +1292,7 @@ export default function App() {
         )}
 
       </main>
-      <footer className="max-w-6xl mx-auto p-12 text-center text-[10px] font-black text-slate-300 dark:text-slate-600 uppercase tracking-[0.5em]">TimeVault v0.6.6</footer>
+      <footer className="max-w-6xl mx-auto p-12 text-center text-[10px] font-black text-slate-300 dark:text-slate-600 uppercase tracking-[0.5em]">TimeVault v0.6.7</footer>
     </div>
 
     {/* --- SEZIONE STAMPABILE NASCOSTA (VISIBILE SOLO IN STAMPA) --- */}
