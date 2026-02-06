@@ -24,7 +24,7 @@ import {
 import { 
   Clock, Plus, Trash2, Calendar as CalendarIcon, LogOut, TrendingUp, 
   Briefcase, Sun, Moon, ChevronLeft, ChevronRight, ArrowLeft, CheckCircle2,
-  Menu, Home, FileText, Settings, X, Zap, Palmtree, Thermometer, AlertTriangle
+  Menu, Home, FileText, Settings, X, Zap, Palmtree, Thermometer, AlertTriangle, Download
 } from 'lucide-react';
 
 // --- CONFIGURAZIONE FIREBASE ---
@@ -72,6 +72,7 @@ export default function App() {
   // STATI PER GESTIONE ERRORI E CONFERME
   const [formError, setFormError] = useState('');
   const [logToDelete, setLogToDelete] = useState(null); // ID del log da cancellare
+  const [showDownloadConfirm, setShowDownloadConfirm] = useState(false); // Nuovo stato per conferma PDF
 
   // Gestione Tema
   const [theme, setTheme] = useState(() => {
@@ -122,7 +123,7 @@ export default function App() {
     loadUserTheme();
   }, [user]);
 
-  // --- NUOVO: Generatore Favicon Dinamica ---
+  // --- Generatore Favicon Dinamica ---
   useEffect(() => {
     const setDynamicFavicon = () => {
       const link = document.querySelector("link[rel*='icon']") || document.createElement('link');
@@ -242,23 +243,34 @@ export default function App() {
     } catch (e) { console.error(e); }
   };
 
-  // Funzione che apre il popup di conferma
   const requestDeleteLog = (id) => {
     setLogToDelete(id);
   };
 
-  // Funzione che esegue effettivamente la cancellazione
   const confirmDelete = async () => {
     if (!logToDelete) return;
     try {
       await deleteDoc(doc(db, 'artifacts', APP_ID, 'users', user.uid, 'work_logs', logToDelete));
-      setLogToDelete(null); // Chiudi popup
+      setLogToDelete(null); 
     } catch (e) { console.error(e); }
+  };
+
+  // --- LOGICA PDF ---
+  const handleDownloadRequest = () => {
+    setShowDownloadConfirm(true);
+  };
+
+  const confirmDownload = () => {
+    setShowDownloadConfirm(false);
+    // Piccolo ritardo per permettere al modale di chiudersi visivamente
+    setTimeout(() => {
+      window.print();
+    }, 300);
   };
 
   // --- LOGICA PULSANTI ---
   const handleSetStandard = () => {
-    setFormError(''); // Reset errori quando l'utente interagisce
+    setFormError(''); 
     setFormData(prev => ({ 
       ...prev, 
       standardHours: STANDARD_HOURS_VALUE, 
@@ -283,27 +295,32 @@ export default function App() {
     setShowOvertimeInput(!showOvertimeInput);
   };
 
-  const monthlyStats = useMemo(() => {
+  // Dati filtrati per il mese corrente (per il report PDF)
+  const currentMonthLogs = useMemo(() => {
     const targetMonth = currentMonth.getMonth(); 
     const targetYear = currentMonth.getFullYear();
+    return logs.filter(log => {
+      const [year, month, day] = log.date.split('-').map(Number);
+      return (month - 1) === targetMonth && year === targetYear;
+    }).sort((a, b) => new Date(a.date) - new Date(b.date)); // Ordine cronologico per il PDF
+  }, [logs, currentMonth]);
+
+  const monthlyStats = useMemo(() => {
     const uniqueDays = new Set();
     let totalOvertime = 0;
 
-    logs.forEach(log => {
-      const [year, month, day] = log.date.split('-').map(Number);
-      if ((month - 1) === targetMonth && year === targetYear) {
+    currentMonthLogs.forEach(log => {
         if (log.type !== 'ferie' && log.type !== 'malattia') {
            uniqueDays.add(log.date);
         }
         totalOvertime += Number(log.overtimeHours || 0);
-      }
     });
 
     return { 
       daysWorked: uniqueDays.size, 
       ext: totalOvertime 
     };
-  }, [logs, currentMonth]);
+  }, [currentMonthLogs]);
 
   const getDaysInMonth = (date) => {
     const year = date.getFullYear();
@@ -321,7 +338,6 @@ export default function App() {
   const selectDay = (day) => {
     const newDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
     setSelectedDate(newDate);
-    // Reset form data e errori quando cambio giorno
     setFormData({ standardHours: 0, overtimeHours: '', notes: '', type: 'work' });
     setShowOvertimeInput(false);
     setFormError('');
@@ -376,7 +392,9 @@ export default function App() {
   const monthName = currentMonth.toLocaleString('it-IT', { month: 'long', year: 'numeric' });
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-300">
+    // Aggiungo print:hidden per nascondere l'interfaccia app durante la stampa
+    <>
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-300 print:hidden">
       
       {/* --- POPUP CONFERMA CANCELLAZIONE --- */}
       {logToDelete && (
@@ -403,6 +421,37 @@ export default function App() {
                 className="p-4 rounded-xl font-black text-xs uppercase tracking-widest bg-red-500 text-white hover:bg-red-600 shadow-lg shadow-red-500/30 transition-colors"
               >
                 Sì, Cancella
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- POPUP CONFERMA DOWNLOAD PDF --- */}
+      {showDownloadConfirm && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-slate-900 p-8 rounded-[2rem] shadow-2xl max-w-sm w-full border border-slate-100 dark:border-slate-800 transform scale-100 animate-in zoom-in-95 duration-200">
+            <div className="flex flex-col items-center text-center mb-6">
+              <div className="w-12 h-12 bg-blue-50 dark:bg-blue-900/20 text-blue-500 rounded-full flex items-center justify-center mb-4">
+                <Download size={24} />
+              </div>
+              <h3 className="text-lg font-black text-slate-800 dark:text-white mb-2">Scaricare Report?</h3>
+              <p className="text-sm text-slate-500 dark:text-slate-400 font-medium leading-relaxed">
+                Verrà aperta la finestra di stampa. Seleziona <strong>"Salva come PDF"</strong> per scaricare il file.
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <button 
+                onClick={() => setShowDownloadConfirm(false)}
+                className="p-4 rounded-xl font-black text-xs uppercase tracking-widest bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+              >
+                Annulla
+              </button>
+              <button 
+                onClick={confirmDownload}
+                className="p-4 rounded-xl font-black text-xs uppercase tracking-widest bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-500/30 transition-colors"
+              >
+                Conferma
               </button>
             </div>
           </div>
@@ -530,7 +579,6 @@ export default function App() {
             <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] shadow-sm border border-slate-200 dark:border-slate-800">
               <h3 className="text-xs font-black mb-6 uppercase text-slate-400 tracking-widest">Aggiungi Ore</h3>
               
-              {/* Messaggio Errore Duplicati */}
               {formError && (
                  <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-2xl text-sm font-bold flex items-center gap-2">
                     <AlertTriangle size={18} className="shrink-0" />
@@ -538,9 +586,7 @@ export default function App() {
                  </div>
               )}
               
-              {/* GRIGLIA PULSANTI */}
               <div className="grid grid-cols-2 gap-4 mb-6">
-                 {/* TASTI LUN-VEN */}
                  {!isWeekend && (
                    <>
                      <button 
@@ -562,7 +608,6 @@ export default function App() {
                    </>
                  )}
                  
-                 {/* TASTI SEMPRE VISIBILI (O specifici weekend) */}
                  <button 
                    type="button"
                    onClick={handleSetMalattia}
@@ -584,7 +629,6 @@ export default function App() {
 
               <form onSubmit={handleSubmitLog} className="space-y-6">
                 
-                {/* INPUT STRAORDINARIO (Mostra solo se toggled) */}
                 {showOvertimeInput && (
                    <div className="animate-in slide-in-from-top-2 fade-in">
                      <label className="block text-[10px] font-black text-orange-500 uppercase tracking-widest mb-2 ml-1">Ore Extra</label>
@@ -619,7 +663,6 @@ export default function App() {
                 <div key={log.id} className="bg-white dark:bg-slate-900 p-6 rounded-[2rem] border border-slate-200 dark:border-slate-800 flex items-center justify-between group hover:border-blue-200 dark:hover:border-blue-800 transition-colors">
                   <div>
                     <div className="flex items-center gap-2 mb-1">
-                      {/* BADGE TIPO */}
                       {log.type === 'ferie' && <span className="text-xs font-black bg-emerald-100 text-emerald-600 px-2 py-1 rounded-lg uppercase">Ferie</span>}
                       {log.type === 'malattia' && <span className="text-xs font-black bg-pink-100 text-pink-600 px-2 py-1 rounded-lg uppercase">Malattia</span>}
                       {log.type === 'work' && log.standardHours > 0 && <span className="text-xl font-black text-slate-800 dark:text-white">{log.standardHours}h</span>}
@@ -628,7 +671,6 @@ export default function App() {
                     </div>
                     <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">{log.notes || "Nessuna nota"}</p>
                   </div>
-                  {/* MODIFICA: Invece di cancellare subito, chiedo conferma */}
                   <button onClick={() => requestDeleteLog(log.id)} className="p-3 text-slate-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-all"><Trash2 size={18} /></button>
                 </div>
               ))}
@@ -659,6 +701,13 @@ export default function App() {
                         <p className="text-sm font-bold text-slate-400 mt-2">Accumulati questo mese</p>
                     </div>
                  </div>
+
+                 <button 
+                   onClick={handleDownloadRequest}
+                   className="mt-8 w-full p-4 bg-slate-100 dark:bg-slate-800 hover:bg-blue-50 dark:hover:bg-blue-900/30 text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 rounded-2xl font-black uppercase text-xs tracking-widest transition-all flex items-center justify-center gap-2"
+                 >
+                   <Download size={18} /> Scarica PDF Report
+                 </button>
              </div>
           </div>
         )}
@@ -694,7 +743,69 @@ export default function App() {
         )}
 
       </main>
-      <footer className="max-w-6xl mx-auto p-12 text-center text-[10px] font-black text-slate-300 dark:text-slate-600 uppercase tracking-[0.5em]">TimeVault v0.5.5</footer>
+      <footer className="max-w-6xl mx-auto p-12 text-center text-[10px] font-black text-slate-300 dark:text-slate-600 uppercase tracking-[0.5em]">TimeVault v0.5.6</footer>
     </div>
+
+    {/* --- SEZIONE STAMPABILE NASCOSTA (VISIBILE SOLO IN STAMPA) --- */}
+    <div className="hidden print:block fixed inset-0 bg-white z-[9999] p-8 font-sans text-black">
+        <div className="flex justify-between items-end border-b-2 border-slate-900 pb-4 mb-8">
+           <div>
+              <h1 className="text-3xl font-black italic tracking-tighter mb-1">TIMEVAULT REPORT</h1>
+              <p className="text-sm font-medium text-slate-500 uppercase tracking-widest">Resoconto Ore Lavorative</p>
+           </div>
+           <div className="text-right">
+              <p className="text-lg font-bold uppercase">{monthName}</p>
+              <p className="text-xs text-slate-500">Dipendente: {user?.displayName}</p>
+           </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-8 mb-8">
+           <div className="p-4 border border-slate-200 rounded-xl bg-slate-50">
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Giorni Lavorati</p>
+              <p className="text-3xl font-black">{monthlyStats.daysWorked}</p>
+           </div>
+           <div className="p-4 border border-slate-200 rounded-xl bg-slate-50">
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Straordinari Totali</p>
+              <p className="text-3xl font-black text-orange-600">+{monthlyStats.ext}h</p>
+           </div>
+        </div>
+
+        <table className="w-full text-left text-sm">
+           <thead>
+              <tr className="border-b border-slate-900">
+                 <th className="py-2 font-black uppercase text-xs">Data</th>
+                 <th className="py-2 font-black uppercase text-xs">Tipo</th>
+                 <th className="py-2 font-black uppercase text-xs">Ore Std</th>
+                 <th className="py-2 font-black uppercase text-xs">Extra</th>
+                 <th className="py-2 font-black uppercase text-xs">Note</th>
+              </tr>
+           </thead>
+           <tbody>
+              {currentMonthLogs.map(log => (
+                 <tr key={log.id} className="border-b border-slate-100">
+                    <td className="py-3 font-medium">{log.date}</td>
+                    <td className="py-3">
+                       {log.type === 'work' && <span className="font-bold">Lavoro</span>}
+                       {log.type === 'ferie' && <span className="font-bold text-emerald-600">FERIE</span>}
+                       {log.type === 'malattia' && <span className="font-bold text-pink-600">MALATTIA</span>}
+                    </td>
+                    <td className="py-3">{log.standardHours > 0 ? `${log.standardHours}h` : '-'}</td>
+                    <td className="py-3 font-bold text-orange-600">{log.overtimeHours > 0 ? `+${log.overtimeHours}h` : '-'}</td>
+                    <td className="py-3 text-slate-500 italic text-xs truncate max-w-[150px]">{log.notes}</td>
+                 </tr>
+              ))}
+              {currentMonthLogs.length === 0 && (
+                <tr>
+                   <td colSpan="5" className="py-8 text-center text-slate-400 italic">Nessun dato registrato per questo mese.</td>
+                </tr>
+              )}
+           </tbody>
+        </table>
+        
+        <div className="fixed bottom-8 left-8 right-8 text-center border-t border-slate-100 pt-4">
+           <p className="text-[10px] text-slate-400 uppercase tracking-widest">Generato da TimeVault App • {new Date().toLocaleDateString()}</p>
+        </div>
+    </div>
+    </>
   );
 }
