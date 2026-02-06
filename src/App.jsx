@@ -24,7 +24,7 @@ import {
 import { 
   Clock, Plus, Trash2, Calendar as CalendarIcon, LogOut, TrendingUp, 
   Briefcase, Sun, Moon, ChevronLeft, ChevronRight, ArrowLeft, CheckCircle2,
-  Menu, Home, FileText, Settings, X, Zap, Palmtree, Thermometer, AlertTriangle, Download
+  Menu, Home, FileText, Settings, X, Zap, Palmtree, Thermometer, AlertTriangle, Download, Eye
 } from 'lucide-react';
 
 // --- CONFIGURAZIONE FIREBASE ---
@@ -80,6 +80,7 @@ export default function App() {
   const [formError, setFormError] = useState('');
   const [logToDelete, setLogToDelete] = useState(null); // ID del log da cancellare
   const [showDownloadConfirm, setShowDownloadConfirm] = useState(false); // Nuovo stato per conferma PDF
+  const [showPreviewModal, setShowPreviewModal] = useState(false); // Nuovo stato per anteprima dati
 
   // Gestione Tema
   const [theme, setTheme] = useState(() => {
@@ -465,6 +466,72 @@ export default function App() {
         </div>
       )}
 
+      {/* --- POPUP ANTEPRIMA DATI (NUOVO) --- */}
+      {showPreviewModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-slate-900 w-full max-w-2xl max-h-[80vh] rounded-[2.5rem] shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col overflow-hidden animate-in zoom-in-95 duration-300">
+            
+            {/* Header Modal */}
+            <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/50">
+              <div>
+                 <h3 className="text-xl font-black italic text-slate-800 dark:text-white uppercase tracking-tight">Dettaglio Mese</h3>
+                 <p className="text-xs font-bold text-slate-500 dark:text-slate-400 capitalize">{monthName}</p>
+              </div>
+              <button onClick={() => setShowPreviewModal(false)} className="p-2 bg-slate-200 dark:bg-slate-700 rounded-full hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors">
+                <X size={20} className="text-slate-600 dark:text-slate-300"/>
+              </button>
+            </div>
+
+            {/* Content Scrollable */}
+            <div className="p-6 overflow-y-auto">
+               {/* Stats Mini */}
+               <div className="grid grid-cols-2 gap-4 mb-6">
+                  <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-2xl border border-blue-100 dark:border-blue-900/30">
+                     <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-1">Giorni</p>
+                     <p className="text-2xl font-black text-blue-700 dark:text-blue-300">{monthlyStats.daysWorked}</p>
+                  </div>
+                  <div className="p-4 bg-orange-50 dark:bg-orange-900/20 rounded-2xl border border-orange-100 dark:border-orange-900/30">
+                     <p className="text-[10px] font-black text-orange-400 uppercase tracking-widest mb-1">Extra</p>
+                     <p className="text-2xl font-black text-orange-600 dark:text-orange-400">+{monthlyStats.ext}h</p>
+                  </div>
+               </div>
+
+               {/* List */}
+               <div className="space-y-3">
+                  {currentMonthLogs.map(log => (
+                     <div key={log.id} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800">
+                        <div className="flex items-center gap-4">
+                           <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold 
+                              ${log.type === 'ferie' ? 'bg-emerald-100 text-emerald-600' : 
+                                log.type === 'malattia' ? 'bg-pink-100 text-pink-600' : 
+                                'bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-600'}`}>
+                              {new Date(log.date).getDate()}
+                           </div>
+                           <div>
+                              <p className="text-xs font-black uppercase tracking-wider text-slate-900 dark:text-white">
+                                 {log.type === 'work' ? 'Lavoro' : log.type}
+                              </p>
+                              {log.notes && <p className="text-[10px] text-slate-400 truncate max-w-[120px]">{log.notes}</p>}
+                           </div>
+                        </div>
+                        <div className="text-right">
+                           {log.overtimeHours > 0 ? (
+                              <span className="text-sm font-black text-orange-500">+{log.overtimeHours}h</span>
+                           ) : (
+                              <span className="text-xs font-bold text-slate-300">-</span>
+                           )}
+                        </div>
+                     </div>
+                  ))}
+                  {currentMonthLogs.length === 0 && (
+                      <p className="text-center text-slate-400 text-sm py-4 italic">Nessun dato registrato.</p>
+                  )}
+               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <header className="bg-white dark:bg-slate-900/80 backdrop-blur-md border-b dark:border-slate-800 sticky top-0 z-30 px-4 md:px-8 h-20 flex justify-between items-center shadow-sm">
         <div className="relative" ref={menuRef}>
           <button 
@@ -694,7 +761,13 @@ export default function App() {
              </div>
              
              <div className="bg-white dark:bg-slate-900 p-10 rounded-[2.5rem] shadow-xl border border-slate-200 dark:border-slate-800 text-center">
-                 <div className="inline-flex p-6 bg-blue-50 dark:bg-slate-800 rounded-full text-blue-600 dark:text-blue-400 mb-6"><FileText size={48} /></div>
+                 {/* MODIFICA: Icona resa interattiva per aprire l'anteprima */}
+                 <button 
+                   onClick={() => setShowPreviewModal(true)}
+                   className="inline-flex p-6 bg-blue-50 dark:bg-slate-800 rounded-full text-blue-600 dark:text-blue-400 mb-6 hover:scale-110 transition-transform cursor-pointer shadow-lg shadow-blue-500/20"
+                 >
+                   <FileText size={48} />
+                 </button>
                  
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-12 mt-4">
                     <div>
@@ -750,7 +823,7 @@ export default function App() {
         )}
 
       </main>
-      <footer className="max-w-6xl mx-auto p-12 text-center text-[10px] font-black text-slate-300 dark:text-slate-600 uppercase tracking-[0.5em]">TimeVault v0.5.7</footer>
+      <footer className="max-w-6xl mx-auto p-12 text-center text-[10px] font-black text-slate-300 dark:text-slate-600 uppercase tracking-[0.5em]">TimeVault v0.5.8</footer>
     </div>
 
     {/* --- SEZIONE STAMPABILE NASCOSTA (VISIBILE SOLO IN STAMPA) --- */}
