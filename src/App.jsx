@@ -929,9 +929,10 @@ export default function App() {
 
         {/* --- VISTA IMPOSTAZIONI --- */}
         {view === 'settings' && (
-          <div className="space-y-8 animate-in fade-in zoom-in duration-300">
+          <div className="space-y-6 animate-in fade-in zoom-in duration-300">
             <h2 className="text-2xl font-black italic text-slate-800 dark:text-white uppercase tracking-tight">Impostazioni</h2>
             
+            {/* Blocco 1: Impostazioni Generali */}
             <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] shadow-sm border border-slate-200 dark:border-slate-800 space-y-8">
                
                <div className="flex items-center justify-between pb-8 border-b border-slate-100 dark:border-slate-800">
@@ -944,7 +945,7 @@ export default function App() {
                   </button>
                </div>
 
-               <div className="flex items-center justify-between pb-8 border-b border-slate-100 dark:border-slate-800">
+               <div className="flex items-center justify-between">
                   <div>
                     <h3 className="font-bold text-slate-900 dark:text-white mb-1">Sessione Utente</h3>
                     <p className="text-xs text-slate-500 dark:text-slate-400">Esci dal tuo account TimeVault</p>
@@ -953,18 +954,20 @@ export default function App() {
                     <LogOut size={16}/> Disconnetti
                   </button>
                </div>
+            </div>
 
-               {/* --- ZONA PERICOLO: ELIMINA ACCOUNT --- */}
-               <div className="flex items-center justify-between pt-2">
+            {/* Blocco 2: Zona Pericolo (Separato) */}
+            <div className="bg-red-50 dark:bg-red-900/10 p-8 rounded-[2.5rem] border border-red-100 dark:border-red-900/20">
+               <div className="flex items-center justify-between">
                   <div>
                     <h3 className="font-bold text-red-600 dark:text-red-500 mb-1 flex items-center gap-2">
                         <AlertTriangle size={16}/> Zona Pericolo
                     </h3>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">Eliminazione definitiva account</p>
+                    <p className="text-xs text-red-400 dark:text-red-400/70">Eliminazione definitiva account</p>
                   </div>
                   <button 
                     onClick={handleInitiateDeleteAccount}
-                    className="flex items-center gap-2 px-4 py-2 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-xl font-bold text-sm hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors"
+                    className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-red-900/40 text-red-600 dark:text-red-400 rounded-xl font-bold text-sm shadow-sm hover:bg-red-50 dark:hover:bg-red-900/60 transition-colors"
                   >
                     Elimina Account
                   </button>
@@ -974,7 +977,7 @@ export default function App() {
         )}
 
       </main>
-      <footer className="max-w-6xl mx-auto p-12 text-center text-[10px] font-black text-slate-300 dark:text-slate-600 uppercase tracking-[0.5em]">TimeVault v0.5.9</footer>
+      <footer className="max-w-6xl mx-auto p-12 text-center text-[10px] font-black text-slate-300 dark:text-slate-600 uppercase tracking-[0.5em]">TimeVault v0.6.0</footer>
     </div>
 
     {/* --- SEZIONE STAMPABILE NASCOSTA (VISIBILE SOLO IN STAMPA) --- */}
