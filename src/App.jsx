@@ -27,7 +27,7 @@ import {
 import { 
   Clock, Plus, Trash2, Calendar as CalendarIcon, LogOut, TrendingUp, 
   Briefcase, Sun, Moon, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, ArrowLeft, CheckCircle2,
-  Menu, Home, FileText, Settings, X, Zap, Palmtree, Thermometer, AlertTriangle, Download, Eye, ShieldAlert, Lock, LogIn, UserPlus, Key, Copy, AlertOctagon, ShieldCheck, Unlock, RefreshCw
+  Menu, Home, FileText, Settings, X, Zap, Palmtree, Thermometer, AlertTriangle, Download, Eye, ShieldAlert, Lock, LogIn, UserPlus, Key, Copy, AlertOctagon, ShieldCheck, Unlock, RefreshCw, Users
 } from 'lucide-react';
 
 // --- CONFIGURAZIONE FIREBASE ---
@@ -128,6 +128,7 @@ export default function App() {
     standardHours: 0, 
     overtimeHours: '',
     notes: '',
+    teamLeader: '', // Nuovo campo Caposquadra
     type: 'work' // 'work', 'ferie', 'malattia'
   });
   
@@ -356,7 +357,7 @@ export default function App() {
         createdAt: serverTimestamp()
       });
       // Reset form
-      setFormData({ standardHours: 0, overtimeHours: '', notes: '', type: 'work' });
+      setFormData({ standardHours: 0, overtimeHours: '', notes: '', teamLeader: '', type: 'work' });
       setShowOvertimeInput(false);
       setShowNotesInput(false); // Reset accordion note
     } catch (e) { console.error(e); }
@@ -437,18 +438,19 @@ export default function App() {
       ...prev, 
       standardHours: STANDARD_HOURS_VALUE, 
       type: 'work',
+      teamLeader: '',
     }));
   };
 
   const handleSetFerie = () => {
     setFormError('');
-    setFormData({ standardHours: 0, overtimeHours: '', notes: 'Ferie', type: 'ferie' });
+    setFormData({ standardHours: 0, overtimeHours: '', notes: 'Ferie', teamLeader: '', type: 'ferie' });
     setShowOvertimeInput(false);
   };
 
   const handleSetMalattia = () => {
     setFormError('');
-    setFormData({ standardHours: 0, overtimeHours: '', notes: 'Malattia', type: 'malattia' });
+    setFormData({ standardHours: 0, overtimeHours: '', notes: 'Malattia', teamLeader: '', type: 'malattia' });
     setShowOvertimeInput(false);
   };
 
@@ -500,7 +502,7 @@ export default function App() {
   const selectDay = (day) => {
     const newDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
     setSelectedDate(newDate);
-    setFormData({ standardHours: 0, overtimeHours: '', notes: '', type: 'work' });
+    setFormData({ standardHours: 0, overtimeHours: '', notes: '', teamLeader: '', type: 'work' });
     setShowOvertimeInput(false);
     setShowNotesInput(false); // Reset accordion note
     setFormError('');
@@ -1157,18 +1159,35 @@ export default function App() {
                   </button>
 
                   {showNotesInput && (
-                      <div className="mt-2 animate-in slide-in-from-top-2 fade-in">
-                        <label className="block text-center text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">
-                           Note (Opzionale)
-                        </label>
-                        <textarea 
-                          placeholder="Dettagli attività..." 
-                          className="w-full p-4.5 bg-slate-50 dark:bg-slate-800 dark:text-white border border-slate-200 dark:border-slate-700 rounded-[1.25rem] font-medium outline-none placeholder:text-slate-300 dark:placeholder:text-slate-600 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900/20 transition-all" 
-                          rows="3" 
-                          autoFocus
-                          value={formData.notes} 
-                          onChange={e => setFormData({...formData, notes: e.target.value})}
-                        ></textarea>
+                      <div className="mt-4 animate-in slide-in-from-top-2 fade-in space-y-3">
+                        
+                        {/* INPUT CAPOSQUADRA */}
+                        <div>
+                           <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 ml-1">
+                              Caposquadra (Opzionale)
+                           </label>
+                           <input 
+                             type="text"
+                             placeholder="Nome Caposquadra..."
+                             className="w-full p-4.5 bg-slate-50 dark:bg-slate-800 dark:text-white border border-slate-200 dark:border-slate-700 rounded-[1.25rem] font-medium outline-none placeholder:text-slate-300 dark:placeholder:text-slate-600 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900/20 transition-all"
+                             value={formData.teamLeader}
+                             onChange={e => setFormData({...formData, teamLeader: e.target.value})}
+                           />
+                        </div>
+
+                        {/* TEXTAREA NOTE */}
+                        <div>
+                           <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 ml-1">
+                              Note (Opzionale)
+                           </label>
+                           <textarea 
+                             placeholder="Dettagli attività..." 
+                             className="w-full p-4.5 bg-slate-50 dark:bg-slate-800 dark:text-white border border-slate-200 dark:border-slate-700 rounded-[1.25rem] font-medium outline-none placeholder:text-slate-300 dark:placeholder:text-slate-600 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900/20 transition-all" 
+                             rows="3" 
+                             value={formData.notes} 
+                             onChange={e => setFormData({...formData, notes: e.target.value})}
+                           ></textarea>
+                        </div>
                       </div>
                   )}
                 </div>
@@ -1193,7 +1212,14 @@ export default function App() {
                       
                       {log.overtimeHours > 0 && <span className="text-sm font-black text-orange-600 dark:text-orange-500 bg-orange-50 dark:bg-orange-900/20 px-2 py-0.5 rounded-lg">+{log.overtimeHours}h Extra</span>}
                     </div>
-                    <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">{log.notes || "Nessuna nota"}</p>
+                    <div>
+                      {log.teamLeader && (
+                         <p className="text-[10px] font-black text-blue-500 uppercase tracking-widest mb-1 flex items-center gap-1">
+                           <Users size={12} /> {log.teamLeader}
+                         </p>
+                      )}
+                      <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">{log.notes || "Nessuna nota"}</p>
+                    </div>
                   </div>
                   <button onClick={() => requestDeleteLog(log.id)} className="p-3 text-slate-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-all"><Trash2 size={18} /></button>
                 </div>
@@ -1292,7 +1318,7 @@ export default function App() {
         )}
 
       </main>
-      <footer className="max-w-6xl mx-auto p-12 text-center text-[10px] font-black text-slate-300 dark:text-slate-600 uppercase tracking-[0.5em]">TimeVault v0.6.7</footer>
+      <footer className="max-w-6xl mx-auto p-12 text-center text-[10px] font-black text-slate-300 dark:text-slate-600 uppercase tracking-[0.5em]">TimeVault v0.6.8</footer>
     </div>
 
     {/* --- SEZIONE STAMPABILE NASCOSTA (VISIBILE SOLO IN STAMPA) --- */}
