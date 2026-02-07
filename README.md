@@ -21,7 +21,7 @@ Include autenticazione con **Firebase**, salvataggio dati su **Firestore**, repo
   - Giorni lavorati
   - Totale ore extra
   - Ricerca per note o caposquadra
-- 🖨️ **Esportazione report in PDF** tramite stampa
+- 🖨️ **Esportazione report in PDF** tramite download
 - 🌗 **Tema chiaro / scuro**
 - 🎨 **Personalizzazione colore principale dell’app**
 - 📱 **Installabile come PWA** (aggiunta alla Home su iOS / Android)
