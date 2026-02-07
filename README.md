@@ -1,12 +1,12 @@
-# ⏱️ TimeVault — Personal Edition
+🔒 TimeVault Enterprise - Registro Ore Team
 
-**TimeVault** è una web app sviluppata in **React + Vite** per la gestione delle ore lavorative, straordinari, ferie, malattia e riposi.  
-Include autenticazione con **Firebase**, salvataggio dati su **Firestore**, report mensili stampabili in PDF e personalizzazione grafica (tema e colore principale).
+TimeVault è un'applicazione web moderna progettata per la registrazione collaborativa delle ore lavorative (standard e straordinari). Utilizza React per l'interfaccia e Firebase per la gestione dei dati in tempo reale.
 
----
+🚀 Caratteristiche
 
-## 🚀 Funzionalità principali
+Autenticazione Aziendale: Accesso tramite formato nome.cognome (ID interno @time.vault).
 
+<<<<<<< HEAD
 - 🔐 **Autenticazione utenti** (login / registrazione) con Firebase Auth  
 - 🛡️ **Sistema di sicurezza con codice di recupero** per:
   - Sblocco account dopo tentativi falliti
@@ -26,21 +26,77 @@ Include autenticazione con **Firebase**, salvataggio dati su **Firestore**, repo
 - 🎨 **Personalizzazione colore principale dell’app**
 - 📱 **Installabile come PWA** (aggiunta alla Home su iOS / Android)
 - 🤖 **Automazione weekend**: inserisce automaticamente “Riposo” per sabato e domenica se mancanti
+=======
+Real-time Sync: I dati inseriti dai colleghi sono visibili istantaneamente a tutto il team.
+>>>>>>> parent of 112996c (Update README.md)
 
----
+Privacy: Ogni utente può eliminare solo i propri record.
 
-## 🧱 Stack tecnologico
+Statistiche: Calcolo automatico dei totali (Standard vs Extra) per il singolo e per il team.
 
-- **Frontend:** React + Vite
-- **UI & Icone:** Tailwind CSS + lucide-react
-- **Backend / Auth / DB:** Firebase
-  - Firebase Authentication
-  - Firestore
-- **Build & Deploy:** Vite, Vercel (o simili)
+🛠️ Requisiti Premilinari
 
----
+Node.js installato sul PC.
 
-## 📂 Struttura dati (Firestore)
+Un progetto attivo su Firebase Console.
 
-I dati vengono salvati con questa struttura logica:
+📦 Installazione Locale
 
+Clona la repository o scarica i file in una cartella.
+
+Apri il terminale nella cartella del progetto ed esegui:
+
+npm install
+
+
+Configura le tue chiavi Firebase nel file src/App.jsx all'interno dell'oggetto firebaseConfig.
+
+⚙️ Configurazione Firebase (Obbligatoria)
+
+Per far funzionare l'autenticazione e il database, segui questi passaggi nella console di Firebase:
+
+1. Authentication
+
+Vai su Authentication > Sign-in method.
+
+Abilita il provider Email/Password.
+
+2. Firestore Database
+
+Crea un database Firestore in modalità produzione.
+
+Nella scheda Rules, incolla queste regole per permettere l'uso del percorso richiesto:
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /artifacts/time-vault-pro/public/data/work_logs/{document} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}
+
+
+💻 Sviluppo e Produzione
+
+Per avviare l'app in locale:
+
+npm run dev
+
+
+Per creare la versione ottimizzata per la pubblicazione:
+
+npm run build
+
+
+👥 Guida per i Colleghi
+
+Quando condividi l'app, comunica ai tuoi colleghi di:
+
+Usare il formato nome.cognome come username.
+
+Creare un account tramite il tasto "Registrati ora" al primo accesso.
+
+Segnalare le ore standard (default 8) e gli eventuali straordinari separatamente.
+
+Sviluppato con React + Vite + Tailwind CSS
