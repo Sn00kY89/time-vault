@@ -30,7 +30,7 @@ import {
 import { 
   Clock, Plus, Trash2, Calendar as CalendarIcon, LogOut, TrendingUp, 
   Briefcase, Sun, Moon, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, ArrowLeft, CheckCircle2,
-  Menu, Home, FileText, Settings, X, Zap, Palmtree, Thermometer, AlertTriangle, Download, Eye, ShieldAlert, Lock, LogIn, UserPlus, Key, Copy, AlertOctagon, ShieldCheck, Unlock, RefreshCw, Users, CheckSquare, Square, User, Palette, Smartphone, Share, Search, ShieldX, Coffee
+  Menu, Home, FileText, Settings, X, Zap, Palmtree, Thermometer, AlertTriangle, Download, Eye, ShieldAlert, Lock, LogIn, UserPlus, Key, Copy, AlertOctagon, ShieldCheck, Unlock, RefreshCw, Users, CheckSquare, Square, User, Palette, Smartphone, Share, Search, ShieldX, Coffee, Loader2
 } from 'lucide-react';
 
 // -----------------------------------------------------------------------------
@@ -120,6 +120,7 @@ export default function App() {
   const [authMode, setAuthMode] = useState('login'); 
   const [authError, setAuthError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false); // AGGIUNTO PER FIX MOBILE
   
   const [view, setView] = useState('calendar'); 
   const [selectedDate, setSelectedDate] = useState(new Date()); 
@@ -175,6 +176,27 @@ export default function App() {
   });
   const [showOvertimeInput, setShowOvertimeInput] = useState(false);
   const [showNotesInput, setShowNotesInput] = useState(false); 
+
+  // --- EFFETTO PER CARICAMENTO LIBRERIE PDF (FIX MOBILE) ---
+  useEffect(() => {
+    const loadPdfScripts = () => {
+      if (!document.getElementById('html2canvas-script')) {
+        const s1 = document.createElement('script');
+        s1.id = 'html2canvas-script';
+        s1.src = "https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js";
+        s1.async = true;
+        document.body.appendChild(s1);
+      }
+      if (!document.getElementById('jspdf-script')) {
+        const s2 = document.createElement('script');
+        s2.id = 'jspdf-script';
+        s2.src = "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js";
+        s2.async = true;
+        document.body.appendChild(s2);
+      }
+    };
+    loadPdfScripts();
+  }, []);
 
   const isWeekend = useMemo(() => {
     const day = selectedDate.getDay();
@@ -297,20 +319,14 @@ export default function App() {
 
     const checkWeekendAutomation = async () => {
       const now = new Date();
-      const dayOfWeek = now.getDay(); // 0: Dom, 1: Lun, ...
-      
-      // Eseguiamo il controllo se oggi è lunedì (o dopo)
-      // Cerchiamo il sabato e la domenica appena passati
+      const dayOfWeek = now.getDay(); 
       if (dayOfWeek >= 1) { 
         const lastSunday = new Date(now);
         lastSunday.setDate(now.getDate() - dayOfWeek);
         const lastSaturday = new Date(lastSunday);
         lastSaturday.setDate(lastSunday.getDate() - 1);
-
         const datesToCheck = [formatDateAsLocal(lastSaturday), formatDateAsLocal(lastSunday)];
-        
         for (const dateStr of datesToCheck) {
-          // Controlliamo localmente se esiste già un log per quella data
           const exists = logs.some(l => l.date === dateStr);
           if (!exists) {
             try {
@@ -325,7 +341,6 @@ export default function App() {
                 userName: user.displayName,
                 createdAt: serverTimestamp()
               });
-              console.log(`Automazione: inserito Riposo per il ${dateStr}`);
             } catch (e) {
               console.error("Errore automazione weekend:", e);
             }
@@ -334,7 +349,6 @@ export default function App() {
       }
     };
 
-    // Ritardiamo leggermente per essere sicuri che i log siano caricati
     if (logs.length > 0) {
       const timer = setTimeout(() => {
         checkWeekendAutomation();
@@ -466,11 +480,43 @@ export default function App() {
   };
 
   const handleDownloadRequest = () => setShowDownloadConfirm(true);
-  const confirmDownload = () => { 
-    setShowDownloadConfirm(false); 
-    setTimeout(() => {
-      window.print();
-    }, 500); 
+  
+  // --- FUNZIONE PDF AGGIORNATA PER SMARTPHONE ---
+  const confirmDownload = async () => { 
+    if (!window.html2canvas || !window.jspdf) {
+      alert("Caricamento componenti... riprova tra un istante.");
+      return;
+    }
+    
+    setIsGeneratingPDF(true);
+    const reportArea = document.getElementById('report-print-area');
+    reportArea.style.display = 'block'; // Mostra temporaneamente per la cattura
+    
+    try {
+      const canvas = await html2canvas(reportArea, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#ffffff',
+        logging: false
+      });
+      
+      const imgData = canvas.toDataURL('image/png');
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+      
+      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+      pdf.save(`Report_${monthName.replace(' ', '_')}.pdf`);
+      
+      setShowDownloadConfirm(false);
+    } catch (err) {
+      console.error("Errore generazione PDF:", err);
+      alert("Errore durante il download.");
+    } finally {
+      reportArea.style.display = 'none';
+      setIsGeneratingPDF(false);
+    }
   };
 
   const handleSetStandard = () => { setFormError(''); setFormData(prev => ({ ...prev, standardHours: STANDARD_HOURS_VALUE, type: 'work', notes: '' })); };
@@ -483,7 +529,7 @@ export default function App() {
     const targetMonth = currentMonth.getMonth(); 
     const targetYear = currentMonth.getFullYear();
     return logs.filter(log => {
-      const [year, month, day] = log.date.split('-').map(Number);
+      const [year, month] = log.date.split('-').map(Number);
       return (month - 1) === targetMonth && year === targetYear;
     }).sort((a, b) => new Date(a.date) - new Date(b.date)); 
   }, [logs, currentMonth]);
@@ -534,7 +580,7 @@ export default function App() {
             <Clock size={80} />
          </div>
          <div className="text-center overflow-hidden">
-            <h1 className="text-6xl font-black italic tracking-tighter text-white animate-in slide-in-from-bottom-8 duration-1000">TIMEVAULT</h1>
+            <h1 className="text-6xl font-black italic tracking-tighter text-white animate-in slide-in-from-bottom-8 duration-1000 uppercase">TIMEVAULT</h1>
             <p className="text-slate-500 text-sm font-black uppercase tracking-[0.5em] mt-4 opacity-0 animate-in fade-in fill-mode-forwards delay-700 duration-1000">Personal Edition</p>
          </div>
       </div>
@@ -556,7 +602,7 @@ export default function App() {
              <div className={`inline-flex p-6 bg-${accentColor}-600 rounded-[2rem] text-white mb-6 shadow-2xl shadow-${accentColor}-500/40 animate-bounce-slow transition-colors duration-300`}>
                <Clock size={48} />
              </div>
-             <h1 className="text-5xl font-black italic tracking-tighter text-slate-900 dark:text-white leading-none mb-2">TIMEVAULT</h1>
+             <h1 className="text-5xl font-black italic tracking-tighter text-slate-900 dark:text-white leading-none mb-2 uppercase">TIMEVAULT</h1>
              <p className="text-slate-400 dark:text-slate-500 text-xs font-black uppercase tracking-[0.4em]">Personal Edition</p>
           </div>
           <div className="space-y-4">
@@ -567,7 +613,7 @@ export default function App() {
               <UserPlus size={20} /> Nuovo Account
             </button>
           </div>
-          <p className="mt-8 text-[10px] text-slate-400 font-medium">Gestisci il tuo tempo, monitora gli straordinari.</p>
+          <p className="mt-8 text-[10px] text-slate-400 font-medium italic">Gestisci il tuo tempo, monitora gli straordinari.</p>
         </div>
 
         {showRecoveryModal && (
@@ -577,7 +623,7 @@ export default function App() {
                     <ShieldCheck size={36} />
                  </div>
                  <h2 className="text-2xl font-black italic text-red-600 uppercase tracking-tight mb-2">Sicurezza</h2>
-                 <p className="text-sm text-slate-600 dark:text-slate-300 font-medium mb-6">Salva questo codice di recupero.</p>
+                 <p className="text-sm text-slate-600 dark:text-slate-300 font-medium mb-6 italic">Salva questo codice di recupero.</p>
                  <div className="bg-slate-100 dark:bg-slate-950 p-4 rounded-xl border border-slate-200 dark:border-slate-800 mb-6 relative group">
                     <p className="font-mono text-lg font-black text-slate-800 dark:text-white tracking-widest break-all">{generatedRecoveryCode}</p>
                     <button onClick={copyToClipboard} className="absolute right-2 top-2 p-2 bg-white dark:bg-slate-800 rounded-lg text-slate-400 hover:text-blue-500 shadow-sm"><Copy size={16} /></button>
@@ -614,12 +660,12 @@ export default function App() {
                      <div className={`inline-flex p-4 rounded-2xl text-white mb-4 shadow-lg ${authMode === 'login' ? `bg-${accentColor}-600 shadow-${accentColor}-500/30` : 'bg-purple-600 shadow-purple-500/30'} transition-colors duration-300`}>
                        {authMode === 'login' ? <LogIn size={28} /> : <UserPlus size={28} />}
                      </div>
-                     <h2 className="text-2xl font-black italic text-slate-900 dark:text-white uppercase tracking-tight">{authMode === 'login' ? 'Bentornato' : 'Nuovo Utente'}</h2>
+                     <h2 className="text-2xl font-black italic text-slate-900 dark:text-white uppercase tracking-tight leading-none">{authMode === 'login' ? 'Bentornato' : 'Nuovo Utente'}</h2>
                    </div>
                    <form onSubmit={handleAuth} className="space-y-4">
                      <input type="text" placeholder="nome.cognome" required className="w-full p-4.5 bg-slate-100 dark:bg-slate-800 dark:text-white rounded-2xl font-bold outline-none" value={authData.username} onChange={e => setAuthData({...authData, username: e.target.value})} />
                      <input type="password" placeholder="••••••••" required className="w-full p-4.5 bg-slate-100 dark:bg-slate-800 dark:text-white rounded-2xl font-bold outline-none" value={authData.password} onChange={e => setAuthData({...authData, password: e.target.value})} />
-                     {authError && <div className="text-red-600 text-[11px] font-black">{authError}</div>}
+                     {authError && <div className="text-red-600 text-[11px] font-black italic">{authError}</div>}
                      <button type="submit" disabled={isSubmitting} className={`w-full text-white p-5 rounded-2xl font-black uppercase tracking-widest shadow-xl transition-colors duration-300 ${authMode === 'login' ? `bg-${accentColor}-600 hover:bg-${accentColor}-700` : 'bg-purple-600'}`}>{isSubmitting ? '...' : authMode === 'login' ? 'Entra' : 'Registra'}</button>
                    </form>
                    <div className="mt-6 text-center"><button onClick={() => setAuthMode(authMode === 'login' ? 'register' : 'login')} className="text-slate-400 font-bold text-[10px] uppercase">{authMode === 'login' ? "Crea account" : "Accedi"}</button></div>
@@ -647,23 +693,23 @@ export default function App() {
                   <Smartphone size={32} />
                 </div>
                 <h2 className="text-2xl font-black italic text-slate-900 dark:text-white uppercase tracking-tight">Installa App</h2>
-                <p className="text-sm text-slate-500 dark:text-slate-400 font-medium mt-2">Aggiungi TimeVault alla tua Home</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400 font-medium mt-2 italic">Aggiungi TimeVault alla tua Home</p>
             </div>
             <div className="space-y-6">
               <div className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-2xl border border-slate-100 dark:border-slate-800">
-                 <h3 className="font-black text-slate-900 dark:text-white flex items-center gap-2 mb-3"><span className="text-xl"></span> iOS (iPhone/iPad)</h3>
-                 <ol className="text-sm text-slate-600 dark:text-slate-300 space-y-3 list-decimal list-inside font-medium marker:text-slate-400 marker:font-bold">
+                 <h3 className="font-black text-slate-900 dark:text-white flex items-center gap-2 mb-3 uppercase italic text-xs tracking-widest"><span className="text-xl"></span> iOS</h3>
+                 <ol className="text-sm text-slate-600 dark:text-slate-300 space-y-3 list-decimal list-inside font-medium italic">
                     <li>Apri <strong>Safari</strong>.</li>
-                    <li>Tocca l'icona <strong>Condividi</strong> nella barra in basso.</li>
-                    <li>Scorri e seleziona <strong>"Aggiungi alla schermata Home"</strong>.</li>
+                    <li>Tocca l'icona <strong>Condividi</strong>.</li>
+                    <li>Seleziona <strong>Aggiungi a Home</strong>.</li>
                  </ol>
               </div>
               <div className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-2xl border border-slate-100 dark:border-slate-800">
-                 <h3 className="font-black text-slate-900 dark:text-white flex items-center gap-2 mb-3"><span className="text-lg">🤖</span> Android (Chrome)</h3>
-                 <ol className="text-sm text-slate-600 dark:text-slate-300 space-y-3 list-decimal list-inside font-medium marker:text-slate-400 marker:font-bold">
+                 <h3 className="font-black text-slate-900 dark:text-white flex items-center gap-2 mb-3 uppercase italic text-xs tracking-widest"><span className="text-lg">🤖</span> Android</h3>
+                 <ol className="text-sm text-slate-600 dark:text-slate-300 space-y-3 list-decimal list-inside font-medium italic">
                     <li>Apri <strong>Chrome</strong>.</li>
-                    <li>Tocca il menu <strong>(tre puntini)</strong> in alto a destra.</li>
-                    <li>Seleziona <strong>"Aggiungi a schermata Home"</strong> o <strong>"Installa App"</strong>.</li>
+                    <li>Tocca i <strong>tre puntini</strong>.</li>
+                    <li>Seleziona <strong>Installa App</strong>.</li>
                  </ol>
               </div>
             </div>
@@ -674,8 +720,8 @@ export default function App() {
 
       {logToDelete && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 p-8 rounded-[2rem] shadow-2xl max-w-sm w-full border border-slate-100 dark:border-slate-800">
-            <h3 className="text-lg font-black text-center mb-4">Confermi cancellazione?</h3>
+          <div className="bg-white dark:bg-slate-900 p-8 rounded-[2rem] shadow-2xl max-w-sm w-full border border-slate-100 dark:border-slate-800 text-center">
+            <h3 className="text-lg font-black mb-4 uppercase italic">Confermi cancellazione?</h3>
             <div className="grid grid-cols-2 gap-3">
               <button onClick={() => setLogToDelete(null)} className="p-4 rounded-xl font-black text-xs uppercase bg-slate-100 dark:bg-slate-800 text-slate-500">No</button>
               <button onClick={confirmDelete} className="p-4 rounded-xl font-black text-xs uppercase bg-red-500 text-white">Sì, Cancella</button>
@@ -688,11 +734,13 @@ export default function App() {
       {showDownloadConfirm && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
           <div className="bg-white dark:bg-slate-900 p-8 rounded-[2rem] shadow-2xl max-w-sm w-full text-center">
-            <h3 className="text-lg font-black mb-2">Generare Report?</h3>
-            <p className="text-sm text-slate-500 mb-6 font-medium">Si aprirà la finestra di stampa per il mese di <span className="capitalize">{monthName}</span>.</p>
+            <h3 className="text-lg font-black mb-2 uppercase italic">Generare Report?</h3>
+            <p className="text-sm text-slate-500 mb-6 font-medium italic leading-relaxed">Il PDF verrà generato e scaricato automaticamente sul tuo smartphone.</p>
             <div className="grid grid-cols-2 gap-3">
               <button onClick={() => setShowDownloadConfirm(false)} className="p-4 bg-slate-100 dark:bg-slate-800 rounded-xl font-black text-xs uppercase text-slate-500 transition-colors">Annulla</button>
-              <button onClick={confirmDownload} className={`p-4 bg-${accentColor}-600 text-white rounded-xl font-black text-xs uppercase shadow-lg shadow-${accentColor}-500/30 transition-all active:scale-95`}>Genera</button>
+              <button onClick={confirmDownload} disabled={isGeneratingPDF} className={`p-4 bg-${accentColor}-600 text-white rounded-xl font-black text-xs uppercase shadow-lg shadow-${accentColor}-500/30 transition-all active:scale-95 flex items-center justify-center gap-2`}>
+                 {isGeneratingPDF ? <><Loader2 className="animate-spin" size={16} /> Generazione...</> : 'Conferma'}
+              </button>
             </div>
           </div>
         </div>
@@ -712,7 +760,7 @@ export default function App() {
             </div>
           )}
         </div>
-        <div className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10"><h1 className="text-2xl font-black tracking-tighter italic leading-none text-slate-900 dark:text-white">TIMEVAULT</h1></div>
+        <div className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10"><h1 className="text-2xl font-black tracking-tighter italic leading-none text-slate-900 dark:text-white uppercase">TIMEVAULT</h1></div>
         <div className="relative z-20" ref={profileDropdownRef}>
             <button onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)} className="flex items-center gap-2 group focus:outline-none">
               <div className={`bg-${accentColor}-50 dark:bg-slate-800 px-4 py-2 rounded-2xl border border-${accentColor}-100 dark:border-slate-700 hidden sm:block transition-transform group-hover:scale-95`}>
@@ -736,14 +784,14 @@ export default function App() {
           <div className="space-y-8 animate-in fade-in zoom-in duration-300">
             <div className="grid grid-cols-2 gap-4">
               <div className="bg-white dark:bg-slate-900 p-6 rounded-[2rem] shadow-sm border border-slate-200 dark:border-slate-800">
-                <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-1">Giornate Lavorate</p>
+                <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-1 italic">Giornate Lavorate</p>
                 <div className="flex items-baseline gap-2">
                   <p className="text-3xl font-black text-slate-800 dark:text-white">{monthlyStats.daysWorked}</p>
                   <span className="text-xs font-bold text-slate-300 dark:text-slate-600 uppercase">Giorni</span>
                 </div>
               </div>
               <div className="bg-white dark:bg-slate-900 p-6 rounded-[2rem] shadow-sm border border-slate-200 dark:border-slate-800">
-                <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-1">Extra Mese</p>
+                <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-1 italic">Extra Mese</p>
                 <div className="flex items-baseline gap-2">
                   <p className="text-3xl font-black text-orange-600 dark:text-orange-500">+{monthlyStats.ext}<span className="text-sm">h</span></p>
                   <span className="text-xs font-bold text-orange-200 dark:text-orange-900/50 uppercase">Accumulati</span>
@@ -780,10 +828,10 @@ export default function App() {
 
         {view === 'day' && (
           <div className="space-y-6 animate-in slide-in-from-right duration-300">
-            <button onClick={() => setView('calendar')} className="flex items-center gap-2 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white transition-colors font-bold uppercase text-xs tracking-widest mb-4"><ArrowLeft size={16} /> Torna al calendario</button>
-            <h2 className="text-3xl font-black italic text-slate-800 dark:text-white capitalize">{selectedDate.toLocaleDateString('it-IT', { day: 'numeric', month: 'long' })}{isWeekend && <span className="block text-xs font-bold text-orange-500 not-italic mt-1 uppercase tracking-widest">Weekend • Straordinario</span>}</h2>
+            <button onClick={() => setView('calendar')} className="flex items-center gap-2 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white transition-colors font-bold uppercase text-xs tracking-widest mb-4 italic"><ArrowLeft size={16} /> Torna al calendario</button>
+            <h2 className="text-3xl font-black italic text-slate-800 dark:text-white capitalize">{selectedDate.toLocaleDateString('it-IT', { day: 'numeric', month: 'long' })}{isWeekend && <span className="block text-xs font-bold text-orange-500 not-italic mt-1 uppercase tracking-widest italic">Weekend • Straordinario</span>}</h2>
             <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] shadow-sm border border-slate-200 dark:border-slate-800">
-              <h3 className="text-xs font-black mb-6 uppercase text-slate-400 tracking-widest">Aggiungi Ore</h3>
+              <h3 className="text-xs font-black mb-6 uppercase text-slate-400 tracking-widest italic">Aggiungi Ore</h3>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
                  {!isWeekend && (
                    <>
@@ -802,12 +850,12 @@ export default function App() {
                      <input type="number" step="0.5" autoFocus className="w-full p-4.5 bg-orange-50 dark:bg-orange-900/10 text-orange-600 dark:text-orange-400 border border-orange-100 dark:border-orange-900/20 rounded-[1.25rem] font-black outline-none focus:ring-2 focus:ring-orange-500 placeholder:text-orange-300" placeholder="0.0" value={formData.overtimeHours} onChange={e => setFormData({...formData, overtimeHours: e.target.value})} />
                    </div>
                 )}
-                <div className="border-t border-slate-100 dark:border-slate-800 pt-4">
+                <div className="border-t border-slate-100 dark:border-slate-800 pt-4 text-center">
                   <button type="button" onClick={() => setShowNotesInput(!showNotesInput)} className="w-full flex items-center justify-center group p-2">
                     <div className={`p-2 rounded-full bg-slate-50 dark:bg-slate-800 text-slate-400 group-hover:text-${accentColor}-500 transition-colors ${showNotesInput ? `bg-${accentColor}-50 dark:bg-${accentColor}-900/20 text-${accentColor}-500` : ''}`}>{showNotesInput ? <ChevronUp size={16} /> : <ChevronDown size={16} />}</div>
                   </button>
                   {showNotesInput && (
-                      <div className="mt-4 animate-in slide-in-from-top-2 fade-in space-y-3">
+                      <div className="mt-4 animate-in slide-in-from-top-2 fade-in space-y-3 text-left">
                         <div ref={leaderDropdownRef} className="relative">
                             <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 ml-1">Capisquadra (Multipla)</label>
                             <div onClick={() => setIsLeaderDropdownOpen(!isLeaderDropdownOpen)} className="w-full p-4.5 bg-slate-50 dark:bg-slate-800 dark:text-white border border-slate-200 dark:border-slate-700 rounded-[1.25rem] font-medium cursor-pointer flex justify-between items-center hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors">
@@ -837,19 +885,19 @@ export default function App() {
             </div>
             <div className="space-y-4">
               {dailyLogs.map(log => (
-                <div key={log.id} className={`bg-white dark:bg-slate-900 p-6 rounded-[2rem] border border-slate-200 dark:border-slate-800 flex items-center justify-between group hover:border-${accentColor}-200 dark:hover:border-${accentColor}-800 transition-colors`}>
+                <div key={log.id} className={`bg-white dark:bg-slate-900 p-6 rounded-[2rem] border border-slate-200 dark:border-slate-800 flex items-center justify-between group hover:border-${accentColor}-200 dark:hover:border-${accentColor}-800 transition-colors shadow-sm`}>
                   <div>
                     <div className="flex items-center gap-2 mb-1">
-                      {log.type === 'ferie' && <span className="text-xs font-black bg-emerald-100 text-emerald-600 px-2 py-1 rounded-lg uppercase">Ferie</span>}
-                      {log.type === 'malattia' && <span className="text-xs font-black bg-pink-100 text-pink-600 px-2 py-1 rounded-lg uppercase">Malattia</span>}
-                      {log.type === 'riposo' && <span className="text-xs font-black bg-slate-100 text-slate-600 px-2 py-1 rounded-lg uppercase">Riposo</span>}
-                      {log.type === 'riposo_compensativo' && <span className="text-xs font-black bg-indigo-100 text-indigo-600 px-2 py-1 rounded-lg uppercase">Riposo Comp.</span>}
-                      {log.type === 'work' && log.standardHours > 0 && <span className="text-xl font-black text-slate-800 dark:text-white">{log.standardHours}h</span>}
-                      {log.overtimeHours > 0 && <span className="text-sm font-black text-orange-600 dark:text-orange-500 bg-orange-50 dark:bg-orange-900/20 px-2 py-0.5 rounded-lg">+{log.overtimeHours}h Extra</span>}
+                      {log.type === 'ferie' && <span className="text-xs font-black bg-emerald-100 text-emerald-600 px-2 py-1 rounded-lg uppercase italic">Ferie</span>}
+                      {log.type === 'malattia' && <span className="text-xs font-black bg-pink-100 text-pink-600 px-2 py-1 rounded-lg uppercase italic">Malattia</span>}
+                      {log.type === 'riposo' && <span className="text-xs font-black bg-slate-100 text-slate-600 px-2 py-1 rounded-lg uppercase italic">Riposo</span>}
+                      {log.type === 'riposo_compensativo' && <span className="text-xs font-black bg-indigo-100 text-indigo-600 px-2 py-1 rounded-lg uppercase italic">Riposo Comp.</span>}
+                      {log.type === 'work' && log.standardHours > 0 && <span className="text-xl font-black text-slate-800 dark:text-white italic">{log.standardHours}h</span>}
+                      {log.overtimeHours > 0 && <span className="text-sm font-black text-orange-600 dark:text-orange-500 bg-orange-50 dark:bg-orange-900/20 px-2 py-0.5 rounded-lg italic">+{log.overtimeHours}h Extra</span>}
                     </div>
                     <div>
-                      {log.teamLeader && <p className={`text-[10px] font-black text-${accentColor}-500 uppercase tracking-widest mb-1 flex items-center gap-1`}><Users size={12} /> {log.teamLeader}</p>}
-                      <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">{log.notes || "Nessuna nota"}</p>
+                      {log.teamLeader && <p className={`text-[10px] font-black text-${accentColor}-500 uppercase tracking-widest mb-1 flex items-center gap-1 italic`}><Users size={12} /> {log.teamLeader}</p>}
+                      <p className="text-sm text-slate-500 dark:text-slate-400 font-medium italic">{log.notes || "Nessuna nota"}</p>
                     </div>
                   </div>
                   <button onClick={() => requestDeleteLog(log.id)} className="p-3 text-slate-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-all"><Trash2 size={18} /></button>
@@ -862,10 +910,10 @@ export default function App() {
         {view === 'report' && (
           <div className="space-y-8 animate-in fade-in zoom-in duration-300">
              <div className="flex justify-between items-center">
-                 <h2 className="text-2xl font-black italic text-slate-800 dark:text-white uppercase tracking-tight leading-none">Resoconto Mese</h2>
+                 <h2 className="text-2xl font-black italic text-slate-800 dark:text-white uppercase tracking-tight leading-none italic">Resoconto Mese</h2>
                  <div className="flex items-center gap-4 bg-white dark:bg-slate-900 px-4 py-2 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm transition-colors duration-300">
                     <button onClick={() => changeMonth(-1)} className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors text-slate-500"><ChevronLeft size={20} /></button>
-                    <p className="text-sm font-bold text-slate-700 dark:text-slate-300 capitalize min-w-[120px] text-center">{monthName}</p>
+                    <p className="text-sm font-bold text-slate-700 dark:text-slate-300 capitalize min-w-[120px] text-center italic">{monthName}</p>
                     <button onClick={() => changeMonth(1)} className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors text-slate-500"><ChevronRight size={20} /></button>
                  </div>
              </div>
@@ -873,18 +921,18 @@ export default function App() {
              <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] shadow-xl border border-slate-200 dark:border-slate-800 text-center">
                  <div className="grid grid-cols-2 gap-8 mt-4 mb-10">
                     <div>
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Giornate Lavorate</p>
-                        <p className="text-5xl font-black text-slate-800 dark:text-white">{monthlyStats.daysWorked}</p>
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 italic">Giornate Lavorate</p>
+                        <p className="text-5xl font-black text-slate-800 dark:text-white italic">{monthlyStats.daysWorked}</p>
                     </div>
                     <div>
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Straordinari Totali</p>
-                        <p className="text-5xl font-black text-orange-600 dark:text-orange-500">{monthlyStats.ext}<span className="text-lg">h</span></p>
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 italic">Straordinari Totali</p>
+                        <p className="text-5xl font-black text-orange-600 dark:text-orange-500 italic">{monthlyStats.ext}<span className="text-lg">h</span></p>
                     </div>
                  </div>
 
                  <div className="relative mb-6">
                     <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
-                    <input type="text" placeholder="Cerca per note o caposquadra..." className="w-full pl-12 pr-4 py-4 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl font-bold outline-none focus:ring-2 focus:ring-slate-200 transition-all text-slate-900 dark:text-white" value={reportSearchQuery} onChange={(e) => setReportSearchQuery(e.target.value)} />
+                    <input type="text" placeholder="Cerca per note o caposquadra..." className="w-full pl-12 pr-4 py-4 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl font-bold outline-none focus:ring-2 focus:ring-slate-200 transition-all text-slate-900 dark:text-white italic" value={reportSearchQuery} onChange={(e) => setReportSearchQuery(e.target.value)} />
                  </div>
 
                  <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar text-left">
@@ -894,20 +942,20 @@ export default function App() {
                                <div className="flex items-center gap-5">
                                   <div className={`w-12 h-12 rounded-full flex items-center justify-center text-sm font-black bg-white dark:bg-slate-700 border-2 transition-colors ${expandedLogId === log.id ? `border-${accentColor}-500 text-${accentColor}-600` : 'border-slate-200 dark:border-slate-600 text-slate-500'}`}>{new Date(log.date).getDate()}</div>
                                   <div>
-                                     <p className="text-[10px] font-black uppercase text-slate-400 mb-0.5 tracking-widest">
+                                     <p className="text-[10px] font-black uppercase text-slate-400 mb-0.5 tracking-widest italic">
                                         {log.type === 'work' ? 'Lavoro' : (log.type === 'ferie' ? 'Ferie' : (log.type === 'malattia' ? 'Malattia' : (log.type === 'riposo_compensativo' ? 'Riposo Comp.' : 'Riposo')))}
                                      </p>
-                                     <h3 className="text-xs font-bold text-slate-800 dark:text-slate-100 uppercase tracking-tight">Registro Giornaliero</h3>
+                                     <h3 className="text-xs font-bold text-slate-800 dark:text-slate-100 uppercase tracking-tight italic">Registro Giornaliero</h3>
                                   </div>
                                </div>
                                <div className="flex items-center gap-4">
                                   <div className="text-right">
                                     {log.overtimeHours > 0 ? (
-                                      <p className="text-sm font-black text-orange-500 leading-tight">+{log.overtimeHours}h Extra</p>
+                                      <p className="text-sm font-black text-orange-500 leading-tight italic">+{log.overtimeHours}h Extra</p>
                                     ) : (
-                                      <p className="text-sm font-black text-slate-300 dark:text-slate-600 leading-tight">- Extra</p>
+                                      <p className="text-sm font-black text-slate-300 dark:text-slate-600 leading-tight italic">- Extra</p>
                                     )}
-                                    <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">{log.standardHours > 0 ? 'std' : ''}</p>
+                                    <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest italic">{log.standardHours > 0 ? 'std' : ''}</p>
                                   </div>
                                   <div className={`text-slate-300 dark:text-slate-600 transition-transform duration-300 ${expandedLogId === log.id ? 'rotate-180' : ''}`}><ChevronDown size={18} /></div>
                                </div>
@@ -916,8 +964,9 @@ export default function App() {
                             {expandedLogId === log.id && (
                                <div className="px-5 pb-5 pt-0 animate-in slide-in-from-top-2 duration-300">
                                   <div className="border-t border-slate-200/50 dark:border-slate-700/50 mt-2 pt-4">
-                                     <p className={`text-[10px] font-black text-${accentColor}-500 uppercase tracking-[0.2em] mb-2 flex items-center gap-2`}><Users size={14} /> Capisquadra</p>
-                                     <p className="text-xs font-bold text-slate-700 dark:text-slate-200 leading-relaxed pl-6">{log.teamLeader || "Nessun caposquadra indicato"}</p>
+                                     <p className={`text-[10px] font-black text-${accentColor}-500 uppercase tracking-[0.2em] mb-2 flex items-center gap-2 italic`}><Users size={14} /> Capisquadra</p>
+                                     <p className="text-xs font-bold text-slate-700 dark:text-slate-200 leading-relaxed pl-6 italic">{log.teamLeader || "Nessun caposquadra indicato"}</p>
+                                     <p className="text-xs text-slate-500 dark:text-slate-400 pl-6 mt-2 italic">{log.notes || "Nessuna nota"}</p>
                                   </div>
                                </div>
                             )}
@@ -925,28 +974,28 @@ export default function App() {
                     ))}
                     {filteredMonthLogs.length === 0 && (
                       <div className="py-20 text-center">
-                        <p className="text-slate-300 dark:text-slate-700 font-black uppercase text-xs tracking-widest">Nessuna voce trovata</p>
+                        <p className="text-slate-300 dark:text-slate-700 font-black uppercase text-xs tracking-widest italic">Nessuna voce trovata</p>
                       </div>
                     )}
                  </div>
 
-                 <button onClick={handleDownloadRequest} className={`mt-8 w-full p-5 bg-slate-900 dark:bg-${accentColor}-600/10 text-white dark:text-${accentColor}-400 rounded-2xl font-black uppercase text-[10px] tracking-[0.2em] transition-all flex items-center justify-center gap-3 hover:scale-[1.02] active:scale-95`}><Download size={18} /> Scarica PDF Report</button>
+                 <button onClick={handleDownloadRequest} className={`mt-8 w-full p-5 bg-slate-900 dark:bg-${accentColor}-600/10 text-white dark:text-${accentColor}-400 rounded-2xl font-black uppercase text-[10px] tracking-[0.2em] transition-all flex items-center justify-center gap-3 hover:scale-[1.02] active:scale-95 shadow-xl shadow-black/10`}><Download size={18} /> Scarica Report PDF</button>
              </div>
           </div>
         )}
 
         {view === 'settings' && (
           <div className="space-y-6 animate-in fade-in zoom-in duration-300">
-            <h2 className="text-2xl font-black italic text-slate-800 dark:text-white uppercase tracking-tight">Impostazioni</h2>
+            <h2 className="text-2xl font-black italic text-slate-800 dark:text-white uppercase tracking-tight italic">Impostazioni</h2>
             <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] shadow-sm border border-slate-200 dark:border-slate-800 space-y-8">
                <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-8">
-                  <div><h3 className="font-bold text-slate-900 dark:text-white mb-1">Aspetto Applicazione</h3><p className="text-xs text-slate-500 dark:text-slate-400">Scegli tra modalità chiara e scura</p></div>
+                  <div><h3 className="font-bold text-slate-900 dark:text-white mb-1 italic">Aspetto Applicazione</h3><p className="text-xs text-slate-500 dark:text-slate-400 italic">Scegli tra modalità chiara e scura</p></div>
                   <button onClick={toggleTheme} className="flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-slate-800 rounded-xl font-bold text-sm text-slate-600 dark:text-slate-300 transition-colors">
                     {theme === 'light' ? <><Moon size={16}/> Dark Mode</> : <><Sun size={16}/> Light Mode</>}
                   </button>
                </div>
                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 dark:border-slate-800 pb-8">
-                  <div><h3 className="font-bold text-slate-900 dark:text-white mb-1 flex items-center gap-2"><Palette size={18}/> Stile Colore</h3><p className="text-xs text-slate-500 dark:text-slate-400">Personalizza lo stile grafico</p></div>
+                  <div><h3 className="font-bold text-slate-900 dark:text-white mb-1 flex items-center gap-2 italic"><Palette size={18}/> Stile Colore</h3><p className="text-xs text-slate-500 dark:text-slate-400 italic">Personalizza lo stile grafico</p></div>
                   <div className="flex items-center gap-3 overflow-x-auto pb-2 sm:pb-0">
                     {Object.entries(ACCENT_COLORS).map(([key, { label, hex }]) => (
                       <button key={key} onClick={() => changeAccentColor(key)} title={label} style={{ backgroundColor: hex }} className={`w-10 h-10 rounded-full border-2 transition-all ${accentColor === key ? 'border-slate-900 dark:border-white scale-110 shadow-lg' : 'border-transparent hover:scale-105 opacity-70 hover:opacity-100'}`}>
@@ -956,14 +1005,14 @@ export default function App() {
                   </div>
                </div>
                <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-8">
-                  <div><h3 className="font-bold text-slate-900 dark:text-white mb-1 flex items-center gap-2"><Smartphone size={18}/> App Mobile</h3><p className="text-xs text-slate-500 dark:text-slate-400">Come installare TimeVault sulla Home</p></div>
+                  <div><h3 className="font-bold text-slate-900 dark:text-white mb-1 flex items-center gap-2 italic"><Smartphone size={18}/> App Mobile</h3><p className="text-xs text-slate-500 dark:text-slate-400 italic">Come installare TimeVault sulla Home</p></div>
                   <button onClick={() => setShowGuideModal(true)} className="flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-slate-800 rounded-xl font-bold text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">Apri Guida</button>
                </div>
                
                <div className="pt-4">
                   <div className="bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/30 p-6 rounded-[2rem]">
-                    <h3 className="font-black text-red-600 dark:text-red-500 mb-1 flex items-center gap-2 uppercase text-xs tracking-widest"><AlertTriangle size={16}/> Zona Pericolosa</h3>
-                    <p className="text-xs text-red-400 mb-4 font-medium">L'eliminazione dell'account è permanente e irreversibile.</p>
+                    <h3 className="font-black text-red-600 dark:text-red-500 mb-1 flex items-center gap-2 uppercase text-xs tracking-widest italic leading-none"><AlertTriangle size={16}/> Zona Pericolosa</h3>
+                    <p className="text-xs text-red-400 mb-4 font-medium italic leading-relaxed">L'eliminazione dell'account è permanente e irreversibile.</p>
                     <button onClick={() => { setShowDeleteRecoveryModal(true); setDeleteRecoveryInput(''); setDeleteError(''); }} className="flex items-center gap-2 px-5 py-3 bg-red-600 text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-red-700 transition-colors shadow-lg shadow-red-500/20"><ShieldX size={16}/> Elimina Account</button>
                   </div>
                </div>
@@ -971,7 +1020,7 @@ export default function App() {
           </div>
         )}
       </main>
-      <footer className="max-w-6xl mx-auto p-12 text-center text-[10px] font-black text-slate-300 dark:text-slate-600 uppercase tracking-[0.5em]">TimeVault v0.8.5</footer>
+      <footer className="max-w-4xl mx-auto p-12 text-center text-[10px] font-black text-slate-300 dark:text-slate-700 uppercase tracking-[0.5em] italic">TimeVault v0.8.9</footer>
     </div>
 
     {/* MODAL ELIMINAZIONE 1: CODICE RECUPERO */}
@@ -982,10 +1031,10 @@ export default function App() {
               <div className="text-center mb-6">
                  <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4"><Key size={32}/></div>
                  <h2 className="text-xl font-black text-red-600 uppercase tracking-tight italic">Sicurezza Account</h2>
-                 <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-2">Inserisci il codice di recupero a 16 cifre per procedere all'eliminazione.</p>
+                 <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-2 italic">Inserisci il codice di recupero a 16 cifre per procedere all'eliminazione.</p>
               </div>
               <form onSubmit={verifyRecoveryCodeForDeletion} className="space-y-4">
-                 <input type="text" placeholder="XXXX-XXXX-XXXX-XXXX" required className="w-full p-4.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl font-mono text-center font-black outline-none uppercase" value={deleteRecoveryInput} onChange={e => setDeleteRecoveryInput(e.target.value.toUpperCase())} maxLength={19} />
+                 <input type="text" placeholder="XXXX-XXXX-XXXX-XXXX" required className="w-full p-4.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl font-mono text-center font-black outline-none uppercase tracking-widest" value={deleteRecoveryInput} onChange={e => setDeleteRecoveryInput(e.target.value.toUpperCase())} maxLength={19} />
                  {deleteError && <p className="text-red-500 text-[10px] font-black text-center italic">{deleteError}</p>}
                  <button type="submit" disabled={isDeleting} className="w-full bg-red-600 text-white p-5 rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-red-500/30 active:scale-95 transition-all">{isDeleting ? "Verifica..." : "Verifica Codice"}</button>
               </form>
@@ -999,7 +1048,7 @@ export default function App() {
            <div className="bg-white dark:bg-slate-900 p-10 rounded-[2.5rem] w-full max-w-sm shadow-2xl text-center animate-in zoom-in-95 duration-300">
               <div className="w-20 h-20 bg-red-600 text-white rounded-full flex items-center justify-center mx-auto mb-6 animate-pulse"><ShieldAlert size={48}/></div>
               <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight italic mb-4">Sei Veramente Sicuro?</h2>
-              <p className="text-sm text-slate-500 dark:text-slate-400 font-medium mb-8 leading-relaxed">Tutti i tuoi registri, impostazioni e credenziali verranno cancellati istantaneamente e non potranno essere recuperati in alcun modo.</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400 font-medium mb-8 leading-relaxed italic">Tutti i tuoi registri, impostazioni e credenziali verranno cancellati istantaneamente e non potranno essere recuperati in alcun modo.</p>
               <div className="space-y-3">
                  <button onClick={confirmFinalAccountDeletion} disabled={isDeleting} className="w-full bg-red-600 text-white p-5 rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-red-500/30 active:scale-95 transition-all">{isDeleting ? "Eliminazione..." : "Sì, Elimina per Sempre"}</button>
                  <button onClick={() => setShowDeleteFinalConfirm(false)} className="w-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 p-5 rounded-2xl font-black uppercase tracking-widest">Annulla</button>
@@ -1008,61 +1057,52 @@ export default function App() {
         </div>
     )}
     
-    {/* AREA DI STAMPA NASCOSTA - PDF TEMPLATE */}
-    <div className="hidden print:block fixed inset-0 bg-white z-[9999] p-8 font-sans text-black overflow-visible">
-        <div className="flex justify-between items-end border-b-4 border-slate-900 pb-4 mb-6">
+    {/* --- AREA DI CATTURA PDF NASCOSTA (TEMPLATE ORIGINALE 0.8.5) --- */}
+    <div id="report-print-area" style={{ display: 'none', position: 'absolute', left: '-10000px', width: '210mm', padding: '20mm', backgroundColor: '#ffffff', color: '#000000', fontFamily: 'sans-serif' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', borderBottom: '4px solid #000', paddingBottom: '20px', marginBottom: '30px' }}>
            <div>
-              <h1 className="text-4xl font-black italic tracking-tighter mb-1">TIMEVAULT REPORT</h1>
-              <p className="text-sm font-bold text-slate-500 uppercase tracking-widest">Resoconto Personale Ore Lavorative</p>
+              <h1 style={{ fontSize: '32px', fontWeight: 900, fontStyle: 'italic', margin: 0, letterSpacing: '-2px' }}>TIMEVAULT REPORT</h1>
+              <p style={{ fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', margin: 0, color: '#666' }}>Resoconto Personale Ore Lavorative</p>
            </div>
-           <div className="text-right">
-              <p className="text-2xl font-black uppercase italic capitalize">{monthName}</p>
-              <p className="text-sm font-bold text-slate-600">Dipendente: {user?.displayName}</p>
+           <div style={{ textAlign: 'right' }}>
+              <p style={{ fontSize: '20px', fontWeight: 900, margin: 0, textTransform: 'capitalize' }}>{monthName}</p>
+              <p style={{ fontSize: '12px', fontWeight: 700, margin: 0 }}>Dipendente: {user?.displayName}</p>
            </div>
         </div>
         
-        <div className="grid grid-cols-2 gap-6 mb-8">
-           <div className="p-6 border-2 border-slate-200 rounded-3xl bg-slate-50">
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Giorni Lavorati</p>
-              <p className="text-4xl font-black">{monthlyStats.daysWorked}</p>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '30px' }}>
+           <div style={{ padding: '20px', border: '2px solid #eee', borderRadius: '20px', backgroundColor: '#fafafa' }}>
+              <p style={{ fontSize: '10px', fontWeight: 900, textTransform: 'uppercase', margin: '0 0 5px 0', color: '#999' }}>Giorni Lavorati</p>
+              <p style={{ fontSize: '32px', fontWeight: 900, margin: 0 }}>{monthlyStats.daysWorked}</p>
            </div>
-           <div className="p-6 border-2 border-slate-200 rounded-3xl bg-slate-50">
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Straordinari Totali</p>
-              <p className="text-4xl font-black text-orange-600">+{monthlyStats.ext}h</p>
+           <div style={{ padding: '20px', border: '2px solid #eee', borderRadius: '20px', backgroundColor: '#fafafa' }}>
+              <p style={{ fontSize: '10px', fontWeight: 900, textTransform: 'uppercase', margin: '0 0 5px 0', color: '#999' }}>Straordinari Totali</p>
+              <p style={{ fontSize: '32px', fontWeight: 900, margin: 0, color: '#f97316' }}>+{monthlyStats.ext}h</p>
            </div>
         </div>
 
-        <table className="w-full text-left border-collapse">
+        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
            <thead>
-              <tr className="border-b-2 border-slate-900">
-                 <th className="py-2 px-2 font-black uppercase text-xs">Data</th>
-                 <th className="py-2 px-2 font-black uppercase text-xs">Tipo</th>
-                 <th className="py-2 px-2 font-black uppercase text-xs">Caposquadra</th>
-                 <th className="py-2 px-2 font-black uppercase text-xs text-right">Extra</th>
+              <tr style={{ borderBottom: '2px solid #000' }}>
+                 <th style={{ padding: '10px', fontSize: '10px', fontWeight: 900, textTransform: 'uppercase', textAlign: 'left' }}>Data</th>
+                 <th style={{ padding: '10px', fontSize: '10px', fontWeight: 900, textTransform: 'uppercase', textAlign: 'left' }}>Tipo</th>
+                 <th style={{ padding: '10px', fontSize: '10px', fontWeight: 900, textTransform: 'uppercase', textAlign: 'left' }}>Caposquadra</th>
+                 <th style={{ padding: '10px', fontSize: '10px', fontWeight: 900, textTransform: 'uppercase', textAlign: 'right' }}>Extra</th>
               </tr>
            </thead>
            <tbody>
               {currentMonthLogs.map(log => (
-                 <tr key={log.id} className="border-b border-slate-100">
-                    <td className="py-3 px-2 font-bold text-xs">{formatDateIT(log.date)}</td>
-                    <td className="py-3 px-2">
-                       <span className="uppercase font-black tracking-wider text-[10px]">
-                          {log.type === 'work' ? "LAVORO" : (log.type === 'ferie' ? "FERIE" : (log.type === 'malattia' ? "MALATTIA" : (log.type === 'riposo_compensativo' ? "RIPOSO COMP." : "RIPOSO")))}
-                       </span>
-                    </td>
-                    <td className="py-3 px-2">
-                       {log.teamLeader ? <p className="text-[9px] font-black text-slate-600 uppercase">{log.teamLeader}</p> : <p className="text-[9px] text-slate-300">-</p>}
-                    </td>
-                    <td className="py-3 px-2 font-black text-xs text-right">
-                       {log.overtimeHours > 0 ? `+${log.overtimeHours}h` : "-"}
-                    </td>
+                 <tr key={log.id} style={{ borderBottom: '1px solid #eee' }}>
+                    <td style={{ padding: '12px 10px', fontSize: '12px', fontWeight: 700 }}>{formatDateIT(log.date)}</td>
+                    <td style={{ padding: '12px 10px', fontSize: '10px', fontWeight: 900, textTransform: 'uppercase' }}>{log.type.replace('_', ' ')}</td>
+                    <td style={{ padding: '12px 10px', fontSize: '11px', fontWeight: 600 }}>{log.teamLeader || '-'}</td>
+                    <td style={{ padding: '12px 10px', fontSize: '12px', fontWeight: 900, textAlign: 'right' }}>{log.overtimeHours > 0 ? `+${log.overtimeHours}h` : '-'}</td>
                  </tr>
               ))}
            </tbody>
         </table>
-
-        <div className="fixed bottom-8 left-8 right-8 text-center border-t-2 border-slate-100 pt-4">
-           <p className="text-[9px] text-slate-400 font-black uppercase tracking-[0.3em]">Documento generato da TimeVault App • {new Date().toLocaleDateString('it-IT')} • Riservato</p>
+        <div style={{ marginTop: '50px', borderTop: '2px solid #eee', paddingTop: '20px', textAlign: 'center' }}>
+           <p style={{ fontSize: '10px', color: '#ccc', fontWeight: 900, textTransform: 'uppercase' }}>Documento generato da TimeVault App • {new Date().toLocaleDateString('it-IT')} • Riservato</p>
         </div>
     </div>
     </>
