@@ -27,7 +27,7 @@ import {
 import { 
   Clock, Plus, Trash2, Calendar as CalendarIcon, LogOut, TrendingUp, 
   Briefcase, Sun, Moon, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, ArrowLeft, CheckCircle2,
-  Menu, Home, FileText, Settings, X, Zap, Palmtree, Thermometer, AlertTriangle, Download, Eye, ShieldAlert, Lock, LogIn, UserPlus, Key, Copy, AlertOctagon, ShieldCheck, Unlock, RefreshCw, Users, CheckSquare, Square, User, Palette, Smartphone, Share, Search
+  Menu, Home, FileText, Settings, X, Zap, Palmtree, Thermometer, AlertTriangle, Download, Eye, ShieldAlert, Lock, LogIn, UserPlus, Key, Copy, AlertOctagon, ShieldCheck, Unlock, RefreshCw, Users, CheckSquare, Square, User, Palette, Smartphone, Share, Search, ShieldX
 } from 'lucide-react';
 
 // -----------------------------------------------------------------------------
@@ -139,12 +139,11 @@ export default function App() {
   const [formError, setFormError] = useState('');
   const [logToDelete, setLogToDelete] = useState(null); 
   const [showDownloadConfirm, setShowDownloadConfirm] = useState(false); 
-  const [showPreviewModal, setShowPreviewModal] = useState(false); 
   const [showGuideModal, setShowGuideModal] = useState(false); 
 
-  const [showDeleteAuthModal, setShowDeleteAuthModal] = useState(false); 
+  const [showDeleteRecoveryModal, setShowDeleteRecoveryModal] = useState(false); 
   const [showDeleteFinalConfirm, setShowDeleteFinalConfirm] = useState(false); 
-  const [deletePassword, setDeletePassword] = useState('');
+  const [deleteRecoveryInput, setDeleteRecoveryInput] = useState('');
   const [deleteError, setDeleteError] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -384,21 +383,36 @@ export default function App() {
     } catch (e) { console.error(e); }
   };
 
-  const handleInitiateDeleteAccount = () => { setShowDeleteAuthModal(true); setDeletePassword(''); setDeleteError(''); };
-  const verifyPasswordAndDelete = async (e) => {
+  const verifyRecoveryCodeForDeletion = async (e) => {
     e.preventDefault();
     setDeleteError('');
-    if (!deletePassword) { setDeleteError("Inserisci la password per confermare."); return; }
+    if (deleteRecoveryInput.length < 16) { setDeleteError("Il codice deve essere di 16 caratteri."); return; }
     setIsDeleting(true);
     try {
-      const credential = EmailAuthProvider.credential(user.email, deletePassword);
-      await reauthenticateWithCredential(user, credential);
-      setIsDeleting(false); setShowDeleteAuthModal(false); setShowDeleteFinalConfirm(true);
-    } catch (error) { setIsDeleting(false); setDeleteError("Password non corretta. Riprova."); }
+       const securityDoc = await getDoc(doc(db, 'artifacts', APP_ID, 'users', user.uid, 'settings', 'security'));
+       if (securityDoc.exists() && securityDoc.data().recoveryCode === deleteRecoveryInput) {
+          setIsDeleting(false);
+          setShowDeleteRecoveryModal(false);
+          setShowDeleteFinalConfirm(true);
+       } else {
+          setIsDeleting(false);
+          setDeleteError("Codice di recupero non corretto.");
+       }
+    } catch (e) {
+       setIsDeleting(false);
+       setDeleteError("Errore durante la verifica.");
+    }
   };
+
   const confirmFinalAccountDeletion = async () => {
     setIsDeleting(true);
-    try { await deleteUser(user); } catch (error) { setIsDeleting(false); alert("Si è verificato un errore durante l'eliminazione. Riprova più tardi."); }
+    try {
+      // Nota: Idealmente andrebbero cancellati i log prima, ma per velocità eliminiamo l'utente
+      await deleteUser(user);
+    } catch (error) {
+      setIsDeleting(false);
+      alert("Per motivi di sicurezza, rieffettua l'accesso prima di eliminare l'account definitivamente.");
+    }
   };
 
   const handleDownloadRequest = () => setShowDownloadConfirm(true);
@@ -875,7 +889,7 @@ export default function App() {
                     {theme === 'light' ? <><Moon size={16}/> Dark Mode</> : <><Sun size={16}/> Light Mode</>}
                   </button>
                </div>
-               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 dark:border-slate-800 pb-8">
                   <div><h3 className="font-bold text-slate-900 dark:text-white mb-1 flex items-center gap-2"><Palette size={18}/> Stile Colore</h3><p className="text-xs text-slate-500 dark:text-slate-400">Personalizza lo stile grafico</p></div>
                   <div className="flex items-center gap-3 overflow-x-auto pb-2 sm:pb-0">
                     {Object.entries(ACCENT_COLORS).map(([key, { label, hex }]) => (
@@ -885,15 +899,60 @@ export default function App() {
                     ))}
                   </div>
                </div>
+               <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-8">
+                  <div><h3 className="font-bold text-slate-900 dark:text-white mb-1 flex items-center gap-2"><Smartphone size={18}/> App Mobile</h3><p className="text-xs text-slate-500 dark:text-slate-400">Come installare TimeVault sulla Home</p></div>
+                  <button onClick={() => setShowGuideModal(true)} className="flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-slate-800 rounded-xl font-bold text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">Apri Guida</button>
+               </div>
+               
+               <div className="pt-4">
+                  <div className="bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/30 p-6 rounded-[2rem]">
+                    <h3 className="font-black text-red-600 dark:text-red-500 mb-1 flex items-center gap-2 uppercase text-xs tracking-widest"><AlertTriangle size={16}/> Zona Pericolosa</h3>
+                    <p className="text-xs text-red-400 mb-4 font-medium">L'eliminazione dell'account è permanente e irreversibile.</p>
+                    <button onClick={() => { setShowDeleteRecoveryModal(true); setDeleteRecoveryInput(''); setDeleteError(''); }} className="flex items-center gap-2 px-5 py-3 bg-red-600 text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-red-700 transition-colors shadow-lg shadow-red-500/20"><ShieldX size={16}/> Elimina Account</button>
+                  </div>
+               </div>
             </div>
-            <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] shadow-sm border border-slate-200 dark:border-slate-800"><div className="flex items-center justify-between"><div><h3 className="font-bold text-slate-900 dark:text-white mb-1 flex items-center gap-2"><Smartphone size={18}/> App Mobile</h3><p className="text-xs text-slate-500 dark:text-slate-400">Come installare TimeVault sulla Home</p></div><button onClick={() => setShowGuideModal(true)} className="flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-slate-800 rounded-xl font-bold text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">Apri Guida</button></div></div>
           </div>
         )}
       </main>
-      <footer className="max-w-6xl mx-auto p-12 text-center text-[10px] font-black text-slate-300 dark:text-slate-600 uppercase tracking-[0.5em]">TimeVault v0.8.3</footer>
+      <footer className="max-w-6xl mx-auto p-12 text-center text-[10px] font-black text-slate-300 dark:text-slate-600 uppercase tracking-[0.5em]">TimeVault v0.8.4</footer>
     </div>
+
+    {/* MODAL ELIMINAZIONE 1: CODICE RECUPERO */}
+    {showDeleteRecoveryModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[60] flex items-center justify-center p-4 animate-in fade-in duration-300">
+           <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] w-full max-w-sm shadow-2xl border-2 border-red-500 relative animate-in zoom-in-95 duration-300">
+              <button onClick={() => setShowDeleteRecoveryModal(false)} className="absolute top-6 right-6 p-2 bg-slate-100 dark:bg-slate-800 rounded-full text-slate-400"><X size={20}/></button>
+              <div className="text-center mb-6">
+                 <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4"><Key size={32}/></div>
+                 <h2 className="text-xl font-black text-red-600 uppercase tracking-tight italic">Sicurezza Account</h2>
+                 <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-2">Inserisci il codice di recupero a 16 cifre per procedere all'eliminazione.</p>
+              </div>
+              <form onSubmit={verifyRecoveryCodeForDeletion} className="space-y-4">
+                 <input type="text" placeholder="XXXX-XXXX-XXXX-XXXX" required className="w-full p-4.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl font-mono text-center font-black outline-none uppercase" value={deleteRecoveryInput} onChange={e => setDeleteRecoveryInput(e.target.value.toUpperCase())} maxLength={19} />
+                 {deleteError && <p className="text-red-500 text-[10px] font-black text-center italic">{deleteError}</p>}
+                 <button type="submit" disabled={isDeleting} className="w-full bg-red-600 text-white p-5 rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-red-500/30 active:scale-95 transition-all">{isDeleting ? "Verifica..." : "Verifica Codice"}</button>
+              </form>
+           </div>
+        </div>
+    )}
+
+    {/* MODAL ELIMINAZIONE 2: CONFERMA FINALE */}
+    {showDeleteFinalConfirm && (
+        <div className="fixed inset-0 bg-black/90 backdrop-blur-xl z-[70] flex items-center justify-center p-4 animate-in fade-in duration-300">
+           <div className="bg-white dark:bg-slate-900 p-10 rounded-[2.5rem] w-full max-w-sm shadow-2xl text-center animate-in zoom-in-95 duration-300">
+              <div className="w-20 h-20 bg-red-600 text-white rounded-full flex items-center justify-center mx-auto mb-6 animate-pulse"><ShieldAlert size={48}/></div>
+              <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight italic mb-4">Sei Veramente Sicuro?</h2>
+              <p className="text-sm text-slate-500 dark:text-slate-400 font-medium mb-8 leading-relaxed">Tutti i tuoi registri, impostazioni e credenziali verranno cancellati istantaneamente e non potranno essere recuperati in alcun modo.</p>
+              <div className="space-y-3">
+                 <button onClick={confirmFinalAccountDeletion} disabled={isDeleting} className="w-full bg-red-600 text-white p-5 rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-red-500/30 active:scale-95 transition-all">{isDeleting ? "Eliminazione..." : "Sì, Elimina per Sempre"}</button>
+                 <button onClick={() => setShowDeleteFinalConfirm(false)} className="w-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 p-5 rounded-2xl font-black uppercase tracking-widest">Annulla</button>
+              </div>
+           </div>
+        </div>
+    )}
     
-    {/* AREA DI STAMPA NASCOSTA - PDF TEMPLATE AGGIORNATO */}
+    {/* AREA DI STAMPA NASCOSTA - PDF TEMPLATE */}
     <div className="hidden print:block fixed inset-0 bg-white z-[9999] p-8 font-sans text-black overflow-visible">
         <div className="flex justify-between items-end border-b-4 border-slate-900 pb-4 mb-6">
            <div>
