@@ -423,6 +423,10 @@ export default function App() {
     try { await deleteUser(user); } catch (error) { setIsDeleting(false); alert("Errore sicurezza."); }
   };
 
+  const handleDownloadRequest = () => {
+    setShowDownloadConfirm(true);
+  };
+
   const confirmDownload = async () => {
     if (!window.html2canvas || !window.jspdf) { alert("Attendi caricamento..."); return; }
     setIsGeneratingPDF(true);
@@ -812,7 +816,7 @@ export default function App() {
                     ))}
                  </div>
 
-                 <button onClick={() => setShowDownloadConfirm(true)} className={`mt-12 w-full p-6 text-white rounded-[1.5rem] font-black uppercase text-[11px] tracking-[0.5em] flex items-center justify-center gap-4 bg-slate-900 dark:bg-${accentColor}-600 transition-all hover:scale-[1.01] active:scale-95 shadow-2xl shadow-blue-500/30 leading-none italic group`}><Download size={22} className="group-hover:translate-y-1 transition-transform" /> Genera Vault Report PDF</button>
+                 <button onClick={handleDownloadRequest} className={`mt-12 w-full p-6 text-white rounded-[1.5rem] font-black uppercase text-[11px] tracking-[0.5em] flex items-center justify-center gap-4 bg-slate-900 dark:bg-${accentColor}-600 transition-all hover:scale-[1.01] active:scale-95 shadow-2xl shadow-blue-500/30 leading-none italic group`}><Download size={22} className="group-hover:translate-y-1 transition-transform" /> Genera Vault Report PDF</button>
              </div>
           </div>
         )}
@@ -821,7 +825,7 @@ export default function App() {
           <div className="space-y-10 animate-in zoom-in duration-300 pb-20">
             <h2 className="text-3xl font-black italic uppercase text-slate-900 dark:text-white tracking-tighter leading-none uppercase tracking-[0.3em]">Impostazioni Vault</h2>
             <div className="bg-white dark:bg-slate-900 p-8 md:p-14 rounded-[4rem] shadow-2xl border border-slate-200 dark:border-slate-800 space-y-14 relative overflow-hidden">
-               <div className={`absolute top-0 right-0 p-12 opacity-5 text-slate-400 dark:text-slate-800 pointer-events-none rotate-12`}><SettingsIcon size={200}/></div>
+               <div className={`absolute top-0 right-0 p-12 opacity-5 text-slate-400 dark:text-slate-800 pointer-events-none rotate-12`}><Settings size={200}/></div>
                
                <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-12 gap-8 relative z-10">
                   <div className="space-y-2">
@@ -1019,9 +1023,9 @@ export default function App() {
             <button onClick={() => setShowGuideModal(false)} className={`w-full mt-12 bg-slate-950 dark:bg-${accentColor}-600 text-white p-7 rounded-[2.5rem] font-black uppercase tracking-[0.5em] shadow-2xl hover:scale-105 active:scale-95 transition-all text-xs italic leading-none`}>Confermo Procedura</button>
           </div>
         </div>
-      )}
+    )}
 
-      {logToDelete && (
+    {logToDelete && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[100] flex items-center justify-center p-4 animate-in fade-in">
           <div className="bg-white dark:bg-slate-900 p-12 rounded-[3.5rem] shadow-2xl max-w-sm w-full border-4 border-slate-50 dark:border-slate-800 text-center animate-in zoom-in-95">
             <Trash2 size={48} className="mx-auto mb-6 text-red-500 animate-bounce" />
@@ -1032,8 +1036,7 @@ export default function App() {
             </div>
           </div>
         </div>
-      )}
-    </div>
+    )}
     </>
   );
 }
