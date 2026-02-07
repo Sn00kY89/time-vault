@@ -6,7 +6,6 @@ TimeVault è un'applicazione web moderna progettata per la registrazione collabo
 
 Autenticazione Aziendale: Accesso tramite formato nome.cognome (ID interno @time.vault).
 
-<<<<<<< HEAD
 - 🔐 **Autenticazione utenti** (login / registrazione) con Firebase Auth  
 - 🛡️ **Sistema di sicurezza con codice di recupero** per:
   - Sblocco account dopo tentativi falliti
@@ -26,9 +25,6 @@ Autenticazione Aziendale: Accesso tramite formato nome.cognome (ID interno @time
 - 🎨 **Personalizzazione colore principale dell’app**
 - 📱 **Installabile come PWA** (aggiunta alla Home su iOS / Android)
 - 🤖 **Automazione weekend**: inserisce automaticamente “Riposo” per sabato e domenica se mancanti
-=======
-Real-time Sync: I dati inseriti dai colleghi sono visibili istantaneamente a tutto il team.
->>>>>>> parent of 112996c (Update README.md)
 
 Privacy: Ogni utente può eliminare solo i propri record.
 

@@ -10,3 +10,6 @@ time-vault/
 ├── tailwind.config.js   # Configurazione di Tailwind CSS
 ├── vite.config.js       # Configurazione di Vite (se usato)
 └── README.md            # Documentazione del progetto
+
+// --- LETTURA VARIBILI CAPITURNO ---
+import externalTeamLeaders from './capisquadra.json';
