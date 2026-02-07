@@ -40,6 +40,7 @@ import externalTeamLeaders from './capisquadra.json';
 const fallbackForPreview = []; 
 // -----------------------------------------------------------------------------
 
+
 const getLeadersList = () => {
   try {
     let data = null;
@@ -169,18 +170,21 @@ export default function App() {
   const [reminderTime, setReminderTime] = useState(() => localStorage.getItem('reminder_time') || "18:00");
   const [notificationStatus, setNotificationStatus] = useState(typeof Notification !== 'undefined' ? Notification.permission : 'default');
 
-  // --- SERVICE WORKER REGISTRATION ---
+  // 1. --- REGISTRAZIONE SERVICE WORKER (FONDAMENTALE PER NOTIFICHE) ---
   useEffect(() => {
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
+        // Richiamo esatto al file sw.js nella cartella public
         navigator.serviceWorker.register('/sw.js').then(reg => {
-          console.log('SW registrato');
-        }).catch(err => console.error('Errore SW:', err));
+          console.log('TimeVault SW Registrato con successo');
+        }).catch(err => {
+          console.error('Errore registrazione SW:', err);
+        });
       });
     }
   }, []);
 
-  // --- UPDATE REMINDER SETTINGS IN SW ---
+  // 2. --- INVIO IMPOSTAZIONI AL SERVICE WORKER ---
   useEffect(() => {
     if (reminderEnabled && notificationStatus === 'granted' && navigator.serviceWorker.controller) {
       navigator.serviceWorker.controller.postMessage({
@@ -460,11 +464,10 @@ export default function App() {
 
   const sendTestNotification = () => {
     if (notificationStatus !== 'granted') {
-      alert("Devi prima abilitare le notifiche nelle impostazioni del dispositivo.");
-      return;
+       alert("Abilita prima le notifiche nel browser."); return;
     }
     new Notification("TimeVault Test", {
-      body: "Il sistema di notifiche del Vault è attivo e funzionante!",
+      body: "Il Vault comunica correttamente!",
       icon: "/favicon.ico"
     });
   };
@@ -866,8 +869,8 @@ export default function App() {
                   <div className="flex flex-wrap items-center gap-6">
                      {reminderEnabled && (
                         <div className="animate-in slide-in-from-right duration-500 flex items-center gap-3">
-                           <input type="time" className="bg-slate-50 dark:bg-slate-800 p-4 rounded-xl font-black text-xs outline-none border border-slate-100 dark:border-slate-700 dark:text-white shadow-inner" value={reminderTime} onChange={(e) => { setReminderTime(e.target.value); localStorage.setItem('reminder_time', e.target.value); }} title="Seleziona l'orario del promemoria" />
-                           <button onClick={sendTestNotification} className="p-4 bg-slate-100 dark:bg-slate-800 text-slate-400 hover:text-blue-500 rounded-xl transition-all active:scale-90" title="Invia notifica di prova"><Send size={18}/></button>
+                           <input type="time" className="bg-slate-50 dark:bg-slate-800 p-4 rounded-xl font-black text-xs outline-none border border-slate-100 dark:border-slate-700 dark:text-white shadow-inner" value={reminderTime} onChange={(e) => { setReminderTime(e.target.value); localStorage.setItem('reminder_time', e.target.value); }} />
+                           <button onClick={sendTestNotification} className="p-4 bg-slate-100 dark:bg-slate-800 text-slate-400 hover:text-blue-500 rounded-xl transition-all active:scale-90" title="Prova Notifica"><Send size={18}/></button>
                         </div>
                      )}
                      {notificationStatus !== 'granted' ? (
@@ -901,7 +904,7 @@ export default function App() {
             <div className="h-6 w-0.5 bg-slate-400"></div>
             <p className="text-[11px] font-black uppercase tracking-[1.2em] leading-none">TIMEVAULT</p>
          </div>
-         <p className="text-[10px] font-black text-slate-300 dark:text-slate-700 uppercase tracking-[0.6em] italic leading-none">Pro Edition v0.9.7 • Personal Vault System • 2024</p>
+         <p className="text-[10px] font-black text-slate-300 dark:text-slate-700 uppercase tracking-[0.6em] italic leading-none">Pro Edition v0.9.8 • Personal Vault System • 2024</p>
       </footer>
     </div>
 
@@ -1007,7 +1010,7 @@ export default function App() {
 
     {showGuideModal && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-xl z-[150] flex items-center justify-center p-4 animate-in fade-in duration-500">
-          <div className="bg-white dark:bg-slate-900 p-10 md:p-14 rounded-[4rem] w-full max-md shadow-2xl border-4 border-slate-50 dark:border-slate-800 relative overflow-y-auto max-h-[90vh] animate-in zoom-in-95">
+          <div className="bg-white dark:bg-slate-900 p-10 md:p-14 rounded-[4rem] w-full max-w-md shadow-2xl border-4 border-slate-50 dark:border-slate-800 relative overflow-y-auto max-h-[90vh] animate-in zoom-in-95">
             <button onClick={() => setShowGuideModal(false)} className="absolute top-10 right-10 p-2.5 bg-slate-100 dark:bg-slate-800 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-white transition-all active:scale-90 hover:rotate-90"><X size={24} /></button>
             <div className="text-center mb-12 relative">
                 <div className={`inline-flex p-6 rounded-[2rem] bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 mb-8 shadow-2xl shadow-blue-500/10 transition-transform hover:scale-110`}><Smartphone size={44} /></div>
