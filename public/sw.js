@@ -1,57 +1,56 @@
-/**
- * Service Worker per TimeVault Pro
- * Gestisce i promemoria nativi in background tramite PWA
- * Versione 0.9.6 - Background Sync Attivo
- */
-
-let reminderTime = null;
+// --- NUOVA LOGICA CON TIMER LOCALE ---
+let reminderTime = "18:00";
 let reminderEnabled = false;
 
-// Al momento dell'installazione del Service Worker
-self.addEventListener('install', (event) => {
-  self.skipWaiting();
-});
-
-// Ascolto messaggi dall'App principale React
 self.addEventListener('message', (event) => {
-  if (event.data.type === 'SET_REMINDER') {
+  if (event.data && event.data.type === 'SET_REMINDER') {
     reminderTime = event.data.time;
     reminderEnabled = event.data.enabled;
-    console.log('SW: Promemoria configurato per le ore', reminderTime);
+    console.log(`[SW] Orario sincronizzato: ${reminderTime} (Attivo: ${reminderEnabled})`);
   }
 });
 
-// Ciclo di controllo del Service Worker (60 secondi)
+// Controllo ogni minuto
 setInterval(() => {
   if (!reminderEnabled || !reminderTime) return;
 
-  const now = new Date();
-  const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+  const oraAttuale = new Date().toLocaleTimeString('it-IT', { 
+    hour: '2-digit', 
+    minute: '2-digit', 
+    hour12: false 
+  });
 
-  if (currentTime === reminderTime) {
+  if (oraAttuale === reminderTime) {
     self.registration.showNotification('TimeVault: Registro Ore', {
-      body: 'Hai inserito le ore lavorative di oggi? Apri il Vault per archiviare il diario!',
-      icon: '/favicon.ico',
-      badge: '/favicon.ico',
-      tag: 'daily-reminder', // Evita spam se il minuto scatta due volte
-      vibrate: [300, 100, 300, 100, 300],
-      requireInteraction: true,
-      data: { url: '/' }
+      body: 'È il momento di archiviare la tua giornata nel Vault!',
+      icon: '/clock.png',
+      badge: '/clock.png',
+      vibrate: [200, 100, 200],
+      tag: 'reminder-tag', // Evita notifiche doppie
+      renotify: true
     });
   }
 }, 60000);
 
-// Gestione click sulla notifica per riaprire l'app
+// --- RESTO DEL CODICE (PUSH E CLICK) ---
+self.addEventListener('push', (event) => {
+  const options = {
+    body: event.data ? event.data.text() : 'Ricordati di archiviare la giornata nel Vault!',
+    icon: '/clock.png',
+    badge: '/clock.png',
+    vibrate: [100, 50, 100],
+    data: { dateOfArrival: Date.now(), primaryKey: '1' },
+    actions: [
+      { action: 'explore', title: 'Apri Vault' },
+      { action: 'close', title: 'Chiudi' }
+    ]
+  };
+  event.waitUntil(self.registration.showNotification('TimeVault Reminder', options));
+});
+
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  event.waitUntil(
-    clients.matchAll({ type: 'window' }).then((clientList) => {
-      // Se l'app è già aperta, mettila a fuoco
-      if (clientList.length > 0) {
-        return clientList[0].focus();
-      }
-      // Altrimenti aprine una nuova finestra
-      return clients.openWindow(event.notification.data.url);
-    })
-  );
+  if (event.action === 'explore') {
+    event.waitUntil(clients.openWindow('/'));
+  }
 });
