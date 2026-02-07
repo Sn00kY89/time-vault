@@ -27,7 +27,7 @@ import {
 import { 
   Clock, Plus, Trash2, Calendar as CalendarIcon, LogOut, TrendingUp, 
   Briefcase, Sun, Moon, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, ArrowLeft, CheckCircle2,
-  Menu, Home, FileText, Settings, X, Zap, Palmtree, Thermometer, AlertTriangle, Download, Eye, ShieldAlert, Lock, LogIn, UserPlus, Key, Copy, AlertOctagon, ShieldCheck, Unlock, RefreshCw, Users, CheckSquare, Square
+  Menu, Home, FileText, Settings, X, Zap, Palmtree, Thermometer, AlertTriangle, Download, Eye, ShieldAlert, Lock, LogIn, UserPlus, Key, Copy, AlertOctagon, ShieldCheck, Unlock, RefreshCw, Users, CheckSquare, Square, User
 } from 'lucide-react';
 
 // -----------------------------------------------------------------------------
@@ -131,6 +131,10 @@ export default function App() {
   const [isLeaderDropdownOpen, setIsLeaderDropdownOpen] = useState(false); // Toggle per la tendina custom
   const leaderDropdownRef = useRef(null);
 
+  // NUOVI STATI PER HEADER PROFILE DROPDOWN
+  const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
+  const profileDropdownRef = useRef(null);
+
   // STATI PER GESTIONE ERRORI E CONFERME
   const [formError, setFormError] = useState('');
   const [logToDelete, setLogToDelete] = useState(null); 
@@ -190,11 +194,16 @@ export default function App() {
     localStorage.setItem('theme', theme);
   }, [theme]);
 
-  // Click Outside per chiudere la tendina custom
+  // Click Outside per chiudere la tendina custom (Capisquadra e Profilo)
   useEffect(() => {
     function handleClickOutsideDropdown(event) {
+      // Chiudi dropdown capisquadra
       if (leaderDropdownRef.current && !leaderDropdownRef.current.contains(event.target)) {
         setIsLeaderDropdownOpen(false);
+      }
+      // Chiudi dropdown profilo header
+      if (profileDropdownRef.current && !profileDropdownRef.current.contains(event.target)) {
+        setIsProfileDropdownOpen(false);
       }
     }
     document.addEventListener("mousedown", handleClickOutsideDropdown);
@@ -375,6 +384,7 @@ export default function App() {
     setView('calendar'); 
     setFailedAttempts(0);
     setIsLocked(false);
+    setIsProfileDropdownOpen(false); // Chiudi il menu se aperto
   };
 
   // Funzione per gestire i click sulla checkbox
@@ -819,11 +829,33 @@ export default function App() {
           )}
         </div>
         <div className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10"><h1 className="text-2xl font-black tracking-tighter italic leading-none text-slate-900 dark:text-white">TIMEVAULT</h1></div>
-        <div className="flex items-center gap-3 z-20">
-          <div className="bg-blue-50 dark:bg-slate-800 px-4 py-2 rounded-2xl border border-blue-100 dark:border-slate-700 hidden sm:block">
-            <p className="text-[9px] text-blue-400 dark:text-blue-300 font-black uppercase mb-0.5 leading-none text-right">Ciao</p>
-            <p className="text-sm font-black text-blue-700 dark:text-blue-400 uppercase italic leading-none">{user.displayName}</p>
-          </div>
+        
+        {/* --- HEADER PROFILE DROPDOWN --- */}
+        <div className="relative z-20" ref={profileDropdownRef}>
+            <button 
+              onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
+              className="flex items-center gap-2 group focus:outline-none"
+            >
+              <div className="bg-blue-50 dark:bg-slate-800 px-4 py-2 rounded-2xl border border-blue-100 dark:border-slate-700 hidden sm:block transition-transform group-hover:scale-95">
+                <p className="text-[9px] text-blue-400 dark:text-blue-300 font-black uppercase mb-0.5 leading-none text-right">Ciao</p>
+                <p className="text-sm font-black text-blue-700 dark:text-blue-400 uppercase italic leading-none">{user.displayName}</p>
+              </div>
+              <div className="w-10 h-10 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700 group-hover:bg-blue-100 dark:group-hover:bg-slate-700 transition-colors">
+                 <User size={20} />
+              </div>
+            </button>
+
+            {isProfileDropdownOpen && (
+              <div className="absolute top-full right-0 mt-2 w-56 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-100 dark:border-slate-800 p-2 animate-in fade-in slide-in-from-top-2">
+                 <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-800 mb-2 sm:hidden">
+                    <p className="text-[9px] text-slate-400 font-black uppercase">Utente</p>
+                    <p className="text-sm font-black text-slate-800 dark:text-white truncate">{user.displayName}</p>
+                 </div>
+                 <button onClick={handleLogout} className="w-full flex items-center gap-3 p-3 rounded-xl text-sm font-bold text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+                    <LogOut size={18} /> Disconnetti
+                 </button>
+              </div>
+            )}
         </div>
       </header>
 
@@ -1017,19 +1049,12 @@ export default function App() {
           <div className="space-y-6 animate-in fade-in zoom-in duration-300">
             <h2 className="text-2xl font-black italic text-slate-800 dark:text-white uppercase tracking-tight">Impostazioni</h2>
             <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] shadow-sm border border-slate-200 dark:border-slate-800 space-y-8">
-               <div className="flex items-center justify-between pb-8 border-b border-slate-100 dark:border-slate-800">
+               <div className="flex items-center justify-between">
                   <div>
                     <h3 className="font-bold text-slate-900 dark:text-white mb-1">Aspetto Applicazione</h3>
                     <p className="text-xs text-slate-500 dark:text-slate-400">Scegli tra modalità chiara e scura</p>
                   </div>
                   <button onClick={toggleTheme} className="flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-slate-800 rounded-xl font-bold text-sm text-slate-600 dark:text-slate-300">{theme === 'light' ? <><Moon size={16}/> Dark Mode</> : <><Sun size={16}/> Light Mode</>}</button>
-               </div>
-               <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="font-bold text-slate-900 dark:text-white mb-1">Sessione Utente</h3>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">Esci dal tuo account TimeVault</p>
-                  </div>
-                  <button onClick={handleLogout} className="flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-xl font-bold text-sm hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"><LogOut size={16}/> Disconnetti</button>
                </div>
             </div>
             <div className="bg-red-50 dark:bg-red-900/10 p-8 rounded-[2.5rem] border border-red-100 dark:border-red-900/20">
@@ -1044,7 +1069,7 @@ export default function App() {
           </div>
         )}
       </main>
-      <footer className="max-w-6xl mx-auto p-12 text-center text-[10px] font-black text-slate-300 dark:text-slate-600 uppercase tracking-[0.5em]">TimeVault v0.7.6</footer>
+      <footer className="max-w-6xl mx-auto p-12 text-center text-[10px] font-black text-slate-300 dark:text-slate-600 uppercase tracking-[0.5em]">TimeVault v0.7.7</footer>
     </div>
     
     {/* --- PRINT LAYOUT --- */}
