@@ -164,7 +164,7 @@ export default function App() {
   const [showOvertimeInput, setShowOvertimeInput] = useState(false);
   const [showNotesInput, setShowNotesInput] = useState(false); 
 
-  // --- STATI REMINDER (INTEGRAZIONE) ---
+  // --- STATI REMINDER ---
   const [reminderEnabled, setReminderEnabled] = useState(() => localStorage.getItem('reminder_enabled') === 'true');
   const [reminderTime, setReminderTime] = useState(() => localStorage.getItem('reminder_time') || "18:00");
   const [notificationStatus, setNotificationStatus] = useState(typeof Notification !== 'undefined' ? Notification.permission : 'default');
@@ -173,9 +173,9 @@ export default function App() {
   useEffect(() => {
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js')
-          .then(reg => console.log('SW registrato correttamente'))
-          .catch(err => console.error('Errore SW:', err));
+        navigator.serviceWorker.register('/sw.js').then(reg => {
+          console.log('SW registrato');
+        }).catch(err => console.error('Errore SW:', err));
       });
     }
   }, []);
@@ -191,7 +191,7 @@ export default function App() {
     }
   }, [reminderEnabled, reminderTime, notificationStatus]);
 
-  // --- PDF LIBRARIES LOADING ---
+  // --- CARICAMENTO LIBRERIE PDF ---
   useEffect(() => {
     const loadPdfScripts = () => {
       if (!document.getElementById('html2canvas-lib')) {
@@ -240,8 +240,7 @@ export default function App() {
   // --- USER DATA & PREFERENCES LOAD ---
   useEffect(() => {
     const initAuth = async () => {
-      try { await setPersistence(auth, browserLocalPersistence); } 
-      catch (error) { console.error("Persistence error:", error); }
+      try { await setPersistence(auth, browserLocalPersistence); } catch (error) {}
     };
     initAuth();
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -280,7 +279,7 @@ export default function App() {
     return () => unsubscribe();
   }, [user]);
 
-  // --- LOGICA AUTOMAZIONE RIPOSO WEEKEND ---
+  // --- AUTOMAZIONE RIPOSO WEEKEND ---
   useEffect(() => {
     if (!user || loading || logs.length === 0) return;
     const checkWeekendAutomation = async () => {
@@ -494,7 +493,7 @@ export default function App() {
   if (showIntro) return (
     <div className="h-screen w-full bg-slate-950 flex flex-col items-center justify-center p-8 animate-in fade-in duration-500 text-center">
       <Clock size={80} className={`text-${accentColor}-600 animate-pulse`} />
-      <h1 className="text-6xl font-black italic tracking-tighter text-white uppercase mt-10">TIMEVAULT</h1>
+      <h1 className="text-6xl font-black italic tracking-tighter text-white uppercase mt-10 leading-none">TIMEVAULT</h1>
       <p className="text-slate-500 font-bold uppercase tracking-[0.4em] text-[10px] mt-4 animate-bounce duration-1000">Enterprise Grade Security</p>
     </div>
   );
@@ -520,7 +519,6 @@ export default function App() {
           </div>
         </div>
 
-        {/* MODAL AUTH INTEGRALE */}
         {showAuthModal && (
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-in fade-in duration-200">
              <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] w-full max-w-sm shadow-2xl border relative animate-in zoom-in-95 duration-200 border-slate-200 dark:border-slate-800">
@@ -529,16 +527,15 @@ export default function App() {
                    <div className="text-center">
                       <div className="inline-flex p-4 rounded-2xl bg-red-600 text-white mb-4 animate-bounce"><AlertOctagon size={28} /></div>
                       <h2 className="text-2xl font-black italic text-red-600 uppercase">Vault Bloccato</h2>
-                      <p className="text-[10px] text-slate-400 font-bold uppercase mb-6 italic tracking-widest">Troppi tentativi falliti.</p>
                       {recoveryStep === 1 ? (
                         <div className="mt-6 space-y-4">
-                           <input type="text" placeholder="XXXX-XXXX-XXXX-XXXX" className="w-full p-4.5 bg-red-50 dark:bg-red-900/10 text-red-900 dark:text-red-500 rounded-2xl font-mono text-center font-bold outline-none border border-red-100 dark:border-red-900/20 shadow-inner" value={unlockCodeInput} onChange={e => setUnlockCodeInput(e.target.value.toUpperCase())} />
-                           <button onClick={handleVerifyCode} className="w-full bg-red-600 text-white p-5 rounded-2xl font-black uppercase tracking-widest shadow-lg shadow-red-500/20 active:scale-95 transition-all">Verifica Codice</button>
+                           <input type="text" placeholder="XXXX-XXXX-XXXX-XXXX" className="w-full p-4.5 bg-red-50 dark:bg-red-900/10 text-red-900 rounded-2xl font-mono text-center font-bold outline-none border border-red-100" value={unlockCodeInput} onChange={e => setUnlockCodeInput(e.target.value.toUpperCase())} />
+                           <button onClick={handleVerifyCode} className="w-full bg-red-600 text-white p-5 rounded-2xl font-black uppercase tracking-widest shadow-lg">Verifica Codice</button>
                         </div>
                       ) : (
-                        <div className="mt-6 space-y-4 animate-in slide-in-from-bottom duration-300">
-                           <input type="password" placeholder="Nuova Password" className="w-full p-4.5 bg-slate-100 dark:bg-slate-800 rounded-2xl font-bold outline-none dark:text-white border border-slate-200 dark:border-slate-700 shadow-inner" value={newResetPassword} onChange={e => setNewResetPassword(e.target.value)} />
-                           <button onClick={handleFinalPasswordReset} className="w-full bg-blue-600 text-white p-5 rounded-2xl font-black uppercase tracking-widest shadow-lg shadow-blue-500/20 active:scale-95 transition-all">Resetta Vault</button>
+                        <div className="mt-6 space-y-4 animate-in slide-in-from-bottom">
+                           <input type="password" placeholder="Nuova Password" className="w-full p-4.5 bg-slate-100 dark:bg-slate-800 rounded-2xl font-bold outline-none dark:text-white" value={newResetPassword} onChange={e => setNewResetPassword(e.target.value)} />
+                           <button onClick={handleFinalPasswordReset} className="w-full bg-blue-600 text-white p-5 rounded-2xl font-black uppercase tracking-widest shadow-lg">Resetta Vault</button>
                         </div>
                       )}
                    </div>
@@ -546,33 +543,32 @@ export default function App() {
                    <>
                    <div className="text-center mb-8">
                      <div className={`inline-flex p-4 rounded-2xl text-white mb-4 bg-${accentColor}-600`}><LogIn size={28} /></div>
-                     <h2 className="text-2xl font-black italic uppercase text-slate-900 dark:text-white tracking-tight">{authMode === 'login' ? 'Bentornato' : 'Nuovo Utente'}</h2>
+                     <h2 className="text-2xl font-black italic uppercase text-slate-900 dark:text-white leading-none">{authMode === 'login' ? 'Bentornato' : 'Nuovo Utente'}</h2>
                    </div>
                    <form onSubmit={handleAuth} className="space-y-4">
                      <input type="text" placeholder="nome.cognome" required className="w-full p-4.5 bg-slate-100 dark:bg-slate-800 dark:text-white rounded-2xl font-bold outline-none focus:ring-2 focus:ring-blue-500/20 border border-slate-200 dark:border-slate-700 shadow-inner" value={authData.username} onChange={e => setAuthData({...authData, username: e.target.value})} />
                      <input type="password" placeholder="••••••••" required className="w-full p-4.5 bg-slate-100 dark:bg-slate-800 dark:text-white rounded-2xl font-bold outline-none focus:ring-2 focus:ring-blue-500/20 border border-slate-200 dark:border-slate-700 shadow-inner" value={authData.password} onChange={e => setAuthData({...authData, password: e.target.value})} />
-                     {authError && <div className="text-red-600 text-[11px] font-black italic animate-shake">{authError}</div>}
+                     {authError && <div className="text-red-600 text-[11px] font-black italic animate-shake leading-none mt-2">{authError}</div>}
                      <button type="submit" disabled={isSubmitting} className={`w-full text-white p-5 rounded-2xl font-black uppercase tracking-widest bg-${accentColor}-600 shadow-xl active:scale-95 transition-all shadow-${accentColor}-500/20`}>{isSubmitting ? '...' : 'Entra nel Vault'}</button>
                    </form>
-                   <div className="mt-6 text-center"><button onClick={() => setAuthMode(authMode === 'login' ? 'register' : 'login')} className="text-slate-400 font-bold text-[10px] uppercase italic tracking-[0.2em] hover:text-slate-900 dark:hover:text-white transition-colors">{authMode === 'login' ? "Non hai un account? Registrati" : "Hai già un account? Accedi"}</button></div>
+                   <div className="mt-6 text-center"><button onClick={() => setAuthMode(authMode === 'login' ? 'register' : 'login')} className="text-slate-400 font-bold text-[10px] uppercase italic tracking-[0.2em]">{authMode === 'login' ? "Registrati" : "Accedi"}</button></div>
                    </>
                 )}
              </div>
           </div>
         )}
 
-        {/* MODAL RECOVERY CODE INTEGRALE */}
         {showRecoveryModal && (
            <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[110] flex items-center justify-center p-4 animate-in fade-in duration-300">
               <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] w-full max-w-sm border-2 border-red-500 text-center shadow-2xl animate-in zoom-in duration-300">
                  <ShieldCheck size={48} className="mx-auto mb-6 text-red-600 animate-pulse" />
-                 <h2 className="text-2xl font-black italic text-red-600 uppercase mb-2 tracking-tight">Chiave Privata</h2>
+                 <h2 className="text-2xl font-black italic text-red-600 uppercase mb-2 tracking-tight leading-none">Chiave Privata</h2>
                  <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mb-6 leading-relaxed italic">Salva questo codice in un luogo sicuro. Senza di esso non potrai recuperare il Vault o eliminare l'account.</p>
                  <div className="bg-slate-100 dark:bg-slate-950 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 mb-6 relative shadow-inner group">
-                    <p className="font-mono text-lg font-black tracking-widest break-all dark:text-white select-all">{generatedRecoveryCode}</p>
+                    <p className="font-mono text-lg font-black tracking-widest break-all dark:text-white select-all leading-none">{generatedRecoveryCode}</p>
                     <button onClick={() => { navigator.clipboard.writeText(generatedRecoveryCode); alert("Codice copiato!"); }} className="absolute right-2 top-2 p-2 bg-white dark:bg-slate-800 rounded-lg text-slate-400 shadow-sm opacity-0 group-hover:opacity-100 transition-opacity"><Copy size={16} /></button>
                  </div>
-                 <button onClick={() => { setShowRecoveryModal(false); setUser(auth.currentUser); }} className="w-full bg-red-600 text-white p-5 rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-red-500/20 active:scale-95 transition-all">Ho salvato la chiave</button>
+                 <button onClick={() => { setShowRecoveryModal(false); setUser(auth.currentUser); }} className="w-full bg-red-600 text-white p-5 rounded-2xl font-black uppercase tracking-widest shadow-xl active:scale-95">Ho salvato la chiave</button>
               </div>
            </div>
         )}
@@ -589,11 +585,11 @@ export default function App() {
           <div className="bg-slate-950 dark:bg-white p-2.5 rounded-2xl text-white dark:text-slate-900 shadow-lg"><Clock size={20} /></div>
           {isMenuOpen && (
             <div className="absolute top-full left-0 mt-2 w-64 bg-white dark:bg-slate-900 rounded-[2rem] shadow-2xl border border-slate-100 dark:border-slate-800 p-3 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
-               <button onClick={() => { setView('calendar'); setIsMenuOpen(false); }} className={`w-full flex items-center gap-3 p-4 rounded-2xl text-xs font-black uppercase tracking-widest transition-all ${view === 'calendar' ? `bg-${accentColor}-600 text-white shadow-lg` : 'hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-400'}`}><Home size={18} /> Diario</button>
-               <button onClick={() => { setView('report'); setIsMenuOpen(false); }} className={`w-full flex items-center gap-3 p-4 rounded-2xl text-xs font-black uppercase tracking-widest transition-all ${view === 'report' ? `bg-${accentColor}-600 text-white shadow-lg` : 'hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-400'}`}><FileText size={18} /> Resoconto</button>
-               <button onClick={() => { setView('settings'); setIsMenuOpen(false); }} className={`w-full flex items-center gap-3 p-4 rounded-2xl text-xs font-black uppercase tracking-widest transition-all ${view === 'settings' ? `bg-${accentColor}-600 text-white shadow-lg` : 'hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-400'}`}><Settings size={18} /> Impostazioni</button>
+               <button onClick={() => { setView('calendar'); setIsMenuOpen(false); }} className={`w-full flex items-center gap-3 p-4 rounded-2xl text-xs font-black uppercase tracking-widest transition-all ${view === 'calendar' ? `bg-${accentColor}-600 text-white` : 'hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-400'}`}><Home size={18} /> Diario</button>
+               <button onClick={() => { setView('report'); setIsMenuOpen(false); }} className={`w-full flex items-center gap-3 p-4 rounded-2xl text-xs font-black uppercase tracking-widest transition-all ${view === 'report' ? `bg-${accentColor}-600 text-white` : 'hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-400'}`}><FileText size={18} /> Resoconto</button>
+               <button onClick={() => { setView('settings'); setIsMenuOpen(false); }} className={`w-full flex items-center gap-3 p-4 rounded-2xl text-xs font-black uppercase tracking-widest transition-all ${view === 'settings' ? `bg-${accentColor}-600 text-white` : 'hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-400'}`}><Settings size={18} /> Impostazioni</button>
                <div className="mt-2 pt-2 border-t border-slate-100 dark:border-slate-800">
-                  <button onClick={() => { setShowGuideModal(true); setIsMenuOpen(false); }} className="w-full flex items-center gap-3 p-4 rounded-2xl text-xs font-black uppercase tracking-widest text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/10 transition-all italic"><Smartphone size={18} /> Guida WebApp</button>
+                  <button onClick={() => { setShowGuideModal(true); setIsMenuOpen(false); }} className="w-full flex items-center gap-3 p-4 rounded-2xl text-xs font-black uppercase tracking-widest text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/10 transition-all italic leading-none"><Smartphone size={18} /> Guida WebApp</button>
                </div>
             </div>
           )}
@@ -609,11 +605,7 @@ export default function App() {
             </button>
             {isProfileDropdownOpen && (
               <div className="absolute top-full right-0 mt-2 w-64 bg-white dark:bg-slate-900 rounded-[2rem] shadow-2xl border border-slate-100 dark:border-slate-800 p-3 animate-in fade-in slide-in-from-top-2">
-                 <div className="p-4 border-b border-slate-100 dark:border-slate-800 mb-2">
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 italic">Email Interna</p>
-                    <p className="text-xs font-bold text-slate-600 dark:text-slate-300 break-all leading-tight">{user?.email}</p>
-                 </div>
-                 <button onClick={() => signOut(auth)} className="w-full flex items-center gap-3 p-4 rounded-2xl text-xs font-black uppercase tracking-widest text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all italic"><LogOut size={18} /> Chiudi Vault</button>
+                 <button onClick={() => signOut(auth)} className="w-full flex items-center gap-3 p-4 rounded-2xl text-xs font-black uppercase tracking-widest text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all italic leading-none"><LogOut size={18} /> Chiudi Vault</button>
               </div>
             )}
         </div>
@@ -622,7 +614,6 @@ export default function App() {
       <main className="max-w-4xl mx-auto p-6 md:p-10 space-y-12 pb-32">
         {view === 'calendar' && (
           <div className="space-y-10 animate-in fade-in zoom-in duration-300">
-            {/* STATS RAPIDE INTEGRALI */}
             <div className="grid grid-cols-2 gap-6">
               <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] shadow-sm border border-slate-200 dark:border-slate-800 hover:shadow-xl transition-all group overflow-hidden relative">
                 <div className={`absolute top-0 right-0 p-6 opacity-5 text-${accentColor}-600 group-hover:scale-125 transition-transform`}><CalendarIcon size={80}/></div>
@@ -632,23 +623,22 @@ export default function App() {
               <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] shadow-sm border border-slate-200 dark:border-slate-800 hover:shadow-xl transition-all group overflow-hidden relative">
                 <div className="absolute top-0 right-0 p-6 opacity-5 text-orange-600 group-hover:scale-125 transition-transform"><Zap size={80}/></div>
                 <p className="text-[11px] text-slate-400 font-black uppercase tracking-[0.2em] mb-1 italic leading-none">Extra del Mese</p>
-                <p className="text-4xl font-black text-orange-600 leading-none tracking-tighter">+{monthlyStats.ext}<span className="text-lg font-bold ml-1 italic">h</span></p>
+                <p className="text-4xl font-black text-orange-600 leading-none tracking-tighter">+{monthlyStats.ext}<span className="text-lg font-bold ml-1 italic leading-none">h</span></p>
               </div>
             </div>
 
-            {/* CALENDARIO PREMIUM INTEGRALE */}
             <div className="bg-white dark:bg-slate-900 rounded-[3rem] shadow-2xl border border-slate-200 dark:border-slate-800 p-8 md:p-12 overflow-hidden animate-in slide-in-from-bottom duration-500 relative">
               <div className="flex flex-col sm:flex-row items-center justify-between mb-12 gap-6 relative z-10">
                 <h2 className="text-3xl font-black capitalize italic text-slate-900 dark:text-white tracking-tighter leading-none">{monthName}</h2>
                 <div className="flex bg-slate-100 dark:bg-slate-800 p-2 rounded-2xl gap-1 border border-slate-200 dark:border-slate-700 shadow-inner">
                   <button onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1))} className="p-3 hover:bg-white dark:hover:bg-slate-700 rounded-xl transition-all text-slate-500 shadow-sm active:scale-90"><ChevronLeft size={22}/></button>
-                  <button onClick={() => setCurrentMonth(new Date())} className="px-4 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-blue-500 italic transition-colors">Oggi</button>
+                  <button onClick={() => setCurrentMonth(new Date())} className="px-4 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-blue-500 italic transition-colors leading-none">Oggi</button>
                   <button onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1))} className="p-3 hover:bg-white dark:hover:bg-slate-700 rounded-xl transition-all text-slate-500 shadow-sm active:scale-90"><ChevronRight size={22}/></button>
                 </div>
               </div>
               
               <div className="grid grid-cols-7 mb-6 relative z-10">
-                 {['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'].map(day => (<div key={day} className="text-center text-[10px] font-black uppercase text-slate-400 py-3 tracking-[0.3em] italic">{day}</div>))}
+                 {['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'].map(day => (<div key={day} className="text-center text-[10px] font-black uppercase text-slate-400 py-3 tracking-[0.3em] italic leading-none">{day}</div>))}
               </div>
 
               <div className="grid grid-cols-7 gap-4 md:gap-6 relative z-10">
@@ -664,8 +654,7 @@ export default function App() {
                   return (
                     <button key={day} onClick={() => { setSelectedDate(new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day)); setView('day'); }} className={`aspect-square rounded-[1.5rem] md:rounded-[2rem] flex flex-col items-center justify-center relative transition-all group ${active ? `bg-${accentColor}-600 text-white shadow-xl shadow-${accentColor}-500/20 scale-100` : isToday ? 'bg-blue-50 dark:bg-blue-900/20 ring-2 ring-blue-500/30' : 'bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 hover:scale-105 active:scale-95 shadow-inner'}`}>
                       <span className={`text-xl font-black tracking-tighter leading-none ${isToday && !active ? 'text-blue-600 dark:text-blue-400 underline underline-offset-4 decoration-2' : ''}`}>{day}</span>
-                      {active && logType === 'work' && <div className="w-1.5 h-1.5 rounded-full mt-1.5 bg-white opacity-80 animate-pulse"></div>}
-                      {active && logType !== 'work' && <div className={`w-1.5 h-1.5 rounded-full mt-1.5 ${logType === 'ferie' ? 'bg-emerald-300' : logType === 'malattia' ? 'bg-pink-300' : 'bg-indigo-300'}`}></div>}
+                      {active && <div className="w-1.5 h-1.5 rounded-full mt-1.5 bg-white opacity-80 animate-pulse"></div>}
                     </button>
                   );
                 })}
@@ -677,9 +666,9 @@ export default function App() {
         {view === 'day' && (
           <div className="space-y-8 animate-in slide-in-from-right duration-300">
             <button onClick={() => setView('calendar')} className="flex items-center gap-2 text-slate-400 font-black uppercase text-[10px] tracking-[0.2em] mb-4 hover:text-slate-900 dark:hover:text-white transition-colors italic leading-none"><ArrowLeft size={16} /> Torna al diario</button>
-            <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center justify-between">
                <h2 className="text-4xl font-black italic capitalize text-slate-900 dark:text-white tracking-tighter leading-none">{selectedDate.toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' })}</h2>
-               {isWeekend && <div className="bg-orange-100 dark:bg-orange-900/30 text-orange-600 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest italic flex-shrink-0">Weekend</div>}
+               {isWeekend && <div className="bg-orange-100 dark:bg-orange-900/30 text-orange-600 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest italic leading-none">Weekend</div>}
             </div>
 
             <div className="bg-white dark:bg-slate-900 p-8 md:p-12 rounded-[3rem] shadow-2xl border border-slate-200 dark:border-slate-800 relative overflow-hidden">
@@ -705,23 +694,21 @@ export default function App() {
                      <input type="number" step="0.5" className="w-full p-5 bg-orange-50 dark:bg-orange-900/10 text-orange-600 dark:text-orange-400 rounded-3xl font-black text-2xl outline-none border border-orange-100 dark:border-orange-900/30 shadow-inner" placeholder="0.0" value={formData.overtimeHours} onChange={e => setFormData({...formData, overtimeHours: e.target.value})} />
                    </div>
                 )}
-
                 <div className="border-t border-slate-100 dark:border-slate-800 pt-8 text-center">
-                  <button type="button" onClick={() => setShowNotesInput(!showNotesInput)} className="text-slate-300 dark:text-slate-600 hover:text-slate-600 p-2 flex items-center gap-2 mx-auto uppercase text-[10px] font-black tracking-[0.2em] italic transition-colors leading-none">{showNotesInput ? <><ChevronUp size={16}/> Nascondi Dettagli</> : <><ChevronDown size={16}/> Aggiungi Note / Capisquadra</>}</button>
-                  
+                  <button type="button" onClick={() => setShowNotesInput(!showNotesInput)} className="text-slate-300 dark:text-slate-600 hover:text-slate-600 p-2 flex items-center gap-2 mx-auto uppercase text-[10px] font-black tracking-[0.2em] italic leading-none">{showNotesInput ? <><ChevronUp size={16}/> Nascondi</> : <><ChevronDown size={16}/> Note e Capisquadra</>}</button>
                   {showNotesInput && (
                     <div className="mt-8 space-y-6 animate-in slide-in-from-top-2 duration-300 text-left">
                        <div ref={leaderDropdownRef} className="relative">
-                          <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 ml-1 italic leading-none">Responsabile di Cantiere</label>
-                          <div onClick={() => setIsLeaderDropdownOpen(!isLeaderDropdownOpen)} className="w-full p-5 bg-slate-50 dark:bg-slate-800 dark:text-white rounded-[1.5rem] font-bold border border-slate-200 dark:border-slate-700 cursor-pointer flex justify-between items-center transition-all hover:border-blue-500 shadow-inner group">
-                              <span className="truncate uppercase text-xs tracking-tight">{selectedLeaders.length === 0 ? "Nessun responsabile selezionato" : selectedLeaders.join(', ')}</span>
-                              <ChevronDown size={18} className={`transition-transform duration-300 text-slate-300 group-hover:text-blue-500 ${isLeaderDropdownOpen ? 'rotate-180' : ''}`} />
+                          <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 ml-1 italic leading-none">Responsabile</label>
+                          <div onClick={() => setIsLeaderDropdownOpen(!isLeaderDropdownOpen)} className="w-full p-5 bg-slate-50 dark:bg-slate-800 dark:text-white rounded-[1.5rem] font-bold border border-slate-200 dark:border-slate-700 cursor-pointer flex justify-between items-center transition-all hover:border-blue-500 shadow-inner">
+                              <span className="truncate uppercase text-xs tracking-tight">{selectedLeaders.length === 0 ? "Nessuno selezionato" : selectedLeaders.join(', ')}</span>
+                              <ChevronDown size={18} className={`transition-transform duration-300 ${isLeaderDropdownOpen ? 'rotate-180' : ''}`} />
                           </div>
                           {isLeaderDropdownOpen && (
-                              <div className="absolute top-full left-0 right-0 mt-3 bg-white dark:bg-slate-800 border dark:border-slate-700 rounded-[2rem] shadow-2xl z-[60] p-3 max-h-60 overflow-y-auto animate-in zoom-in-95 duration-200 border-slate-100">
+                              <div className="absolute top-full left-0 right-0 mt-3 bg-white dark:bg-slate-800 border dark:border-slate-700 rounded-[2rem] shadow-2xl z-[60] p-3 max-h-60 overflow-y-auto animate-in zoom-in-95">
                                   {availableLeaders.map(l => (
-                                      <div key={l} onClick={() => toggleLeaderSelection(l)} className="flex items-center gap-4 p-4 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-700 cursor-pointer transition-all border border-transparent hover:border-slate-100 dark:hover:border-slate-600">
-                                          <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all ${selectedLeaders.includes(l) ? `bg-${accentColor}-600 text-white border-${accentColor}-600 scale-110 shadow-lg shadow-${accentColor}-500/20` : 'border-slate-300 dark:border-slate-600'}`}>{selectedLeaders.includes(l) && <CheckSquare size={16} />}</div>
+                                      <div key={l} onClick={() => toggleLeaderSelection(l)} className="flex items-center gap-4 p-4 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-700 cursor-pointer transition-all">
+                                          <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all ${selectedLeaders.includes(l) ? `bg-${accentColor}-600 text-white border-${accentColor}-600 shadow-lg shadow-${accentColor}-500/20` : 'border-slate-300 dark:border-slate-600'}`}>{selectedLeaders.includes(l) && <CheckSquare size={16} />}</div>
                                           <span className={`text-sm font-black uppercase tracking-tight ${selectedLeaders.includes(l) ? 'text-slate-900 dark:text-white' : 'text-slate-400'}`}>{l}</span>
                                       </div>
                                   ))}
@@ -729,22 +716,20 @@ export default function App() {
                           )}
                        </div>
                        <div>
-                          <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 ml-1 italic leading-none">Dettagli Attività / Note</label>
-                          <textarea placeholder="Inserisci descrizioni o riferimenti..." className="w-full p-6 bg-slate-50 dark:bg-slate-800 dark:text-white rounded-[1.5rem] font-medium outline-none border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-blue-500/20 shadow-inner min-h-[140px] italic text-sm transition-all" rows="3" value={formData.notes} onChange={e => setFormData({...formData, notes: e.target.value})}></textarea>
+                          <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 ml-1 italic leading-none">Note Attività</label>
+                          <textarea placeholder="Dettagli..." className="w-full p-6 bg-slate-50 dark:bg-slate-800 dark:text-white rounded-[1.5rem] font-medium outline-none border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-blue-500/20 shadow-inner min-h-[140px] italic text-sm" rows="3" value={formData.notes} onChange={e => setFormData({...formData, notes: e.target.value})}></textarea>
                        </div>
                     </div>
                   )}
                 </div>
                 {formError && <p className="text-red-600 text-[10px] font-black italic animate-bounce leading-none mt-4 uppercase tracking-widest">{formError}</p>}
-                <button type="submit" className={`w-full p-6 rounded-[1.5rem] font-black uppercase tracking-[0.4em] text-white shadow-2xl bg-${accentColor}-600 shadow-${accentColor}-500/40 transition-all hover:scale-[1.01] active:scale-95 flex items-center justify-center gap-4 text-xs`}><CheckCircle2 size={22} /> Archivia nel Vault</button>
+                <button type="submit" className={`w-full p-6 rounded-[1.5rem] font-black uppercase tracking-[0.4em] text-white shadow-2xl bg-${accentColor}-600 shadow-${accentColor}-500/40 transition-all hover:scale-[1.01] active:scale-95 flex items-center justify-center gap-4 text-xs italic leading-none`}><CheckCircle2 size={22} /> Archivia nel Vault</button>
               </form>
             </div>
 
-            {/* STORICO GIORNALIERO INTEGRALE PREMIUM */}
             <div className="space-y-6">
-               <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em] italic leading-none text-center py-4 border-b border-slate-100 dark:border-slate-900">Registri Attivi</h4>
                {logs.filter(l => l.date === formatDateAsLocal(selectedDate)).map(log => (
-                 <div key={log.id} className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between shadow-lg animate-in slide-in-from-right duration-500 relative group overflow-hidden hover:shadow-xl transition-all">
+                 <div key={log.id} className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between shadow-lg animate-in slide-in-from-right relative group overflow-hidden">
                     <div className={`absolute left-0 top-0 h-full w-2 bg-${accentColor}-600`}></div>
                     <div className="space-y-4">
                        <div className="flex flex-wrap items-center gap-3">
@@ -756,16 +741,10 @@ export default function App() {
                        {log.notes && <p className="text-sm text-slate-500 dark:text-slate-400 font-medium italic border-l-2 border-slate-100 dark:border-slate-800 pl-4 py-1 leading-relaxed">{log.notes}</p>}
                     </div>
                     <div className="flex justify-end mt-6 sm:mt-0">
-                       <button onClick={() => requestDeleteLog(log.id)} className="p-4 text-slate-200 hover:text-red-500 rounded-2xl transition-all hover:bg-red-50 dark:hover:bg-red-900/10 group-hover:text-slate-400 group-hover:scale-110 active:scale-90"><Trash2 size={20} /></button>
+                       <button onClick={() => requestDeleteLog(log.id)} className="p-4 text-slate-200 hover:text-red-500 rounded-2xl transition-all hover:bg-red-50 dark:hover:bg-red-900/10"><Trash2 size={20} /></button>
                     </div>
                  </div>
                ))}
-               {logs.filter(l => l.date === formatDateAsLocal(selectedDate)).length === 0 && (
-                  <div className="p-16 text-center border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-[3rem] animate-pulse">
-                     <Clock size={32} className="mx-auto text-slate-200 dark:text-slate-800 mb-4 opacity-50" />
-                     <p className="text-[11px] font-black text-slate-300 dark:text-slate-700 uppercase tracking-[0.6em] italic leading-none">Vault in Attesa</p>
-                  </div>
-               )}
             </div>
           </div>
         )}
@@ -785,16 +764,15 @@ export default function App() {
                  <div className={`absolute top-0 left-0 w-2 h-full bg-${accentColor}-600`}></div>
                  <div className="grid grid-cols-2 gap-12 mb-14">
                     <div className="animate-in slide-in-from-left duration-500">
-                       <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.4em] mb-3 italic leading-none">Presenze Effettive</p>
+                       <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.4em] mb-3 italic leading-none">Presenze</p>
                        <p className="text-7xl font-black dark:text-white tracking-tighter leading-none">{monthlyStats.daysWorked}</p>
                     </div>
                     <div className="animate-in slide-in-from-right duration-500">
-                       <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.4em] mb-3 italic leading-none">Straordinari Totali</p>
+                       <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.4em] mb-3 italic leading-none">Extra</p>
                        <p className="text-7xl font-black text-orange-600 tracking-tighter leading-none">{monthlyStats.ext}<span className="text-2xl font-black ml-1 italic leading-none">h</span></p>
                     </div>
                  </div>
 
-                 {/* SEARCH & LIST INTEGRALE PREMIUM */}
                  <div className="relative mb-10 group">
                     <Search size={22} className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
                     <input type="text" placeholder="Filtra tra note, date o responsabili..." className="w-full pl-16 pr-6 py-6 bg-slate-50 dark:bg-slate-800 border-none rounded-[1.5rem] font-bold outline-none italic text-sm shadow-inner dark:text-white focus:ring-2 focus:ring-blue-500/20 transition-all placeholder:text-slate-300" value={reportSearchQuery} onChange={(e) => setReportSearchQuery(e.target.value)} />
@@ -805,7 +783,7 @@ export default function App() {
                          <div key={log.id} className={`bg-slate-50/50 dark:bg-slate-800/20 rounded-[2rem] border-2 transition-all cursor-pointer hover:bg-white dark:hover:bg-slate-800 shadow-sm ${expandedLogId === log.id ? `ring-4 ring-${accentColor}-500/10 border-blue-500/30 scale-[1.02] bg-white dark:bg-slate-800` : 'border-transparent'}`} onClick={() => setExpandedLogId(expandedLogId === log.id ? null : log.id)}>
                             <div className="p-6 md:p-8 flex items-center justify-between">
                                 <div className="flex items-center gap-6">
-                                   <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-lg font-black bg-white dark:bg-slate-700 border-2 transition-all duration-300 shadow-sm ${expandedLogId === log.id ? `border-${accentColor}-500 text-${accentColor}-500 rotate-12 scale-110` : 'border-slate-100 dark:border-slate-600'}`}>{new Date(log.date).getDate()}</div>
+                                   <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-lg font-black bg-white dark:bg-slate-700 border-2 shadow-sm ${expandedLogId === log.id ? `border-${accentColor}-500 text-${accentColor}-500 rotate-12 scale-110` : 'border-slate-100 dark:border-slate-600'}`}>{new Date(log.date).getDate()}</div>
                                    <div>
                                       <p className={`text-[10px] font-black uppercase text-slate-400 mb-1 tracking-[0.3em] italic leading-none`}>{log.type.replace('_', ' ')}</p>
                                       <h3 className="text-xs font-black uppercase tracking-widest text-slate-800 dark:text-slate-200 leading-none">Giorno {new Date(log.date).getDate()}</h3>
@@ -820,57 +798,49 @@ export default function App() {
                                 <div className="px-8 pb-10 pt-4 border-t border-slate-100 dark:border-slate-700/50 animate-in slide-in-from-top-4 duration-500">
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
                                        <div className="space-y-3">
-                                          <p className={`text-[10px] font-black text-${accentColor}-500 uppercase tracking-[0.2em] italic flex items-center gap-2 leading-none`}><Users size={16}/> Capisquadra / Responsabile</p>
-                                          <p className="text-sm font-black pl-6 italic dark:text-slate-300 tracking-tight leading-none">{log.teamLeader || "Nessun dato registrato"}</p>
+                                          <p className={`text-[10px] font-black text-${accentColor}-500 uppercase tracking-[0.2em] italic flex items-center gap-2 leading-none`}><Users size={16}/> Responsabile</p>
+                                          <p className="text-sm font-black pl-6 italic dark:text-slate-300 tracking-tight leading-none">{log.teamLeader || "N/A"}</p>
                                        </div>
                                        <div className="space-y-3">
-                                          <p className={`text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] italic flex items-center gap-2 leading-none`}><FileText size={16}/> Note Log di Diario</p>
-                                          <p className="text-sm font-medium text-slate-500 dark:text-slate-400 pl-6 italic leading-relaxed">{log.notes || "Nessuna nota aggiuntiva disponibile."}</p>
+                                          <p className={`text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] italic flex items-center gap-2 leading-none`}><FileText size={16}/> Note Diario</p>
+                                          <p className="text-sm font-medium text-slate-500 dark:text-slate-400 pl-6 italic leading-relaxed">{log.notes || "Nessun dettaglio."}</p>
                                        </div>
                                     </div>
                                 </div>
                             )}
                          </div>
                     ))}
-                    {filteredMonthLogs.length === 0 && (
-                        <div className="py-32 text-center opacity-50 grayscale">
-                           <ShieldAlert size={60} className="mx-auto text-slate-200 dark:text-slate-800 mb-6 animate-pulse" />
-                           <p className="text-[11px] font-black text-slate-300 dark:text-slate-700 uppercase tracking-[0.6em] italic leading-none">Database Sincronizzato - Nessun Record</p>
-                        </div>
-                    )}
                  </div>
 
-                 <button onClick={handleDownloadRequest} className={`mt-12 w-full p-6 text-white rounded-[1.5rem] font-black uppercase text-[11px] tracking-[0.5em] flex items-center justify-center gap-4 bg-slate-900 dark:bg-${accentColor}-600 transition-all hover:scale-[1.01] active:scale-95 shadow-2xl shadow-blue-500/30 leading-none italic group`}><Download size={22} className="group-hover:translate-y-1 transition-transform" /> Genera Vault Report PDF</button>
+                 <button onClick={() => setShowDownloadConfirm(true)} className={`mt-12 w-full p-6 text-white rounded-[1.5rem] font-black uppercase text-[11px] tracking-[0.5em] flex items-center justify-center gap-4 bg-slate-900 dark:bg-${accentColor}-600 transition-all hover:scale-[1.01] active:scale-95 shadow-2xl shadow-blue-500/30 leading-none italic group`}><Download size={22} className="group-hover:translate-y-1 transition-transform" /> Genera Vault Report PDF</button>
              </div>
           </div>
         )}
 
         {view === 'settings' && (
           <div className="space-y-10 animate-in zoom-in duration-300 pb-20">
-            <h2 className="text-3xl font-black italic uppercase text-slate-900 dark:text-white tracking-tighter leading-none">Impostazioni Vault</h2>
+            <h2 className="text-3xl font-black italic uppercase text-slate-900 dark:text-white tracking-tighter leading-none uppercase tracking-[0.3em]">Impostazioni Vault</h2>
             <div className="bg-white dark:bg-slate-900 p-8 md:p-14 rounded-[4rem] shadow-2xl border border-slate-200 dark:border-slate-800 space-y-14 relative overflow-hidden">
-               <div className={`absolute top-0 right-0 p-12 opacity-5 text-slate-400 dark:text-slate-800 pointer-events-none rotate-12`}><Settings size={200}/></div>
+               <div className={`absolute top-0 right-0 p-12 opacity-5 text-slate-400 dark:text-slate-800 pointer-events-none rotate-12`}><SettingsIcon size={200}/></div>
                
-               {/* TEMA & ACCENT INTEGRALE PREMIUM */}
                <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-12 gap-8 relative z-10">
                   <div className="space-y-2">
                     <h3 className="font-black text-slate-900 dark:text-white italic uppercase text-sm tracking-widest leading-none">Esperienza Visiva</h3>
                     <p className="text-[11px] text-slate-400 italic font-medium tracking-tight leading-none">Interfaccia adattiva e colori accento</p>
                   </div>
                   <div className="flex flex-wrap items-center gap-8">
-                    <div className="flex gap-2.5 bg-slate-50 dark:bg-slate-800 p-2.5 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-inner transition-all hover:shadow-md">
+                    <div className="flex gap-2.5 bg-slate-50 dark:bg-slate-800 p-2.5 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-inner">
                       {Object.entries(ACCENT_COLORS).map(([key, { hex }]) => (
-                        <button key={key} onClick={() => toggleAccent(key)} className={`w-9 h-9 rounded-full border-4 transition-all ${accentColor === key ? 'border-slate-900 dark:border-white scale-125 shadow-xl rotate-12' : 'border-transparent hover:scale-110 opacity-60 hover:opacity-100 hover:rotate-6'}`} style={{ backgroundColor: hex }} />
+                        <button key={key} onClick={() => toggleAccent(key)} className={`w-9 h-9 rounded-full border-4 transition-all ${accentColor === key ? 'border-slate-900 dark:border-white scale-125 shadow-xl rotate-12' : 'border-transparent hover:scale-110 opacity-60 hover:opacity-100'}`} style={{ backgroundColor: hex }} />
                       ))}
                     </div>
-                    <button onClick={toggleTheme} className="flex items-center gap-3 px-8 py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] shadow-xl transition-all active:scale-95 shadow-blue-500/10 italic leading-none">{theme === 'light' ? <><Moon size={18}/> Dark Mode</> : <><Sun size={18}/> Light Mode</>}</button>
+                    <button onClick={toggleTheme} className="flex items-center gap-3 px-8 py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] shadow-xl transition-all active:scale-95 italic leading-none">{theme === 'light' ? <><Moon size={18}/> Dark Mode</> : <><Sun size={18}/> Light Mode</>}</button>
                   </div>
                </div>
 
-               {/* PROMEMORIA (INTEGRAZIONE SERVICE WORKER) */}
                <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-12 gap-8 relative z-10">
                   <div className="flex items-center gap-6">
-                    <div className={`p-5 rounded-[1.5rem] transition-all shadow-xl ${reminderEnabled ? `bg-${accentColor}-600 text-white shadow-${accentColor}-500/30 scale-110` : 'bg-slate-200 text-slate-400 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 opacity-50'}`}>
+                    <div className={`p-5 rounded-[1.5rem] transition-all shadow-xl ${reminderEnabled ? `bg-${accentColor}-600 text-white shadow-${accentColor}-500/30 scale-110` : 'bg-slate-200 text-slate-400 dark:bg-slate-800 border opacity-50'}`}>
                       {reminderEnabled ? <Bell size={28} className="animate-ring"/> : <BellOff size={28}/>}
                     </div>
                     <div className="space-y-2">
@@ -881,27 +851,26 @@ export default function App() {
                   <div className="flex flex-wrap items-center gap-6">
                      {reminderEnabled && (
                         <div className="animate-in slide-in-from-right duration-500">
-                           <input type="time" className="bg-slate-50 dark:bg-slate-800 p-4 rounded-xl font-black text-xs outline-none border border-slate-100 dark:border-slate-700 dark:text-white shadow-inner focus:ring-2 focus:ring-blue-500/20" value={reminderTime} onChange={(e) => { setReminderTime(e.target.value); localStorage.setItem('reminder_time', e.target.value); }} />
+                           <input type="time" className="bg-slate-50 dark:bg-slate-800 p-4 rounded-xl font-black text-xs outline-none border border-slate-100 dark:border-slate-700 dark:text-white shadow-inner" value={reminderTime} onChange={(e) => { setReminderTime(e.target.value); localStorage.setItem('reminder_time', e.target.value); }} />
                         </div>
                      )}
                      {notificationStatus !== 'granted' ? (
                        <button onClick={requestNotificationPermission} className="text-[10px] font-black uppercase bg-blue-600 text-white px-8 py-4 rounded-2xl shadow-2xl shadow-blue-500/30 active:scale-95 transition-all tracking-[0.2em] italic leading-none">Abilita Notifiche Native</button>
                      ) : (
-                       <button onClick={() => { setReminderEnabled(!reminderEnabled); localStorage.setItem('reminder_enabled', !reminderEnabled); }} className={`w-16 h-9 rounded-full transition-all relative border-2 ${reminderEnabled ? `bg-${accentColor}-600 border-${accentColor}-600 shadow-lg shadow-${accentColor}-500/20` : 'bg-slate-300 dark:bg-slate-700 border-slate-200 dark:border-slate-600'}`}>
+                       <button onClick={() => { setReminderEnabled(!reminderEnabled); localStorage.setItem('reminder_enabled', !reminderEnabled); }} className={`w-16 h-9 rounded-full transition-all relative border-2 ${reminderEnabled ? `bg-${accentColor}-600 border-${accentColor}-600 shadow-lg` : 'bg-slate-300 dark:bg-slate-700 border-slate-200 dark:border-slate-600'}`}>
                          <div className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all shadow-md ${reminderEnabled ? 'right-1' : 'left-1'}`}></div>
                        </button>
                      )}
                   </div>
                </div>
 
-               {/* ZONA PERICOLOSA INTEGRALE PREMIUM */}
                <div className="pt-6 relative z-10">
-                  <div className="bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/20 p-10 md:p-14 rounded-[3rem] relative overflow-hidden group transition-all hover:bg-red-100/50 dark:hover:bg-red-900/20 border-red-200/50">
-                    <div className="absolute top-0 right-0 p-10 opacity-5 text-red-600 group-hover:scale-125 transition-transform duration-700 group-hover:rotate-12"><ShieldAlert size={140}/></div>
+                  <div className="bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/20 p-10 md:p-14 rounded-[3rem] relative overflow-hidden group">
+                    <div className="absolute top-0 right-0 p-10 opacity-5 text-red-600 group-hover:scale-125 transition-transform duration-700"><ShieldAlert size={140}/></div>
                     <div className="relative z-10">
                        <h3 className="font-black text-red-600 dark:text-red-500 mb-3 flex items-center gap-4 uppercase text-sm tracking-[0.3em] italic leading-none"><AlertTriangle size={24} className="animate-pulse"/> Area Sotto Protocollo</h3>
-                       <p className="text-[10px] font-bold text-red-400 dark:text-red-700/80 mb-10 italic uppercase tracking-[0.2em] leading-relaxed max-w-sm">Attenzione: l'eliminazione dell'account è un'operazione distruttiva irreversibile. Tutti i registri e le chiavi verranno rimosse permanentemente.</p>
-                       <button onClick={() => { setShowDeleteRecoveryModal(true); setDeleteRecoveryInput(''); setDeleteError(''); }} className="flex items-center gap-4 px-10 py-5 bg-red-600 text-white rounded-[1.5rem] font-black text-[10px] uppercase tracking-[0.3em] hover:bg-red-700 transition-all shadow-2xl shadow-red-500/40 active:scale-95 leading-none italic group-hover:translate-x-1"><ShieldX size={20}/> Formatta Vault Privato</button>
+                       <p className="text-[10px] font-bold text-red-400 dark:text-red-700/80 mb-10 italic uppercase tracking-[0.2em] leading-relaxed max-w-sm">Attenzione: l'eliminazione dell'account rimuoverà tutti i tuoi dati e i tuoi registri in modo definitivo dal server.</p>
+                       <button onClick={() => { setShowDeleteRecoveryModal(true); setDeleteRecoveryInput(''); setDeleteError(''); }} className="flex items-center gap-4 px-10 py-5 bg-red-600 text-white rounded-[1.5rem] font-black text-[10px] uppercase tracking-[0.3em] hover:bg-red-700 transition-all shadow-2xl active:scale-95 leading-none italic"><ShieldX size={18}/> Formatta Vault Privato</button>
                     </div>
                   </div>
                </div>
@@ -910,18 +879,17 @@ export default function App() {
         )}
       </main>
 
-      {/* FOOTER PREMIUM INTEGRALE */}
       <footer className="max-w-4xl mx-auto p-16 text-center border-t border-slate-100 dark:border-slate-900">
          <div className="flex items-center justify-center gap-6 mb-6 opacity-20 dark:opacity-10 grayscale group">
             <Clock size={24} className="group-hover:rotate-45 transition-transform duration-500" />
             <div className="h-6 w-0.5 bg-slate-400"></div>
             <p className="text-[11px] font-black uppercase tracking-[1.2em] leading-none">TIMEVAULT</p>
          </div>
-         <p className="text-[10px] font-black text-slate-300 dark:text-slate-700 uppercase tracking-[0.6em] italic leading-none transition-colors hover:text-slate-400">Pro Edition v0.9.6 • Personal Vault System • 2024</p>
+         <p className="text-[10px] font-black text-slate-300 dark:text-slate-700 uppercase tracking-[0.6em] italic leading-none">Pro Edition v0.9.7 • Personal Vault System • 2024</p>
       </footer>
     </div>
 
-    {/* AREA DI STAMPA INTEGRALE (FIX MOBILE REALIZZATO) */}
+    {/* AREA DI STAMPA NASCOSTA - CRITICA PER IL FUNZIONAMENTO DEL REPORT */}
     <div id="report-print-area" style={{ display: 'none', position: 'fixed', top: 0, left: 0, width: '210mm', padding: '20mm', backgroundColor: '#ffffff', color: '#000000', fontFamily: 'sans-serif', zIndex: -1 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', borderBottom: '6px solid #000', paddingBottom: '25px', marginBottom: '45px' }}>
            <div>
@@ -973,16 +941,16 @@ export default function App() {
         </div>
     </div>
 
-    {/* MODAL DOWNLOAD PREMIUM (INTEGRAZIONE) */}
+    {/* MODAL DOWNLOAD */}
     {showDownloadConfirm && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[100] flex items-center justify-center p-4 animate-in fade-in duration-300">
-          <div className="bg-white dark:bg-slate-900 p-12 rounded-[4rem] shadow-2xl max-w-sm w-full text-center border-4 border-slate-50 dark:border-slate-800 animate-in zoom-in-95 duration-200">
-            <div className={`w-24 h-24 bg-${accentColor}-100 dark:bg-${accentColor}-900/30 rounded-[2.5rem] flex items-center justify-center mx-auto mb-8 text-${accentColor}-600 shadow-xl shadow-blue-500/10 transition-transform hover:rotate-12`}><Download size={40} className="animate-bounce" /></div>
-            <h3 className="text-2xl font-black mb-4 uppercase italic tracking-tighter text-slate-900 dark:text-white leading-none">Generare Report?</h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mb-12 font-medium italic leading-relaxed uppercase tracking-widest">Il Vault elaborerà un PDF professionale ottimizzato per la visualizzazione mobile.</p>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[100] flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-slate-900 p-12 rounded-[4rem] shadow-2xl max-w-sm w-full text-center border-4 border-slate-50 dark:border-slate-800 animate-in zoom-in-95">
+            <div className={`w-24 h-24 bg-${accentColor}-100 dark:bg-${accentColor}-900/30 rounded-[2.5rem] flex items-center justify-center mx-auto mb-8 text-${accentColor}-600 shadow-xl transition-transform hover:rotate-12`}><Download size={40} className="animate-bounce" /></div>
+            <h3 className="text-xl font-black mb-4 uppercase italic tracking-tighter text-slate-900 dark:text-white leading-none">Generare Report?</h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mb-12 font-medium italic leading-relaxed uppercase tracking-widest leading-none">Il Vault elaborerà un PDF professionale ottimizzato per la visualizzazione mobile.</p>
             <div className="grid grid-cols-2 gap-5">
               <button onClick={() => setShowDownloadConfirm(false)} className="p-6 bg-slate-100 dark:bg-slate-800 rounded-3xl font-black text-[10px] uppercase text-slate-400 tracking-widest transition-all active:scale-95 leading-none">Annulla</button>
-              <button onClick={confirmDownload} disabled={isGeneratingPDF} className={`p-6 text-white rounded-3xl font-black text-[10px] uppercase shadow-2xl bg-${accentColor}-600 shadow-blue-500/30 flex items-center justify-center gap-3 active:scale-95 transition-all tracking-[0.2em] leading-none italic`}>
+              <button onClick={confirmDownload} disabled={isGeneratingPDF} className={`p-6 text-white rounded-3xl font-black text-[10px] uppercase shadow-2xl bg-${accentColor}-600 flex items-center justify-center gap-3 active:scale-95 transition-all tracking-[0.2em] leading-none italic`}>
                  {isGeneratingPDF ? <><Loader2 className="animate-spin" size={18} /> ...</> : 'Conferma'}
               </button>
             </div>
@@ -990,14 +958,14 @@ export default function App() {
         </div>
     )}
 
-    {/* MODAL ELIMINAZIONE ACCOUNT CON CHIAVE (INTEGRALE) */}
+    {/* MODAL ELIMINAZIONE ACCOUNT CON CHIAVE */}
     {showDeleteRecoveryModal && (
         <div className="fixed inset-0 bg-black/85 backdrop-blur-2xl z-[120] flex items-center justify-center p-4 animate-in fade-in duration-300">
            <div className="bg-white dark:bg-slate-900 p-12 md:p-14 rounded-[4rem] w-full max-w-sm border-4 border-red-500 relative animate-in zoom-in-95 text-center shadow-2xl shadow-red-500/20">
               <button onClick={() => setShowDeleteRecoveryModal(false)} className="absolute top-10 right-10 p-2.5 bg-slate-100 dark:bg-slate-800 rounded-full text-slate-400 hover:text-red-500 transition-all hover:rotate-90 active:scale-90"><X size={24}/></button>
               <div className="w-24 h-24 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-8 animate-pulse text-red-600 shadow-xl shadow-red-500/10"><Key size={48}/></div>
               <h2 className="text-3xl font-black text-red-600 uppercase mb-4 italic tracking-tighter leading-none dark:text-white">Formattazione</h2>
-              <p className="text-[10px] text-slate-500 dark:text-slate-400 font-black mt-2 italic mb-10 uppercase tracking-[0.2em] leading-relaxed">Inserisci la tua Chiave Privata di 16 cifre per autorizzare la distruzione totale dei dati.</p>
+              <p className="text-[10px] text-slate-500 dark:text-slate-400 font-black mt-2 italic mb-10 uppercase tracking-[0.2em] leading-relaxed leading-none">Inserisci la tua Chiave Privata di 16 cifre per autorizzare la distruzione totale dei dati.</p>
               <form onSubmit={verifyRecoveryCodeForDeletion} className="space-y-8">
                  <input type="text" placeholder="XXXX-XXXX-XXXX-XXXX" className="w-full p-6 bg-slate-50 dark:bg-slate-800 dark:text-white border-2 border-slate-100 dark:border-slate-700 rounded-3xl font-mono text-center font-black outline-none uppercase tracking-[0.2em] shadow-inner focus:ring-4 focus:ring-red-500/10 transition-all" value={deleteRecoveryInput} onChange={e => setDeleteRecoveryInput(e.target.value.toUpperCase())} maxLength={19} />
                  {deleteError && <p className="text-red-500 text-[11px] font-black italic animate-shake leading-none uppercase tracking-widest">{deleteError}</p>}
@@ -1014,17 +982,16 @@ export default function App() {
               <h2 className="text-5xl md:text-6xl font-black uppercase italic mb-8 tracking-tighter leading-none">ADDIO VAULT?</h2>
               <p className="text-slate-500 mb-14 max-w-sm mx-auto italic font-black leading-relaxed uppercase tracking-[0.2em] text-[10px]">Il tuo spazio privato, ogni log di lavoro e le preferenze verranno vaporizzate. Azione irreversibile e definitiva.</p>
               <div className="space-y-8 flex flex-col items-center w-full max-w-xs mx-auto">
-                 <button onClick={confirmFinalAccountDeletion} className="w-full bg-red-600 p-7 rounded-3xl font-black uppercase tracking-[0.4em] shadow-2xl shadow-red-600/40 hover:bg-red-700 active:scale-95 transition-all text-sm italic">Sì, Distruggi Tutto</button>
+                 <button onClick={confirmFinalAccountDeletion} className="w-full max-w-xs bg-red-600 p-7 rounded-3xl font-black uppercase tracking-[0.4em] shadow-2xl shadow-red-600/40 hover:bg-red-700 active:scale-95 transition-all text-sm italic">Sì, Distruggi Tutto</button>
                  <button onClick={() => setShowDeleteFinalConfirm(false)} className="text-slate-600 font-black uppercase tracking-[0.4em] hover:text-white transition-all text-[10px] active:scale-90 italic">Annulla, Torna Indietro</button>
               </div>
            </div>
         </div>
     )}
 
-    {/* MODAL GUIDA WEBAPP / ADD TO HOME SCREEN (INTEGRALE RIPRISTINATA) */}
     {showGuideModal && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-xl z-[150] flex items-center justify-center p-4 animate-in fade-in duration-500">
-          <div className="bg-white dark:bg-slate-900 p-10 md:p-14 rounded-[4rem] w-full max-w-md shadow-2xl border-4 border-slate-50 dark:border-slate-800 relative overflow-y-auto max-h-[90vh] animate-in zoom-in-95 duration-300">
+          <div className="bg-white dark:bg-slate-900 p-10 md:p-14 rounded-[4rem] w-full max-w-md shadow-2xl border-4 border-slate-50 dark:border-slate-800 relative overflow-y-auto max-h-[90vh] animate-in zoom-in-95">
             <button onClick={() => setShowGuideModal(false)} className="absolute top-10 right-10 p-2.5 bg-slate-100 dark:bg-slate-800 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-white transition-all active:scale-90 hover:rotate-90"><X size={24} /></button>
             <div className="text-center mb-12 relative">
                 <div className={`inline-flex p-6 rounded-[2rem] bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 mb-8 shadow-2xl shadow-blue-500/10 transition-transform hover:scale-110`}><Smartphone size={44} /></div>
@@ -1033,26 +1000,20 @@ export default function App() {
             </div>
             <div className="space-y-10">
               <div className="bg-slate-50 dark:bg-slate-800/50 p-8 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 transition-all hover:shadow-xl group relative overflow-hidden">
-                 <div className="absolute top-0 right-0 p-4 opacity-5 text-blue-600 group-hover:scale-125 transition-transform"><Smartphone size={60}/></div>
                  <h3 className="font-black text-slate-900 dark:text-white flex items-center gap-4 mb-6 uppercase italic text-xs tracking-[0.3em] relative z-10"><span className="text-3xl not-italic group-hover:animate-bounce"></span> iOS (iPhone)</h3>
-                 <ol className="text-[11px] text-slate-600 dark:text-slate-300 space-y-5 list-decimal list-inside font-bold italic leading-relaxed uppercase tracking-tight relative z-10">
-                    <li>Apri <span className="text-blue-500 border-b-2 border-blue-500/20">Safari</span> su questo sito.</li>
-                    <li>Tocca il tasto <span className="bg-slate-200 dark:bg-slate-700 px-3 py-1 rounded-xl text-[10px] shadow-sm mx-1">Condividi</span> (quadrato ↑).</li>
-                    <li>Scorri e seleziona <span className="bg-slate-200 dark:bg-slate-700 px-3 py-1 rounded-xl text-[10px] shadow-sm mx-1">Aggiungi alla Home</span>.</li>
+                 <ol className="text-[11px] text-slate-600 dark:text-slate-300 space-y-5 list-decimal list-inside font-bold italic leading-relaxed uppercase tracking-tight relative z-10 leading-none">
+                    <li>Apri <span className="text-blue-500">Safari</span>.</li>
+                    <li>Tocca il tasto <span className="bg-slate-200 dark:bg-slate-700 px-3 py-1 rounded-xl text-[10px] shadow-sm">Condividi</span>.</li>
+                    <li>Seleziona <span className="bg-slate-200 dark:bg-slate-700 px-3 py-1 rounded-xl text-[10px] shadow-sm">Aggiungi alla Home</span>.</li>
                  </ol>
               </div>
               <div className="bg-slate-50 dark:bg-slate-800/50 p-8 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 transition-all hover:shadow-xl group relative overflow-hidden">
-                 <div className="absolute top-0 right-0 p-4 opacity-5 text-orange-500 group-hover:scale-125 transition-transform"><Smartphone size={60}/></div>
                  <h3 className="font-black text-slate-900 dark:text-white flex items-center gap-4 mb-6 uppercase italic text-xs tracking-[0.3em] relative z-10"><span className="text-2xl not-italic group-hover:animate-bounce">🤖</span> Android</h3>
-                 <ol className="text-[11px] text-slate-600 dark:text-slate-300 space-y-5 list-decimal list-inside font-bold italic leading-relaxed uppercase tracking-tight relative z-10">
-                    <li>Apri <span className="text-orange-500 border-b-2 border-orange-500/20">Chrome</span> su questo sito.</li>
-                    <li>Tocca i <span className="bg-slate-200 dark:bg-slate-700 px-3 py-1 rounded-xl text-[10px] shadow-sm mx-1">Tre Puntini</span> verticali.</li>
-                    <li>Seleziona <span className="bg-slate-200 dark:bg-slate-700 px-3 py-1 rounded-xl text-[10px] shadow-sm mx-1">Installa App</span> o Aggiungi.</li>
+                 <ol className="text-[11px] text-slate-600 dark:text-slate-300 space-y-5 list-decimal list-inside font-bold italic leading-relaxed uppercase tracking-tight relative z-10 leading-none">
+                    <li>Apri <span className="text-orange-500">Chrome</span>.</li>
+                    <li>Tocca i <span className="bg-slate-200 dark:bg-slate-700 px-3 py-1 rounded-xl text-[10px] shadow-sm">Tre Puntini</span>.</li>
+                    <li>Seleziona <span className="bg-slate-200 dark:bg-slate-700 px-3 py-1 rounded-xl text-[10px] shadow-sm">Installa App</span>.</li>
                  </ol>
-              </div>
-              <div className="p-6 bg-blue-50 dark:bg-blue-900/10 rounded-[2rem] border border-blue-100 dark:border-blue-800 flex items-center gap-6 shadow-sm">
-                 <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center text-white flex-shrink-0 animate-pulse"><Info size={28} /></div>
-                 <p className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-[0.2em] italic leading-relaxed">Nota: l'installazione abilita i promemoria nativi e rimuove l'interfaccia del browser per un'esperienza Vault immersiva.</p>
               </div>
             </div>
             <button onClick={() => setShowGuideModal(false)} className={`w-full mt-12 bg-slate-950 dark:bg-${accentColor}-600 text-white p-7 rounded-[2.5rem] font-black uppercase tracking-[0.5em] shadow-2xl hover:scale-105 active:scale-95 transition-all text-xs italic leading-none`}>Confermo Procedura</button>
@@ -1060,20 +1021,19 @@ export default function App() {
         </div>
       )}
 
-      {/* MODAL ELIMINAZIONE LOG INTEGRALE */}
       {logToDelete && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[100] flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="bg-white dark:bg-slate-900 p-12 rounded-[3.5rem] shadow-2xl max-w-sm w-full border-4 border-slate-50 dark:border-slate-800 text-center animate-in zoom-in-95 duration-200">
-            <div className="w-20 h-20 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center mx-auto mb-6 text-red-500 animate-bounce"><Trash2 size={40} /></div>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[100] flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-white dark:bg-slate-900 p-12 rounded-[3.5rem] shadow-2xl max-w-sm w-full border-4 border-slate-50 dark:border-slate-800 text-center animate-in zoom-in-95">
+            <Trash2 size={48} className="mx-auto mb-6 text-red-500 animate-bounce" />
             <h3 className="text-2xl font-black mb-4 uppercase italic text-slate-900 dark:text-white tracking-tighter leading-none">Cancellare Log?</h3>
-            <p className="text-xs text-slate-400 font-bold mb-10 uppercase italic tracking-widest leading-none">L'operazione è definitiva nel Vault.</p>
             <div className="grid grid-cols-2 gap-5">
-              <button onClick={() => setLogToDelete(null)} className="p-5 bg-slate-100 dark:bg-slate-800 rounded-2xl font-black text-[10px] uppercase text-slate-500 tracking-widest active:scale-95 transition-all leading-none">No</button>
-              <button onClick={confirmDelete} className="p-5 bg-red-600 text-white rounded-2xl font-black text-[10px] uppercase shadow-xl active:scale-95 transition-all tracking-widest leading-none shadow-red-500/20">Sì, Elimina</button>
+              <button onClick={() => setLogToDelete(null)} className="p-5 bg-slate-100 dark:bg-slate-800 rounded-2xl font-black text-[10px] uppercase text-slate-500 tracking-widest active:scale-95 transition-all">No</button>
+              <button onClick={confirmDelete} className="p-5 bg-red-600 text-white rounded-2xl font-black text-[10px] uppercase shadow-xl active:scale-95 transition-all tracking-widest shadow-red-500/20">Sì, Elimina</button>
             </div>
           </div>
         </div>
       )}
+    </div>
     </>
   );
 }
