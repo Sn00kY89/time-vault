@@ -1141,34 +1141,28 @@ export default function App() {
           </div>
         )}
 
-        {/* --- VISTA IMPOSTAZIONI --- */}
+        {/* --- VISTA IMPOSTAZIONI (RIORGANIZZATA) --- */}
         {view === 'settings' && (
           <div className="space-y-6 animate-in fade-in zoom-in duration-300">
             <h2 className="text-2xl font-black italic text-slate-800 dark:text-white uppercase tracking-tight">Impostazioni</h2>
-            <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] shadow-sm border border-slate-200 dark:border-slate-800 space-y-8">
-               
-               {/* TEMA DARK/LIGHT */}
-               <div className="flex items-center justify-between pb-8 border-b border-slate-100 dark:border-slate-800">
+            
+            {/* CARD 1: TEMA */}
+            <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] shadow-sm border border-slate-200 dark:border-slate-800">
+               <div className="flex items-center justify-between">
                   <div>
                     <h3 className="font-bold text-slate-900 dark:text-white mb-1">Aspetto Applicazione</h3>
                     <p className="text-xs text-slate-500 dark:text-slate-400">Scegli tra modalità chiara e scura</p>
                   </div>
                   <button onClick={toggleTheme} className="flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-slate-800 rounded-xl font-bold text-sm text-slate-600 dark:text-slate-300">{theme === 'light' ? <><Moon size={16}/> Dark Mode</> : <><Sun size={16}/> Light Mode</>}</button>
                </div>
+            </div>
 
-               {/* SUPPORTO & PWA (NUOVA SEZIONE) */}
-               <div className="flex items-center justify-between pb-8 border-b border-slate-100 dark:border-slate-800">
+            {/* CARD 2: STILE & APP */}
+            <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] shadow-sm border border-slate-200 dark:border-slate-800 space-y-8">
+               {/* SELETTORE STILE COLORE */}
+               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 dark:border-slate-800 pb-8">
                   <div>
-                    <h3 className="font-bold text-slate-900 dark:text-white mb-1 flex items-center gap-2"><Smartphone size={18}/> App Mobile</h3>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">Come installare su telefono</p>
-                  </div>
-                  <button onClick={() => setShowGuideModal(true)} className="flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-slate-800 rounded-xl font-bold text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">Apri Guida</button>
-               </div>
-
-               {/* SELETTORE COLORE ACCENTO */}
-               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                  <div>
-                    <h3 className="font-bold text-slate-900 dark:text-white mb-1 flex items-center gap-2"><Palette size={18}/> Colore Accento</h3>
+                    <h3 className="font-bold text-slate-900 dark:text-white mb-1 flex items-center gap-2"><Palette size={18}/> Stile Colore</h3>
                     <p className="text-xs text-slate-500 dark:text-slate-400">Personalizza lo stile grafico</p>
                   </div>
                   <div className="flex items-center gap-3 overflow-x-auto pb-2 sm:pb-0">
@@ -1177,7 +1171,6 @@ export default function App() {
                         key={key}
                         onClick={() => changeAccentColor(key)}
                         title={label}
-                        // MODIFICA CRUCIALE: Usiamo style in-line per il background per garantire che si veda anche se Tailwind purga la classe
                         style={{ backgroundColor: hex }} 
                         className={`w-10 h-10 rounded-full border-2 transition-all ${accentColor === key ? 'border-slate-900 dark:border-white scale-110 shadow-lg' : 'border-transparent hover:scale-105 opacity-70 hover:opacity-100'}`}
                       >
@@ -1187,9 +1180,17 @@ export default function App() {
                   </div>
                </div>
 
+               {/* APP MOBILE */}
+               <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="font-bold text-slate-900 dark:text-white mb-1 flex items-center gap-2"><Smartphone size={18}/> App Mobile</h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Come installare su telefono</p>
+                  </div>
+                  <button onClick={() => setShowGuideModal(true)} className="flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-slate-800 rounded-xl font-bold text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">Apri Guida</button>
+               </div>
             </div>
             
-            {/* ZONA PERICOLO */}
+            {/* ZONA PERICOLO (CARD 3) */}
             <div className="bg-red-50 dark:bg-red-900/10 p-8 rounded-[2.5rem] border border-red-100 dark:border-red-900/20">
                <div className="flex items-center justify-between">
                   <div>
