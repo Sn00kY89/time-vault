@@ -27,7 +27,7 @@ import {
 import { 
   Clock, Plus, Trash2, Calendar as CalendarIcon, LogOut, TrendingUp, 
   Briefcase, Sun, Moon, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, ArrowLeft, CheckCircle2,
-  Menu, Home, FileText, Settings, X, Zap, Palmtree, Thermometer, AlertTriangle, Download, Eye, ShieldAlert, Lock, LogIn, UserPlus, Key, Copy, AlertOctagon, ShieldCheck, Unlock, RefreshCw, Users, CheckSquare, Square, User, Palette
+  Menu, Home, FileText, Settings, X, Zap, Palmtree, Thermometer, AlertTriangle, Download, Eye, ShieldAlert, Lock, LogIn, UserPlus, Key, Copy, AlertOctagon, ShieldCheck, Unlock, RefreshCw, Users, CheckSquare, Square, User, Palette, Smartphone, Share
 } from 'lucide-react';
 
 // -----------------------------------------------------------------------------
@@ -36,7 +36,7 @@ import {
 // NOTA IMPORTANTE PER L'USO LOCALE:
 // 1. Assicurati che il file 'capisquadra.json' sia nella cartella 'src'.
 // 2. TOGLI IL COMMENTO (//) dalla riga seguente per attivare l'importazione:
- import externalTeamLeaders from './capisquadra.json';
+import externalTeamLeaders from './capisquadra.json';
 
 // VARIABILE DI RISERVA (Per evitare errori in questa anteprima se l'import è commentato)
 // Se scommenti l'import sopra, questa variabile verrà ignorata dalla logica sotto.
@@ -82,22 +82,7 @@ const ACCENT_COLORS = {
 const getLeadersList = () => {
   try {
     // Tentiamo di usare externalTeamLeaders se definito (importato)
-    // Se l'import è commentato, externalTeamLeaders non sarà definito nello scope globale come import,
-    // ma potremmo avere la variabile fallbackForPreview.
-    
-    // In locale, quando scommenti l'import, 'externalTeamLeaders' sarà disponibile.
-    // Qui usiamo un check sicuro.
     let data = null;
-    
-    // Verifica se externalTeamLeaders è stato importato (simulazione logica)
-    // Nota: eval è evitato, usiamo un try-catch diretto sull'uso della variabile se fosse definita, 
-    // ma React non funziona così. 
-    
-    // LOGICA SEMPLIFICATA:
-    // Se hai scommentato l'import, usa quella variabile.
-    // Altrimenti usa il fallback.
-    // Poiché non possiamo fare un "if variable exists" pulito senza l'import reale,
-    // ci affidiamo al fatto che tu gestisca l'import.
     
     // PER L'ANTEPRIMA (dove l'import è commentato), usiamo il fallback:
     if (typeof externalTeamLeaders !== 'undefined') {
@@ -175,6 +160,7 @@ export default function App() {
   const [logToDelete, setLogToDelete] = useState(null); 
   const [showDownloadConfirm, setShowDownloadConfirm] = useState(false); 
   const [showPreviewModal, setShowPreviewModal] = useState(false); 
+  const [showGuideModal, setShowGuideModal] = useState(false); // NUOVO STATO GUIDA
 
   // STATI PER ELIMINAZIONE ACCOUNT
   const [showDeleteAuthModal, setShowDeleteAuthModal] = useState(false); 
@@ -780,6 +766,47 @@ export default function App() {
     <>
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-300 print:hidden">
       
+      {/* --- GUIDE MODAL (NUOVO) --- */}
+      {showGuideModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[60] flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] w-full max-w-md shadow-2xl border border-slate-100 dark:border-slate-800 relative overflow-y-auto max-h-[80vh]">
+            <button onClick={() => setShowGuideModal(false)} className="absolute top-6 right-6 p-2 bg-slate-100 dark:bg-slate-800 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"><X size={20} /></button>
+            
+            <div className="text-center mb-8">
+               <div className={`inline-flex p-4 rounded-2xl bg-${accentColor}-100 dark:bg-${accentColor}-900/30 text-${accentColor}-600 dark:text-${accentColor}-400 mb-4 shadow-lg`}>
+                 <Smartphone size={32} />
+               </div>
+               <h2 className="text-2xl font-black italic text-slate-900 dark:text-white uppercase tracking-tight">Installa App</h2>
+               <p className="text-sm text-slate-500 dark:text-slate-400 font-medium mt-2">Aggiungi TimeVault alla tua Home</p>
+            </div>
+
+            <div className="space-y-6">
+              {/* iOS Section */}
+              <div className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-2xl border border-slate-100 dark:border-slate-800">
+                 <h3 className="font-black text-slate-900 dark:text-white flex items-center gap-2 mb-3"><span className="text-xl"></span> iOS (iPhone/iPad)</h3>
+                 <ol className="text-sm text-slate-600 dark:text-slate-300 space-y-3 list-decimal list-inside font-medium marker:text-slate-400 marker:font-bold">
+                    <li>Apri <strong>Safari</strong>.</li>
+                    <li>Tocca l'icona <strong>Condividi</strong> <span className="inline-block align-middle bg-slate-200 dark:bg-slate-700 p-1 rounded"><Share size={12}/></span> nella barra in basso.</li>
+                    <li>Scorri e seleziona <strong>"Aggiungi alla schermata Home"</strong>.</li>
+                 </ol>
+              </div>
+
+              {/* Android Section */}
+              <div className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-2xl border border-slate-100 dark:border-slate-800">
+                 <h3 className="font-black text-slate-900 dark:text-white flex items-center gap-2 mb-3"><span className="text-lg">🤖</span> Android (Chrome)</h3>
+                 <ol className="text-sm text-slate-600 dark:text-slate-300 space-y-3 list-decimal list-inside font-medium marker:text-slate-400 marker:font-bold">
+                    <li>Apri <strong>Chrome</strong>.</li>
+                    <li>Tocca il menu <strong>(tre puntini)</strong> in alto a destra.</li>
+                    <li>Seleziona <strong>"Aggiungi a schermata Home"</strong> o <strong>"Installa App"</strong>.</li>
+                 </ol>
+              </div>
+            </div>
+            
+            <button onClick={() => setShowGuideModal(false)} className={`w-full mt-8 bg-slate-900 dark:bg-${accentColor}-600 text-white p-4 rounded-2xl font-black uppercase tracking-widest shadow-xl hover:scale-105 active:scale-95 transition-all`}>Capito</button>
+          </div>
+        </div>
+      )}
+
       {/* --- POPUP ELIMINA --- */}
       {logToDelete && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -1127,6 +1154,15 @@ export default function App() {
                     <p className="text-xs text-slate-500 dark:text-slate-400">Scegli tra modalità chiara e scura</p>
                   </div>
                   <button onClick={toggleTheme} className="flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-slate-800 rounded-xl font-bold text-sm text-slate-600 dark:text-slate-300">{theme === 'light' ? <><Moon size={16}/> Dark Mode</> : <><Sun size={16}/> Light Mode</>}</button>
+               </div>
+
+               {/* SUPPORTO & PWA (NUOVA SEZIONE) */}
+               <div className="flex items-center justify-between pb-8 border-b border-slate-100 dark:border-slate-800">
+                  <div>
+                    <h3 className="font-bold text-slate-900 dark:text-white mb-1 flex items-center gap-2"><Smartphone size={18}/> App Mobile</h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Come installare su telefono</p>
+                  </div>
+                  <button onClick={() => setShowGuideModal(true)} className="flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-slate-800 rounded-xl font-bold text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">Apri Guida</button>
                </div>
 
                {/* SELETTORE COLORE ACCENTO */}
