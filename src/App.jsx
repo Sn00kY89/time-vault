@@ -404,7 +404,6 @@ export default function App() {
   const handleDownloadRequest = () => setShowDownloadConfirm(true);
   const confirmDownload = () => { 
     setShowDownloadConfirm(false); 
-    // Usiamo un piccolo ritardo per assicurarci che il modal sia chiuso prima di lanciare la stampa
     setTimeout(() => {
       window.print();
     }, 500); 
@@ -826,7 +825,7 @@ export default function App() {
                                   <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 transition-colors ${expandedLogId === log.id ? `text-${accentColor}-600 border-${accentColor}-500 shadow-sm` : ''}`}>{new Date(log.date).getDate()}</div>
                                   <div>
                                      <p className="text-[10px] font-black uppercase text-slate-400">{log.type === 'work' ? 'Lavoro' : log.type}</p>
-                                     <p className={`text-sm font-bold text-slate-700 dark:text-slate-300 ${expandedLogId === log.id ? '' : 'truncate max-w-[200px]'}`}>{log.notes || "Nessuna nota"}</p>
+                                     <p className={`text-sm font-bold text-slate-700 dark:text-slate-300 ${expandedLogId === log.id ? '' : 'truncate max-w-[200px]'}`}>{log.teamLeader || "Nessun Caposquadra"}</p>
                                   </div>
                                </div>
                                <div className="text-right flex items-center gap-3">
@@ -839,14 +838,10 @@ export default function App() {
                             </div>
                             {expandedLogId === log.id && (
                                <div className="mt-4 pt-4 border-t border-slate-200/50 dark:border-slate-700/50 animate-in slide-in-from-top-2 duration-300">
-                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                  <div className="grid grid-cols-1 gap-4">
                                      <div>
                                         <p className={`text-[9px] font-black text-${accentColor}-500 uppercase tracking-widest mb-1 flex items-center gap-1`}><Users size={12} /> Capisquadra</p>
                                         <p className="text-xs font-bold text-slate-600 dark:text-slate-400">{log.teamLeader || "Non specificato"}</p>
-                                     </div>
-                                     <div>
-                                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1 flex items-center gap-1"><FileText size={12} /> Note Complete</p>
-                                        <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed font-medium italic">"{log.notes || "Nessun dettaglio aggiuntivo"}"</p>
                                      </div>
                                   </div>
                                </div>
@@ -884,7 +879,7 @@ export default function App() {
           </div>
         )}
       </main>
-      <footer className="max-w-6xl mx-auto p-12 text-center text-[10px] font-black text-slate-300 dark:text-slate-600 uppercase tracking-[0.5em]">TimeVault v0.8.1</footer>
+      <footer className="max-w-6xl mx-auto p-12 text-center text-[10px] font-black text-slate-300 dark:text-slate-600 uppercase tracking-[0.5em]">TimeVault v0.8.2</footer>
     </div>
     
     {/* AREA DI STAMPA NASCOSTA - CORRETTA */}
@@ -916,7 +911,7 @@ export default function App() {
               <tr className="border-b-2 border-slate-900">
                  <th className="py-2 px-2 font-black uppercase text-xs">Data</th>
                  <th className="py-2 px-2 font-black uppercase text-xs">Tipo</th>
-                 <th className="py-2 px-2 font-black uppercase text-xs">Note / Caposquadra</th>
+                 <th className="py-2 px-2 font-black uppercase text-xs">Caposquadra</th>
                  <th className="py-2 px-2 font-black uppercase text-xs text-right">Extra</th>
               </tr>
            </thead>
@@ -930,8 +925,7 @@ export default function App() {
                        </span>
                     </td>
                     <td className="py-3 px-2">
-                       <p className="text-[10px] font-medium leading-tight">{log.notes || "-"}</p>
-                       {log.teamLeader && <p className="text-[9px] font-black text-slate-400 uppercase mt-0.5">Capo: {log.teamLeader}</p>}
+                       {log.teamLeader ? <p className="text-[9px] font-black text-slate-600 uppercase">{log.teamLeader}</p> : <p className="text-[9px] text-slate-300">-</p>}
                     </td>
                     <td className="py-3 px-2 font-black text-xs text-right">
                        {log.overtimeHours > 0 ? `+${log.overtimeHours}h` : "-"}
