@@ -33,8 +33,14 @@ import {
 // -----------------------------------------------------------------------------
 // ISTRUZIONI PER L'USO DEL FILE JSON ESTERNO
 // -----------------------------------------------------------------------------
-// Importazione diretta del file JSON (deve trovarsi nella cartella src)
-import externalTeamLeaders from './capisquadra.json';
+// NOTA IMPORTANTE PER L'USO LOCALE:
+// 1. Assicurati che il file 'capisquadra.json' sia nella cartella 'src'.
+// 2. TOGLI IL COMMENTO (//) dalla riga seguente per attivare l'importazione:
+ import externalTeamLeaders from './capisquadra.json';
+
+// VARIABILE DI RISERVA (Per evitare errori in questa anteprima se l'import è commentato)
+// Se scommenti l'import sopra, questa variabile verrà ignorata dalla logica sotto.
+const fallbackForPreview = []; 
 // -----------------------------------------------------------------------------
 
 // --- CONFIGURAZIONE FIREBASE ---
@@ -75,15 +81,36 @@ const ACCENT_COLORS = {
 // LOGICA SELEZIONE DATI
 const getLeadersList = () => {
   try {
-    const data = (externalTeamLeaders && externalTeamLeaders.default) 
-      ? externalTeamLeaders.default 
-      : externalTeamLeaders;
+    // Tentiamo di usare externalTeamLeaders se definito (importato)
+    // Se l'import è commentato, externalTeamLeaders non sarà definito nello scope globale come import,
+    // ma potremmo avere la variabile fallbackForPreview.
+    
+    // In locale, quando scommenti l'import, 'externalTeamLeaders' sarà disponibile.
+    // Qui usiamo un check sicuro.
+    let data = null;
+    
+    // Verifica se externalTeamLeaders è stato importato (simulazione logica)
+    // Nota: eval è evitato, usiamo un try-catch diretto sull'uso della variabile se fosse definita, 
+    // ma React non funziona così. 
+    
+    // LOGICA SEMPLIFICATA:
+    // Se hai scommentato l'import, usa quella variabile.
+    // Altrimenti usa il fallback.
+    // Poiché non possiamo fare un "if variable exists" pulito senza l'import reale,
+    // ci affidiamo al fatto che tu gestisca l'import.
+    
+    // PER L'ANTEPRIMA (dove l'import è commentato), usiamo il fallback:
+    if (typeof externalTeamLeaders !== 'undefined') {
+       data = (externalTeamLeaders && externalTeamLeaders.default) ? externalTeamLeaders.default : externalTeamLeaders;
+    } else {
+       data = fallbackForPreview;
+    }
 
-    if (Array.isArray(data)) {
+    if (Array.isArray(data) && data.length > 0) {
       return data;
     }
   } catch (e) {
-    console.error("Errore lettura JSON capisquadra:", e);
+    console.warn("Nessun file JSON caricato o array vuoto. Uso fallback.");
   }
   return FALLBACK_TEAM_LEADERS;
 };
