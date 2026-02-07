@@ -14,6 +14,10 @@ import {
   deleteUser
 } from 'firebase/auth';
 import { 
+  getMessaging, 
+  getToken 
+} from 'firebase/messaging';
+import { 
   getFirestore, 
   collection, 
   doc, 
@@ -25,7 +29,7 @@ import {
   setDoc,
   query,
   where,
-  getDocs
+  getDocs,
 } from 'firebase/firestore';
 import { 
   Clock, Plus, Trash2, Calendar as CalendarIcon, LogOut, TrendingUp, 
@@ -183,6 +187,34 @@ export default function App() {
       });
     }
   }, []);
+
+  // Aggiungi questa funzione dopo gli useEffect esistenti
+const setupFCM = async () => {
+  try {
+    const messaging = getMessaging(app);
+    const token = await getToken(messaging, { 
+      vapidKey: 'BJXBFxWqNvvIyffYPT1Z9pZCm2tqz-VNrfN5w3tU0baYLX2ilVcoD_phNZKLNZbfuS-v9KYFMS1Ls9-Ym0-QUE4' 
+    });
+    
+    if (token && user) {
+      // Salva il token nel profilo utente su Firestore
+      await setDoc(doc(db, 'artifacts', APP_ID, 'users', user.uid, 'settings', 'push'), {
+        fcmToken: token,
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+      console.log("Vault Device Token salvato con successo.");
+    }
+  } catch (err) {
+    console.error("Errore configurazione Push:", err);
+  }
+};
+
+// Richiama setupFCM quando l'utente è loggato e le notifiche sono permesse
+useEffect(() => {
+  if (user && notificationStatus === 'granted') {
+    setupFCM();
+  }
+}, [user, notificationStatus]);
 
   // 2. --- INVIO IMPOSTAZIONI AL SERVICE WORKER ---
   useEffect(() => {
