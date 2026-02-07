@@ -802,54 +802,65 @@ export default function App() {
                  </div>
              </div>
              
-             <div className="bg-white dark:bg-slate-900 p-10 rounded-[2.5rem] shadow-xl border border-slate-200 dark:border-slate-800 text-center">
-                 <div className="grid grid-cols-1 md:grid-cols-2 gap-12 mt-4 mb-10">
+             <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] shadow-xl border border-slate-200 dark:border-slate-800 text-center">
+                 <div className="grid grid-cols-2 gap-8 mt-4 mb-10">
                     <div>
-                        <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Giornate Lavorate</p>
-                        <p className="text-6xl font-black text-slate-800 dark:text-white">{monthlyStats.daysWorked}</p>
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Giornate Lavorate</p>
+                        <p className="text-5xl font-black text-slate-800 dark:text-white">{monthlyStats.daysWorked}</p>
                     </div>
                     <div>
-                        <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Straordinari Totali</p>
-                        <p className="text-6xl font-black text-orange-600 dark:text-orange-500">{monthlyStats.ext}<span className="text-lg">h</span></p>
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Straordinari Totali</p>
+                        <p className="text-5xl font-black text-orange-600 dark:text-orange-500">{monthlyStats.ext}<span className="text-lg">h</span></p>
                     </div>
                  </div>
+
                  <div className="relative mb-6">
                     <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
                     <input type="text" placeholder="Cerca per note o caposquadra..." className="w-full pl-12 pr-4 py-4 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl font-bold outline-none focus:ring-2 focus:ring-slate-200 transition-all text-slate-900 dark:text-white" value={reportSearchQuery} onChange={(e) => setReportSearchQuery(e.target.value)} />
                  </div>
-                 <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar text-left">
+
+                 <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar text-left">
                     {filteredMonthLogs.map(log => (
-                         <div key={log.id} onClick={() => setExpandedLogId(expandedLogId === log.id ? null : log.id)} className={`p-4 bg-slate-50/50 dark:bg-slate-800/30 rounded-2xl border border-slate-100 dark:border-slate-700/50 cursor-pointer transition-all hover:border-${accentColor}-200 dark:hover:border-${accentColor}-800 ${expandedLogId === log.id ? `ring-2 ring-${accentColor}-500/20 border-${accentColor}-300 dark:border-${accentColor}-700 shadow-lg` : ''}`}>
-                            <div className="flex items-center justify-between">
-                               <div className="flex items-center gap-4">
-                                  <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 transition-colors ${expandedLogId === log.id ? `text-${accentColor}-600 border-${accentColor}-500 shadow-sm` : ''}`}>{new Date(log.date).getDate()}</div>
+                         <div key={log.id} className={`bg-slate-50/50 dark:bg-slate-800/20 rounded-[1.5rem] border border-slate-100 dark:border-slate-700/40 overflow-hidden transition-all duration-300 ${expandedLogId === log.id ? `ring-2 ring-${accentColor}-500/30 bg-slate-100/50 dark:bg-slate-800/50` : ''}`}>
+                            <div onClick={() => setExpandedLogId(expandedLogId === log.id ? null : log.id)} className="p-5 cursor-pointer flex items-center justify-between">
+                               <div className="flex items-center gap-5">
+                                  <div className={`w-12 h-12 rounded-full flex items-center justify-center text-sm font-black bg-white dark:bg-slate-700 border-2 transition-colors ${expandedLogId === log.id ? `border-${accentColor}-500 text-${accentColor}-600` : 'border-slate-200 dark:border-slate-600 text-slate-500'}`}>{new Date(log.date).getDate()}</div>
                                   <div>
-                                     <p className="text-[10px] font-black uppercase text-slate-400">{log.type === 'work' ? 'Lavoro' : log.type}</p>
-                                     <p className={`text-sm font-bold text-slate-700 dark:text-slate-300 ${expandedLogId === log.id ? '' : 'truncate max-w-[200px]'}`}>{log.teamLeader || "Nessun Caposquadra"}</p>
+                                     <p className="text-[10px] font-black uppercase text-slate-400 mb-0.5 tracking-widest">{log.type === 'work' ? 'Lavoro' : (log.type === 'ferie' ? 'Ferie' : 'Malattia')}</p>
+                                     <h3 className="text-xs font-bold text-slate-800 dark:text-slate-100 uppercase tracking-tight">Registro Giornaliero</h3>
                                   </div>
                                </div>
-                               <div className="text-right flex items-center gap-3">
-                                  <div>
-                                    {log.overtimeHours > 0 && <p className="text-xs font-black text-orange-500 leading-none">+{log.overtimeHours}h Extra</p>}
-                                    <p className="text-xs font-bold text-slate-400">{log.standardHours > 0 ? `${log.standardHours}h std` : ''}</p>
+                               <div className="flex items-center gap-4">
+                                  <div className="text-right">
+                                    {log.overtimeHours > 0 ? (
+                                      <p className="text-sm font-black text-orange-500 leading-tight">+{log.overtimeHours}h Extra</p>
+                                    ) : (
+                                      <p className="text-sm font-black text-slate-300 dark:text-slate-600 leading-tight">- Extra</p>
+                                    )}
+                                    <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">{log.standardHours > 0 ? 'std' : ''}</p>
                                   </div>
-                                  <div className={`text-slate-300 transition-transform duration-300 ${expandedLogId === log.id ? 'rotate-180' : ''}`}><ChevronDown size={14} /></div>
+                                  <div className={`text-slate-300 dark:text-slate-600 transition-transform duration-300 ${expandedLogId === log.id ? 'rotate-180' : ''}`}><ChevronDown size={18} /></div>
                                </div>
                             </div>
+                            
                             {expandedLogId === log.id && (
-                               <div className="mt-4 pt-4 border-t border-slate-200/50 dark:border-slate-700/50 animate-in slide-in-from-top-2 duration-300">
-                                  <div className="grid grid-cols-1 gap-4">
-                                     <div>
-                                        <p className={`text-[9px] font-black text-${accentColor}-500 uppercase tracking-widest mb-1 flex items-center gap-1`}><Users size={12} /> Capisquadra</p>
-                                        <p className="text-xs font-bold text-slate-600 dark:text-slate-400">{log.teamLeader || "Non specificato"}</p>
-                                     </div>
+                               <div className="px-5 pb-5 pt-0 animate-in slide-in-from-top-2 duration-300">
+                                  <div className="border-t border-slate-200/50 dark:border-slate-700/50 mt-2 pt-4">
+                                     <p className={`text-[10px] font-black text-${accentColor}-500 uppercase tracking-[0.2em] mb-2 flex items-center gap-2`}><Users size={14} /> Capisquadra</p>
+                                     <p className="text-xs font-bold text-slate-700 dark:text-slate-200 leading-relaxed pl-6">{log.teamLeader || "Nessun caposquadra indicato"}</p>
                                   </div>
                                </div>
                             )}
                          </div>
                     ))}
+                    {filteredMonthLogs.length === 0 && (
+                      <div className="py-20 text-center">
+                        <p className="text-slate-300 dark:text-slate-700 font-black uppercase text-xs tracking-widest">Nessuna voce trovata</p>
+                      </div>
+                    )}
                  </div>
-                 <button onClick={handleDownloadRequest} className={`mt-8 w-full p-4 bg-slate-100 dark:bg-slate-800 hover:bg-${accentColor}-50 dark:hover:bg-${accentColor}-900/30 text-slate-600 dark:text-slate-300 hover:text-${accentColor}-600 dark:hover:text-${accentColor}-400 rounded-2xl font-black uppercase text-xs tracking-widest transition-all flex items-center justify-center gap-2`}><Download size={18} /> Scarica PDF Report</button>
+
+                 <button onClick={handleDownloadRequest} className={`mt-8 w-full p-5 bg-slate-900 dark:bg-${accentColor}-600/10 text-white dark:text-${accentColor}-400 rounded-2xl font-black uppercase text-[10px] tracking-[0.2em] transition-all flex items-center justify-center gap-3 hover:scale-[1.02] active:scale-95`}><Download size={18} /> Scarica PDF Report</button>
              </div>
           </div>
         )}
@@ -879,10 +890,10 @@ export default function App() {
           </div>
         )}
       </main>
-      <footer className="max-w-6xl mx-auto p-12 text-center text-[10px] font-black text-slate-300 dark:text-slate-600 uppercase tracking-[0.5em]">TimeVault v0.8.2</footer>
+      <footer className="max-w-6xl mx-auto p-12 text-center text-[10px] font-black text-slate-300 dark:text-slate-600 uppercase tracking-[0.5em]">TimeVault v0.8.3</footer>
     </div>
     
-    {/* AREA DI STAMPA NASCOSTA - CORRETTA */}
+    {/* AREA DI STAMPA NASCOSTA - PDF TEMPLATE AGGIORNATO */}
     <div className="hidden print:block fixed inset-0 bg-white z-[9999] p-8 font-sans text-black overflow-visible">
         <div className="flex justify-between items-end border-b-4 border-slate-900 pb-4 mb-6">
            <div>
@@ -932,11 +943,6 @@ export default function App() {
                     </td>
                  </tr>
               ))}
-              {currentMonthLogs.length === 0 && (
-                 <tr>
-                    <td colSpan="4" className="py-12 text-center text-slate-400 italic font-bold">Nessun dato registrato per questo periodo.</td>
-                 </tr>
-              )}
            </tbody>
         </table>
 
