@@ -1,8 +1,7 @@
-// Importa gli script di Firebase Messaging
+// TimeVault Service Worker - Versione IBRIDA (Locale + Firebase)
 importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-compat.js');
 
-// Configurazione (Sostituisci con i tuoi dati se diversi, ma questi sono quelli del tuo App.jsx)
 const firebaseConfig = {
   apiKey: "AIzaSyDdxN05Yj1CtPOY69x3JJjuFuhEUelXWsc",
   authDomain: "work-time-vault.firebaseapp.com",
@@ -15,23 +14,49 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const messaging = firebase.messaging();
 
-// Gestione notifiche quando l'app è in background
-messaging.onBackgroundMessage((payload) => {
-  console.log('[SW] Notifica ricevuta in background:', payload);
+let reminderTime = "18:00";
+let reminderEnabled = false;
 
-  const notificationTitle = payload.notification.title;
+// 1. GESTIONE NOTIFICHE PUSH (DA FIREBASE CONSOLE)
+messaging.onBackgroundMessage((payload) => {
+  console.log('[SW] Push ricevuto:', payload);
+  const notificationTitle = payload.notification.title || 'TimeVault';
   const notificationOptions = {
-    body: payload.notification.body,
+    body: payload.notification.body || 'Ricordati di registrare le ore!',
     icon: '/favicon.ico',
     badge: '/favicon.ico',
     vibrate: [200, 100, 200],
+    tag: 'vault-push',
     data: { url: '/' }
   };
-
-  self.registration.showNotification(notificationTitle, notificationOptions);
+  return self.registration.showNotification(notificationTitle, notificationOptions);
 });
 
-// Listener per il click
+// 2. GESTIONE REMINDER LOCALE (TIMER INTERNO)
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SET_REMINDER') {
+    reminderTime = event.data.time;
+    reminderEnabled = event.data.enabled;
+    console.log(`[SW] Timer locale sincronizzato: ${reminderTime}`);
+  }
+});
+
+setInterval(() => {
+  if (!reminderEnabled) return;
+  const now = new Date();
+  const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+  
+  if (currentTime === reminderTime) {
+    self.registration.showNotification('TimeVault: Reminder Locale', {
+      body: 'È l’orario impostato! Registra la tua giornata.',
+      icon: '/favicon.ico',
+      vibrate: [200, 100, 200],
+      tag: 'vault-local-reminder'
+    });
+  }
+}, 30000);
+
+// GESTIONE CLICK
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   event.waitUntil(clients.openWindow('/'));
