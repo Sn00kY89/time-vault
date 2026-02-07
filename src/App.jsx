@@ -22,22 +22,21 @@ import {
   deleteDoc,
   serverTimestamp,
   getDoc,
-  setDoc
+  setDoc,
+  query,
+  where,
+  getDocs
 } from 'firebase/firestore';
 import { 
   Clock, Plus, Trash2, Calendar as CalendarIcon, LogOut, TrendingUp, 
   Briefcase, Sun, Moon, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, ArrowLeft, CheckCircle2,
-  Menu, Home, FileText, Settings, X, Zap, Palmtree, Thermometer, AlertTriangle, Download, Eye, ShieldAlert, Lock, LogIn, UserPlus, Key, Copy, AlertOctagon, ShieldCheck, Unlock, RefreshCw, Users, CheckSquare, Square, User, Palette, Smartphone, Share, Search, ShieldX
+  Menu, Home, FileText, Settings, X, Zap, Palmtree, Thermometer, AlertTriangle, Download, Eye, ShieldAlert, Lock, LogIn, UserPlus, Key, Copy, AlertOctagon, ShieldCheck, Unlock, RefreshCw, Users, CheckSquare, Square, User, Palette, Smartphone, Share, Search, ShieldX, Coffee
 } from 'lucide-react';
 
 // -----------------------------------------------------------------------------
 // ISTRUZIONI PER L'USO DEL FILE JSON ESTERNO
-// -----------------------------------------------------------------------------
-// NOTA IMPORTANTE PER L'USO LOCALE:
-// 1. Assicurati che il file 'capisquadra.json' sia nella cartella 'src'.
-// 2. TOGLI IL COMMENTO (//) dalla riga seguente per attivare l'importazione:
 import externalTeamLeaders from './capisquadra.json';
-
+// -----------------------------------------------------------------------------
 const fallbackForPreview = []; 
 // -----------------------------------------------------------------------------
 
@@ -292,6 +291,58 @@ export default function App() {
     return () => unsubscribe();
   }, [user]);
 
+  // --- LOGICA AUTOMAZIONE RIPOSO WEEKEND ---
+  useEffect(() => {
+    if (!user || loading) return;
+
+    const checkWeekendAutomation = async () => {
+      const now = new Date();
+      const dayOfWeek = now.getDay(); // 0: Dom, 1: Lun, ...
+      
+      // Eseguiamo il controllo se oggi è lunedì (o dopo)
+      // Cerchiamo il sabato e la domenica appena passati
+      if (dayOfWeek >= 1) { 
+        const lastSunday = new Date(now);
+        lastSunday.setDate(now.getDate() - dayOfWeek);
+        const lastSaturday = new Date(lastSunday);
+        lastSaturday.setDate(lastSunday.getDate() - 1);
+
+        const datesToCheck = [formatDateAsLocal(lastSaturday), formatDateAsLocal(lastSunday)];
+        
+        for (const dateStr of datesToCheck) {
+          // Controlliamo localmente se esiste già un log per quella data
+          const exists = logs.some(l => l.date === dateStr);
+          if (!exists) {
+            try {
+              const logsCollection = collection(db, 'artifacts', APP_ID, 'users', user.uid, 'work_logs');
+              await addDoc(logsCollection, {
+                standardHours: 0,
+                overtimeHours: 0,
+                notes: 'Riposo',
+                type: 'riposo',
+                date: dateStr,
+                userId: user.uid,
+                userName: user.displayName,
+                createdAt: serverTimestamp()
+              });
+              console.log(`Automazione: inserito Riposo per il ${dateStr}`);
+            } catch (e) {
+              console.error("Errore automazione weekend:", e);
+            }
+          }
+        }
+      }
+    };
+
+    // Ritardiamo leggermente per essere sicuri che i log siano caricati
+    if (logs.length > 0) {
+      const timer = setTimeout(() => {
+        checkWeekendAutomation();
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [user, logs, loading]);
+
   const handleAuth = async (e) => {
     e.preventDefault();
     setAuthError('');
@@ -407,7 +458,6 @@ export default function App() {
   const confirmFinalAccountDeletion = async () => {
     setIsDeleting(true);
     try {
-      // Nota: Idealmente andrebbero cancellati i log prima, ma per velocità eliminiamo l'utente
       await deleteUser(user);
     } catch (error) {
       setIsDeleting(false);
@@ -423,9 +473,10 @@ export default function App() {
     }, 500); 
   };
 
-  const handleSetStandard = () => { setFormError(''); setFormData(prev => ({ ...prev, standardHours: STANDARD_HOURS_VALUE, type: 'work' })); };
+  const handleSetStandard = () => { setFormError(''); setFormData(prev => ({ ...prev, standardHours: STANDARD_HOURS_VALUE, type: 'work', notes: '' })); };
   const handleSetFerie = () => { setFormError(''); setFormData({ standardHours: 0, overtimeHours: '', notes: 'Ferie', type: 'ferie' }); setSelectedLeaders([]); setShowOvertimeInput(false); };
   const handleSetMalattia = () => { setFormError(''); setFormData({ standardHours: 0, overtimeHours: '', notes: 'Malattia', type: 'malattia' }); setSelectedLeaders([]); setShowOvertimeInput(false); };
+  const handleSetRiposoCompensativo = () => { setFormError(''); setFormData({ standardHours: 0, overtimeHours: '', notes: 'Riposo Compensativo', type: 'riposo_compensativo' }); setSelectedLeaders([]); setShowOvertimeInput(false); };
   const toggleOvertime = () => { setFormError(''); setShowOvertimeInput(!showOvertimeInput); };
 
   const currentMonthLogs = useMemo(() => {
@@ -447,7 +498,7 @@ export default function App() {
     const uniqueDays = new Set();
     let totalOvertime = 0;
     currentMonthLogs.forEach(log => {
-        if (log.type !== 'ferie' && log.type !== 'malattia') uniqueDays.add(log.date);
+        if (!['ferie', 'malattia', 'riposo', 'riposo_compensativo'].includes(log.type)) uniqueDays.add(log.date);
         totalOvertime += Number(log.overtimeHours || 0);
     });
     return { daysWorked: uniqueDays.size, ext: totalOvertime };
@@ -733,7 +784,7 @@ export default function App() {
             <h2 className="text-3xl font-black italic text-slate-800 dark:text-white capitalize">{selectedDate.toLocaleDateString('it-IT', { day: 'numeric', month: 'long' })}{isWeekend && <span className="block text-xs font-bold text-orange-500 not-italic mt-1 uppercase tracking-widest">Weekend • Straordinario</span>}</h2>
             <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] shadow-sm border border-slate-200 dark:border-slate-800">
               <h3 className="text-xs font-black mb-6 uppercase text-slate-400 tracking-widest">Aggiungi Ore</h3>
-              <div className="grid grid-cols-2 gap-4 mb-6">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
                  {!isWeekend && (
                    <>
                      <button type="button" onClick={handleSetStandard} className={`p-4 rounded-2xl font-black uppercase text-[10px] tracking-widest flex flex-col items-center gap-2 transition-all ${formData.type === 'work' && formData.standardHours === STANDARD_HOURS_VALUE ? `bg-${accentColor}-600 text-white shadow-xl shadow-${accentColor}-500/30` : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'}`}><Briefcase size={20} />Standard ({STANDARD_HOURS_VALUE}h)</button>
@@ -741,6 +792,7 @@ export default function App() {
                    </>
                  )}
                  <button type="button" onClick={handleSetMalattia} className={`p-4 rounded-2xl font-black uppercase text-[10px] tracking-widest flex flex-col items-center gap-2 transition-all ${formData.type === 'malattia' ? 'bg-pink-500 text-white shadow-xl shadow-pink-500/30' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'}`}><Thermometer size={20} />Malattia</button>
+                 <button type="button" onClick={handleSetRiposoCompensativo} className={`p-4 rounded-2xl font-black uppercase text-[10px] tracking-widest flex flex-col items-center gap-2 transition-all ${formData.type === 'riposo_compensativo' ? 'bg-indigo-500 text-white shadow-xl shadow-indigo-500/30' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'}`}><Coffee size={20} />Riposo Comp.</button>
                  <button type="button" onClick={toggleOvertime} className={`p-4 rounded-2xl font-black uppercase text-[10px] tracking-widest flex flex-col items-center gap-2 transition-all ${showOvertimeInput ? 'bg-orange-500 text-white shadow-xl shadow-orange-500/30' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'}`}><Zap size={20} />Straordinario</button>
               </div>
               <form onSubmit={handleSubmitLog} className="space-y-6">
@@ -790,6 +842,8 @@ export default function App() {
                     <div className="flex items-center gap-2 mb-1">
                       {log.type === 'ferie' && <span className="text-xs font-black bg-emerald-100 text-emerald-600 px-2 py-1 rounded-lg uppercase">Ferie</span>}
                       {log.type === 'malattia' && <span className="text-xs font-black bg-pink-100 text-pink-600 px-2 py-1 rounded-lg uppercase">Malattia</span>}
+                      {log.type === 'riposo' && <span className="text-xs font-black bg-slate-100 text-slate-600 px-2 py-1 rounded-lg uppercase">Riposo</span>}
+                      {log.type === 'riposo_compensativo' && <span className="text-xs font-black bg-indigo-100 text-indigo-600 px-2 py-1 rounded-lg uppercase">Riposo Comp.</span>}
                       {log.type === 'work' && log.standardHours > 0 && <span className="text-xl font-black text-slate-800 dark:text-white">{log.standardHours}h</span>}
                       {log.overtimeHours > 0 && <span className="text-sm font-black text-orange-600 dark:text-orange-500 bg-orange-50 dark:bg-orange-900/20 px-2 py-0.5 rounded-lg">+{log.overtimeHours}h Extra</span>}
                     </div>
@@ -840,7 +894,9 @@ export default function App() {
                                <div className="flex items-center gap-5">
                                   <div className={`w-12 h-12 rounded-full flex items-center justify-center text-sm font-black bg-white dark:bg-slate-700 border-2 transition-colors ${expandedLogId === log.id ? `border-${accentColor}-500 text-${accentColor}-600` : 'border-slate-200 dark:border-slate-600 text-slate-500'}`}>{new Date(log.date).getDate()}</div>
                                   <div>
-                                     <p className="text-[10px] font-black uppercase text-slate-400 mb-0.5 tracking-widest">{log.type === 'work' ? 'Lavoro' : (log.type === 'ferie' ? 'Ferie' : 'Malattia')}</p>
+                                     <p className="text-[10px] font-black uppercase text-slate-400 mb-0.5 tracking-widest">
+                                        {log.type === 'work' ? 'Lavoro' : (log.type === 'ferie' ? 'Ferie' : (log.type === 'malattia' ? 'Malattia' : (log.type === 'riposo_compensativo' ? 'Riposo Comp.' : 'Riposo')))}
+                                     </p>
                                      <h3 className="text-xs font-bold text-slate-800 dark:text-slate-100 uppercase tracking-tight">Registro Giornaliero</h3>
                                   </div>
                                </div>
@@ -915,7 +971,7 @@ export default function App() {
           </div>
         )}
       </main>
-      <footer className="max-w-6xl mx-auto p-12 text-center text-[10px] font-black text-slate-300 dark:text-slate-600 uppercase tracking-[0.5em]">TimeVault v0.8.4</footer>
+      <footer className="max-w-6xl mx-auto p-12 text-center text-[10px] font-black text-slate-300 dark:text-slate-600 uppercase tracking-[0.5em]">TimeVault v0.8.5</footer>
     </div>
 
     {/* MODAL ELIMINAZIONE 1: CODICE RECUPERO */}
@@ -991,7 +1047,7 @@ export default function App() {
                     <td className="py-3 px-2 font-bold text-xs">{formatDateIT(log.date)}</td>
                     <td className="py-3 px-2">
                        <span className="uppercase font-black tracking-wider text-[10px]">
-                          {log.type === 'work' ? "LAVORO" : (log.type === 'ferie' ? "FERIE" : "MALATTIA")}
+                          {log.type === 'work' ? "LAVORO" : (log.type === 'ferie' ? "FERIE" : (log.type === 'malattia' ? "MALATTIA" : (log.type === 'riposo_compensativo' ? "RIPOSO COMP." : "RIPOSO")))}
                        </span>
                     </td>
                     <td className="py-3 px-2">
