@@ -1,5 +1,3 @@
-// --- ISTRUZIONI PER L'USO DEL FILE JSON ESTERNO ---
-
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { initializeApp } from 'firebase/app';
 import { 
@@ -38,7 +36,7 @@ import {
 // NOTA IMPORTANTE PER L'USO LOCALE:
 // 1. Assicurati che il file 'capisquadra.json' sia nella cartella 'src'.
 // 2. TOGLI IL COMMENTO (//) dalla riga seguente per attivare l'importazione:
-import externalTeamLeaders from './capisquadra.json';
+// import externalTeamLeaders from './capisquadra.json';
 
 // VARIABILE DI RISERVA (Per evitare errori in questa anteprima se l'import è commentato)
 // Se scommenti l'import sopra, questa variabile verrà ignorata dalla logica sotto.
@@ -185,6 +183,8 @@ export default function App() {
 
   // AGGIUNTA: Stato per la ricerca nel report
   const [reportSearchQuery, setReportSearchQuery] = useState('');
+  // AGGIUNTA: Stato per l'espansione dei dettagli nel report
+  const [expandedLogId, setExpandedLogId] = useState(null);
 
   // Gestione Tema e Colore Accento
   const [theme, setTheme] = useState(() => {
@@ -1148,21 +1148,54 @@ export default function App() {
                  </div>
 
                  <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar text-left">
-                    {filteredMonthLogs.map(log => (
-                       <div key={log.id} className="flex items-center justify-between p-4 bg-slate-50/50 dark:bg-slate-800/30 rounded-2xl border border-slate-100 dark:border-slate-700/50">
-                          <div className="flex items-center gap-4">
-                             <div className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600">{new Date(log.date).getDate()}</div>
-                             <div>
-                                <p className="text-[10px] font-black uppercase text-slate-400">{log.type === 'work' ? 'Lavoro' : log.type}</p>
-                                <p className="text-sm font-bold text-slate-700 dark:text-slate-300 truncate max-w-[200px]">{log.notes || "Nessuna nota"}</p>
-                             </div>
-                          </div>
-                          <div className="text-right">
-                             {log.overtimeHours > 0 && <p className="text-xs font-black text-orange-500 leading-none">+{log.overtimeHours}h Extra</p>}
-                             <p className="text-xs font-bold text-slate-400">{log.standardHours > 0 ? `${log.standardHours}h std` : ''}</p>
-                          </div>
-                       </div>
-                    ))}
+                    {filteredMonthLogs.map(log => {
+                       const isExpanded = expandedLogId === log.id;
+                       return (
+                         <div 
+                           key={log.id} 
+                           onClick={() => setExpandedLogId(isExpanded ? null : log.id)}
+                           className={`p-4 bg-slate-50/50 dark:bg-slate-800/30 rounded-2xl border border-slate-100 dark:border-slate-700/50 cursor-pointer transition-all hover:border-${accentColor}-200 dark:hover:border-${accentColor}-800 ${isExpanded ? `ring-2 ring-${accentColor}-500/20 border-${accentColor}-300 dark:border-${accentColor}-700 shadow-lg` : ''}`}
+                         >
+                            <div className="flex items-center justify-between">
+                               <div className="flex items-center gap-4">
+                                  <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 transition-colors ${isExpanded ? `text-${accentColor}-600 border-${accentColor}-500 shadow-sm` : ''}`}>
+                                    {new Date(log.date).getDate()}
+                                  </div>
+                                  <div>
+                                     <p className="text-[10px] font-black uppercase text-slate-400">{log.type === 'work' ? 'Lavoro' : log.type}</p>
+                                     <p className={`text-sm font-bold text-slate-700 dark:text-slate-300 ${isExpanded ? '' : 'truncate max-w-[200px]'}`}>
+                                       {log.notes || "Nessuna nota"}
+                                     </p>
+                                  </div>
+                               </div>
+                               <div className="text-right flex items-center gap-3">
+                                  <div>
+                                    {log.overtimeHours > 0 && <p className="text-xs font-black text-orange-500 leading-none">+{log.overtimeHours}h Extra</p>}
+                                    <p className="text-xs font-bold text-slate-400">{log.standardHours > 0 ? `${log.standardHours}h std` : ''}</p>
+                                  </div>
+                                  <div className={`text-slate-300 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`}>
+                                     <ChevronDown size={14} />
+                                  </div>
+                               </div>
+                            </div>
+
+                            {isExpanded && (
+                               <div className="mt-4 pt-4 border-t border-slate-200/50 dark:border-slate-700/50 animate-in slide-in-from-top-2 duration-300">
+                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                     <div>
+                                        <p className={`text-[9px] font-black text-${accentColor}-500 uppercase tracking-widest mb-1 flex items-center gap-1`}><Users size={12} /> Capisquadra</p>
+                                        <p className="text-xs font-bold text-slate-600 dark:text-slate-400">{log.teamLeader || "Non specificato"}</p>
+                                     </div>
+                                     <div>
+                                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1 flex items-center gap-1"><FileText size={12} /> Note Complete</p>
+                                        <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed font-medium italic">"{log.notes || "Nessun dettaglio aggiuntivo"}"</p>
+                                     </div>
+                                  </div>
+                               </div>
+                            )}
+                         </div>
+                       );
+                    })}
                     {filteredMonthLogs.length === 0 && <p className="text-center text-slate-400 py-8 italic uppercase font-black tracking-widest text-[10px]">Nessun risultato</p>}
                  </div>
 
