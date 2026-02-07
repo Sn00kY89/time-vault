@@ -34,7 +34,7 @@ import {
 // ISTRUZIONI PER L'USO DEL FILE JSON ESTERNO
 // -----------------------------------------------------------------------------
 // NOTA IMPORTANTE PER L'USO LOCALE:
-// 1. Assicurati che il file 'capisquadra.json' sea nella cartella 'src'.
+// 1. Assicurati che il file 'capisquadra.json' sia nella cartella 'src'.
 // 2. TOGLI IL COMMENTO (//) dalla riga seguente per attivare l'importazione:
 import externalTeamLeaders from './capisquadra.json';
 
@@ -114,7 +114,7 @@ const generateRecoveryCode = () => {
 };
 
 export default function App() {
-  const [showIntro, setShowIntro] = useState(true); // AGGIUNTA: Stato per l'Intro
+  const [showIntro, setShowIntro] = useState(true); 
   const [user, setUser] = useState(null);
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -187,7 +187,7 @@ export default function App() {
   useEffect(() => {
     const timer = setTimeout(() => {
       setShowIntro(false);
-    }, 3200); // 3.2 secondi di intro
+    }, 3200); 
     return () => clearTimeout(timer);
   }, []);
 
@@ -402,7 +402,13 @@ export default function App() {
   };
 
   const handleDownloadRequest = () => setShowDownloadConfirm(true);
-  const confirmDownload = () => { setShowDownloadConfirm(false); setTimeout(() => window.print(), 300); };
+  const confirmDownload = () => { 
+    setShowDownloadConfirm(false); 
+    // Usiamo un piccolo ritardo per assicurarci che il modal sia chiuso prima di lanciare la stampa
+    setTimeout(() => {
+      window.print();
+    }, 500); 
+  };
 
   const handleSetStandard = () => { setFormError(''); setFormData(prev => ({ ...prev, standardHours: STANDARD_HOURS_VALUE, type: 'work' })); };
   const handleSetFerie = () => { setFormError(''); setFormData({ standardHours: 0, overtimeHours: '', notes: 'Ferie', type: 'ferie' }); setSelectedLeaders([]); setShowOvertimeInput(false); };
@@ -568,7 +574,6 @@ export default function App() {
   return (
     <>
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-300 print:hidden">
-      {/* GUIDE MODAL */}
       {showGuideModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[60] flex items-center justify-center p-4 animate-in fade-in duration-200">
           <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] w-full max-w-md shadow-2xl border border-slate-100 dark:border-slate-800 relative overflow-y-auto max-h-[80vh]">
@@ -603,7 +608,6 @@ export default function App() {
         </div>
       )}
 
-      {/* POPUP ELIMINA */}
       {logToDelete && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white dark:bg-slate-900 p-8 rounded-[2rem] shadow-2xl max-w-sm w-full border border-slate-100 dark:border-slate-800">
@@ -611,6 +615,20 @@ export default function App() {
             <div className="grid grid-cols-2 gap-3">
               <button onClick={() => setLogToDelete(null)} className="p-4 rounded-xl font-black text-xs uppercase bg-slate-100 dark:bg-slate-800 text-slate-500">No</button>
               <button onClick={confirmDelete} className="p-4 rounded-xl font-black text-xs uppercase bg-red-500 text-white">Sì, Cancella</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL DOWNLOAD */}
+      {showDownloadConfirm && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-slate-900 p-8 rounded-[2rem] shadow-2xl max-w-sm w-full text-center">
+            <h3 className="text-lg font-black mb-2">Generare Report?</h3>
+            <p className="text-sm text-slate-500 mb-6 font-medium">Si aprirà la finestra di stampa per il mese di <span className="capitalize">{monthName}</span>.</p>
+            <div className="grid grid-cols-2 gap-3">
+              <button onClick={() => setShowDownloadConfirm(false)} className="p-4 bg-slate-100 dark:bg-slate-800 rounded-xl font-black text-xs uppercase text-slate-500 transition-colors">Annulla</button>
+              <button onClick={confirmDownload} className={`p-4 bg-${accentColor}-600 text-white rounded-xl font-black text-xs uppercase shadow-lg shadow-${accentColor}-500/30 transition-all active:scale-95`}>Genera</button>
             </div>
           </div>
         </div>
@@ -863,34 +881,74 @@ export default function App() {
                </div>
             </div>
             <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] shadow-sm border border-slate-200 dark:border-slate-800"><div className="flex items-center justify-between"><div><h3 className="font-bold text-slate-900 dark:text-white mb-1 flex items-center gap-2"><Smartphone size={18}/> App Mobile</h3><p className="text-xs text-slate-500 dark:text-slate-400">Come installare TimeVault sulla Home</p></div><button onClick={() => setShowGuideModal(true)} className="flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-slate-800 rounded-xl font-bold text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">Apri Guida</button></div></div>
-            <div className="bg-red-50 dark:bg-red-900/10 p-8 rounded-[2.5rem] border border-red-100 dark:border-red-900/20"><div className="flex items-center justify-between"><div><h3 className="font-bold text-red-600 dark:text-red-500 mb-1 flex items-center gap-2"><AlertTriangle size={16}/> Zona Pericolo</h3><p className="text-xs text-red-400 dark:text-red-400/70">Eliminazione definitiva account</p></div><button onClick={handleInitiateDeleteAccount} className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-red-900/40 text-red-600 dark:text-red-400 rounded-xl font-bold text-sm shadow-sm hover:bg-red-50 dark:hover:bg-red-900/60 transition-colors">Elimina Account</button></div></div>
           </div>
         )}
       </main>
-      <footer className="max-w-6xl mx-auto p-12 text-center text-[10px] font-black text-slate-300 dark:text-slate-600 uppercase tracking-[0.5em]">TimeVault v0.8.0</footer>
+      <footer className="max-w-6xl mx-auto p-12 text-center text-[10px] font-black text-slate-300 dark:text-slate-600 uppercase tracking-[0.5em]">TimeVault v0.8.1</footer>
     </div>
     
-    <div className="hidden print:block fixed inset-0 bg-white z-[9999] p-6 font-sans text-black overflow-hidden">
-        <div className="flex justify-between items-end border-b-2 border-slate-900 pb-2 mb-4">
-           <div><h1 className="text-3xl font-black italic tracking-tighter mb-1">TIMEVAULT REPORT</h1><p className="text-sm font-medium text-slate-500 uppercase tracking-widest">Resoconto Ore Lavorative</p></div>
-           <div className="text-right"><p className="text-lg font-bold uppercase">{monthName}</p><p className="text-xs text-slate-500">Dipendente: {user?.displayName}</p></div>
+    {/* AREA DI STAMPA NASCOSTA - CORRETTA */}
+    <div className="hidden print:block fixed inset-0 bg-white z-[9999] p-8 font-sans text-black overflow-visible">
+        <div className="flex justify-between items-end border-b-4 border-slate-900 pb-4 mb-6">
+           <div>
+              <h1 className="text-4xl font-black italic tracking-tighter mb-1">TIMEVAULT REPORT</h1>
+              <p className="text-sm font-bold text-slate-500 uppercase tracking-widest">Resoconto Personale Ore Lavorative</p>
+           </div>
+           <div className="text-right">
+              <p className="text-2xl font-black uppercase italic capitalize">{monthName}</p>
+              <p className="text-sm font-bold text-slate-600">Dipendente: {user?.displayName}</p>
+           </div>
         </div>
-        <div className="grid grid-cols-2 gap-4 mb-4">
-           <div className="p-4 border border-slate-200 rounded-xl bg-slate-50"><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Giorni Lavorati</p><p className="text-3xl font-black">{monthlyStats.daysWorked}</p></div>
-           <div className="p-4 border border-slate-200 rounded-xl bg-slate-50"><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Straordinari Totali</p><p className="text-3xl font-black text-orange-600">+{monthlyStats.ext}h</p></div>
+        
+        <div className="grid grid-cols-2 gap-6 mb-8">
+           <div className="p-6 border-2 border-slate-200 rounded-3xl bg-slate-50">
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Giorni Lavorati</p>
+              <p className="text-4xl font-black">{monthlyStats.daysWorked}</p>
+           </div>
+           <div className="p-6 border-2 border-slate-200 rounded-3xl bg-slate-50">
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Straordinari Totali</p>
+              <p className="text-4xl font-black text-orange-600">+{monthlyStats.ext}h</p>
+           </div>
         </div>
-        <table className="w-full text-left text-xs">
-           <thead><tr className="border-b border-slate-900"><th className="py-1 font-black uppercase">Data</th><th className="py-1 font-black uppercase">Tipo</th><th className="py-1 font-black uppercase text-right">Extra</th></tr></thead>
+
+        <table className="w-full text-left border-collapse">
+           <thead>
+              <tr className="border-b-2 border-slate-900">
+                 <th className="py-2 px-2 font-black uppercase text-xs">Data</th>
+                 <th className="py-2 px-2 font-black uppercase text-xs">Tipo</th>
+                 <th className="py-2 px-2 font-black uppercase text-xs">Note / Caposquadra</th>
+                 <th className="py-2 px-2 font-black uppercase text-xs text-right">Extra</th>
+              </tr>
+           </thead>
            <tbody>
               {currentMonthLogs.map(log => (
                  <tr key={log.id} className="border-b border-slate-100">
-                    <td className="py-1 font-medium">{formatDateIT(log.date)}</td>
-                    <td className="py-1 uppercase font-bold tracking-wider text-[10px]">{log.type === 'work' && "Lavoro"}{log.type === 'ferie' && <span className="text-emerald-700">FERIE</span>}{log.type === 'malattia' && <span className="text-pink-700">MALATTIA</span>}</td>
-                    <td className="py-1 font-bold text-right">{log.overtimeHours > 0 ? <span className="text-orange-700">+{log.overtimeHours}h</span> : <span className="text-slate-300">-</span>}</td>
+                    <td className="py-3 px-2 font-bold text-xs">{formatDateIT(log.date)}</td>
+                    <td className="py-3 px-2">
+                       <span className="uppercase font-black tracking-wider text-[10px]">
+                          {log.type === 'work' ? "LAVORO" : (log.type === 'ferie' ? "FERIE" : "MALATTIA")}
+                       </span>
+                    </td>
+                    <td className="py-3 px-2">
+                       <p className="text-[10px] font-medium leading-tight">{log.notes || "-"}</p>
+                       {log.teamLeader && <p className="text-[9px] font-black text-slate-400 uppercase mt-0.5">Capo: {log.teamLeader}</p>}
+                    </td>
+                    <td className="py-3 px-2 font-black text-xs text-right">
+                       {log.overtimeHours > 0 ? `+${log.overtimeHours}h` : "-"}
+                    </td>
                  </tr>
               ))}
+              {currentMonthLogs.length === 0 && (
+                 <tr>
+                    <td colSpan="4" className="py-12 text-center text-slate-400 italic font-bold">Nessun dato registrato per questo periodo.</td>
+                 </tr>
+              )}
            </tbody>
         </table>
+
+        <div className="fixed bottom-8 left-8 right-8 text-center border-t-2 border-slate-100 pt-4">
+           <p className="text-[9px] text-slate-400 font-black uppercase tracking-[0.3em]">Documento generato da TimeVault App • {new Date().toLocaleDateString('it-IT')} • Riservato</p>
+        </div>
     </div>
     </>
   );
