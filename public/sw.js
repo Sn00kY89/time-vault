@@ -1,56 +1,66 @@
-// --- NUOVA LOGICA CON TIMER LOCALE ---
+// TimeVault Service Worker - Versione Ottimizzata Mobile
+const CACHE_NAME = 'time-vault-v1';
+
+// Forza l'attivazione del Service Worker appena viene installato
+self.addEventListener('install', (event) => {
+  self.skipWaiting();
+});
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil(clients.claim());
+});
+
 let reminderTime = "18:00";
 let reminderEnabled = false;
 
+// Riceve i settaggi dall'App React
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SET_REMINDER') {
     reminderTime = event.data.time;
     reminderEnabled = event.data.enabled;
-    console.log(`[SW] Orario sincronizzato: ${reminderTime} (Attivo: ${reminderEnabled})`);
+    console.log(`[SW] Sincronizzato per le: ${reminderTime}`);
   }
 });
 
-// Controllo ogni minuto
+// Timer di controllo (Nota: su mobile potrebbe fermarsi se il sistema iberna il processo)
 setInterval(() => {
   if (!reminderEnabled || !reminderTime) return;
 
-  const oraAttuale = new Date().toLocaleTimeString('it-IT', { 
-    hour: '2-digit', 
-    minute: '2-digit', 
-    hour12: false 
-  });
+  const now = new Date();
+  const currentH = String(now.getHours()).padStart(2, '0');
+  const currentM = String(now.getMinutes()).padStart(2, '0');
+  const currentTime = `${currentH}:${currentM}`;
 
-  if (oraAttuale === reminderTime) {
-    self.registration.showNotification('TimeVault: Registro Ore', {
-      body: 'È il momento di archiviare la tua giornata nel Vault!',
-      icon: '/clock.png',
-      badge: '/clock.png',
+  if (currentTime === reminderTime) {
+    self.registration.showNotification('TimeVault Reminder', {
+      body: 'È ora di registrare la giornata lavorativa nel Vault!',
+      icon: '/favicon.ico',
+      badge: '/favicon.ico',
       vibrate: [200, 100, 200],
-      tag: 'reminder-tag', // Evita notifiche doppie
-      renotify: true
+      tag: 'vault-reminder',
+      renotify: true,
+      requireInteraction: true // Mantiene la notifica visibile finché non viene toccata
     });
   }
 }, 60000);
 
-// --- RESTO DEL CODICE (PUSH E CLICK) ---
-self.addEventListener('push', (event) => {
-  const options = {
-    body: event.data ? event.data.text() : 'Ricordati di archiviare la giornata nel Vault!',
-    icon: '/clock.png',
-    badge: '/clock.png',
-    vibrate: [100, 50, 100],
-    data: { dateOfArrival: Date.now(), primaryKey: '1' },
-    actions: [
-      { action: 'explore', title: 'Apri Vault' },
-      { action: 'close', title: 'Chiudi' }
-    ]
-  };
-  event.waitUntil(self.registration.showNotification('TimeVault Reminder', options));
-});
-
+// Gestione click sulla notifica
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  if (event.action === 'explore') {
-    event.waitUntil(clients.openWindow('/'));
-  }
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      if (clientList.length > 0) return clientList[0].focus();
+      return clients.openWindow('/');
+    })
+  );
+});
+
+// Listener per messaggi Push (per future implementazioni server-side)
+self.addEventListener('push', (event) => {
+  const options = {
+    body: event.data ? event.data.text() : 'Notifica dal Vault',
+    icon: '/favicon.ico',
+    vibrate: [100, 50, 100],
+  };
+  event.waitUntil(self.registration.showNotification('TimeVault', options));
 });
