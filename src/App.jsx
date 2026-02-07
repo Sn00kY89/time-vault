@@ -174,11 +174,10 @@ export default function App() {
   const [reminderTime, setReminderTime] = useState(() => localStorage.getItem('reminder_time') || "18:00");
   const [notificationStatus, setNotificationStatus] = useState(typeof Notification !== 'undefined' ? Notification.permission : 'default');
 
-  // 1. --- REGISTRAZIONE SERVICE WORKER (FONDAMENTALE PER NOTIFICHE) ---
+   // 1. --- REGISTRAZIONE SERVICE WORKER ---
   useEffect(() => {
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        // Richiamo esatto al file sw.js nella cartella public
         navigator.serviceWorker.register('/sw.js').then(reg => {
           console.log('TimeVault SW Registrato con successo');
         }).catch(err => {
@@ -188,44 +187,69 @@ export default function App() {
     }
   }, []);
 
-  // Aggiungi questa funzione dopo gli useEffect esistenti
-const setupFCM = async () => {
-  try {
-    const messaging = getMessaging(app);
-    const token = await getToken(messaging, { 
-      vapidKey: 'BJXBFxWqNvvIyffYPT1Z9pZCm2tqz-VNrfN5w3tU0baYLX2ilVcoD_phNZKLNZbfuS-v9KYFMS1Ls9-Ym0-QUE4' 
-    });
+  // 2. --- LOGICA NOTIFICHE PUSH (FCM) OTTIMIZZATA PER MOBILE/IOS ---
+  const setupFCM = async () => {
+    // Sostituisci qui con la tua chiave VAPID reale dalla console Firebase
+    const vapidKey = 'INCOLLA_QUI_LA_TUA_VAPID_KEY'; 
     
-    if (token && user) {
-      // Salva il token nel profilo utente su Firestore
-      await setDoc(doc(db, 'artifacts', APP_ID, 'users', user.uid, 'settings', 'push'), {
-        fcmToken: token,
-        updatedAt: serverTimestamp()
-      }, { merge: true });
-      console.log("Vault Device Token salvato con successo.");
+    if (!user || vapidKey.includes('INCOLLA')) {
+      console.warn("FCM: Chiave VAPID non inserita o utente non loggato.");
+      return;
     }
-  } catch (err) {
-    console.error("Errore configurazione Push:", err);
-  }
-};
 
-// Richiama setupFCM quando l'utente è loggato e le notifiche sono permesse
-useEffect(() => {
-  if (user && notificationStatus === 'granted') {
-    setupFCM();
-  }
-}, [user, notificationStatus]);
+    try {
+      // Per iOS/Mobile è CRITICO passare la registrazione del Service Worker a getToken
+      const registration = await navigator.serviceWorker.ready;
+      if (!registration) {
+        console.warn("FCM: Service Worker non pronto.");
+        return;
+      }
 
-  // 2. --- INVIO IMPOSTAZIONI AL SERVICE WORKER ---
-  useEffect(() => {
-    if (reminderEnabled && notificationStatus === 'granted' && navigator.serviceWorker.controller) {
-      navigator.serviceWorker.controller.postMessage({
-        type: 'SET_REMINDER',
-        time: reminderTime,
-        enabled: reminderEnabled
+      const messaging = getMessaging(app);
+      console.log("FCM: Richiesta Token in corso per dispositivo mobile...");
+      
+      const token = await getToken(messaging, { 
+        vapidKey: vapidKey,
+        serviceWorkerRegistration: registration 
       });
+      
+      if (token) {
+        // Salvataggio nel database
+        const pushDocRef = doc(db, 'artifacts', APP_ID, 'users', user.uid, 'settings', 'push');
+        await setDoc(pushDocRef, {
+          fcmToken: token,
+          updatedAt: serverTimestamp(),
+          deviceInfo: navigator.userAgent,
+          platform: 'mobile_pwa'
+        }, { merge: true });
+        console.log("FCM: Token sincronizzato correttamente.");
+      } else {
+        console.warn("FCM: Nessun token ricevuto.");
+      }
+    } catch (err) {
+      console.error("FCM Error Details:", err);
     }
-  }, [reminderEnabled, reminderTime, notificationStatus]);
+  };
+
+  useEffect(() => {
+    // Avvia la registrazione solo se l'utente è loggato e ha concesso i permessi
+    if (user && notificationStatus === 'granted') {
+      setupFCM();
+    }
+  }, [user, notificationStatus]);
+
+  // --- ALTRI EFFETTI (INTRO, THEME, ECC.) ---
+  useEffect(() => {
+    const timer = setTimeout(() => setShowIntro(false), 3200); 
+    return () => clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    const root = window.document.documentElement;
+    if (theme === 'dark') root.classList.add('dark');
+    else root.classList.remove('dark');
+    localStorage.setItem('theme', theme);
+  }, [theme]);
 
   // --- CARICAMENTO LIBRERIE PDF ---
   useEffect(() => {
