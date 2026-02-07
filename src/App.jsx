@@ -1,3 +1,5 @@
+// --- ISTRUZIONI PER L'USO DEL FILE JSON ESTERNO ---
+
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { initializeApp } from 'firebase/app';
 import { 
