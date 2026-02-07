@@ -30,7 +30,7 @@ import {
 import { 
   Clock, Plus, Trash2, Calendar as CalendarIcon, LogOut, TrendingUp, 
   Briefcase, Sun, Moon, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, ArrowLeft, CheckCircle2,
-  Menu, Home, FileText, Settings, X, Zap, Palmtree, Thermometer, AlertTriangle, Download, Eye, ShieldAlert, Lock, LogIn, UserPlus, Key, Copy, AlertOctagon, ShieldCheck, Unlock, RefreshCw, Users, CheckSquare, Square, User, Palette, Smartphone, Share, Search, ShieldX, Coffee, Loader2, Bell, BellOff, HelpCircle, Info
+  Menu, Home, FileText, Settings, X, Zap, Palmtree, Thermometer, AlertTriangle, Download, Eye, ShieldAlert, Lock, LogIn, UserPlus, Key, Copy, AlertOctagon, ShieldCheck, Unlock, RefreshCw, Users, CheckSquare, Square, User, Palette, Smartphone, Share, Search, ShieldX, Coffee, Loader2, Bell, BellOff, HelpCircle, Info, Send
 } from 'lucide-react';
 
 // -----------------------------------------------------------------------------
@@ -458,6 +458,17 @@ export default function App() {
     }
   };
 
+  const sendTestNotification = () => {
+    if (notificationStatus !== 'granted') {
+      alert("Devi prima abilitare le notifiche nelle impostazioni del dispositivo.");
+      return;
+    }
+    new Notification("TimeVault Test", {
+      body: "Il sistema di notifiche del Vault è attivo e funzionante!",
+      icon: "/favicon.ico"
+    });
+  };
+
   // --- MEMO STATS ---
   const currentMonthLogs = useMemo(() => {
     const targetMonth = currentMonth.getMonth(); 
@@ -854,8 +865,9 @@ export default function App() {
                   </div>
                   <div className="flex flex-wrap items-center gap-6">
                      {reminderEnabled && (
-                        <div className="animate-in slide-in-from-right duration-500">
-                           <input type="time" className="bg-slate-50 dark:bg-slate-800 p-4 rounded-xl font-black text-xs outline-none border border-slate-100 dark:border-slate-700 dark:text-white shadow-inner" value={reminderTime} onChange={(e) => { setReminderTime(e.target.value); localStorage.setItem('reminder_time', e.target.value); }} />
+                        <div className="animate-in slide-in-from-right duration-500 flex items-center gap-3">
+                           <input type="time" className="bg-slate-50 dark:bg-slate-800 p-4 rounded-xl font-black text-xs outline-none border border-slate-100 dark:border-slate-700 dark:text-white shadow-inner" value={reminderTime} onChange={(e) => { setReminderTime(e.target.value); localStorage.setItem('reminder_time', e.target.value); }} title="Seleziona l'orario del promemoria" />
+                           <button onClick={sendTestNotification} className="p-4 bg-slate-100 dark:bg-slate-800 text-slate-400 hover:text-blue-500 rounded-xl transition-all active:scale-90" title="Invia notifica di prova"><Send size={18}/></button>
                         </div>
                      )}
                      {notificationStatus !== 'granted' ? (
@@ -995,7 +1007,7 @@ export default function App() {
 
     {showGuideModal && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-xl z-[150] flex items-center justify-center p-4 animate-in fade-in duration-500">
-          <div className="bg-white dark:bg-slate-900 p-10 md:p-14 rounded-[4rem] w-full max-w-md shadow-2xl border-4 border-slate-50 dark:border-slate-800 relative overflow-y-auto max-h-[90vh] animate-in zoom-in-95">
+          <div className="bg-white dark:bg-slate-900 p-10 md:p-14 rounded-[4rem] w-full max-md shadow-2xl border-4 border-slate-50 dark:border-slate-800 relative overflow-y-auto max-h-[90vh] animate-in zoom-in-95">
             <button onClick={() => setShowGuideModal(false)} className="absolute top-10 right-10 p-2.5 bg-slate-100 dark:bg-slate-800 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-white transition-all active:scale-90 hover:rotate-90"><X size={24} /></button>
             <div className="text-center mb-12 relative">
                 <div className={`inline-flex p-6 rounded-[2rem] bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 mb-8 shadow-2xl shadow-blue-500/10 transition-transform hover:scale-110`}><Smartphone size={44} /></div>
