@@ -38,8 +38,6 @@ import {
 // 2. TOGLI IL COMMENTO (//) dalla riga seguente per attivare l'importazione:
 import externalTeamLeaders from './capisquadra.json';
 
-// VARIABILE DI RISERVA (Per evitare errori in questa anteprima se l'import è commentato)
-// Se scommenti l'import sopra, questa variabile verrà ignorata dalla logica sotto.
 const fallbackForPreview = []; 
 // -----------------------------------------------------------------------------
 
@@ -59,16 +57,13 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const INTERNAL_DOMAIN = "@time.vault";
 
-// Valore ore standard (modificabile per CCNL Chimico)
 const STANDARD_HOURS_VALUE = 8; 
 
-// Lista di RISERVA (Fallback) - Usata solo in caso di problemi critici con il JSON
 const FALLBACK_TEAM_LEADERS = [
   'Caposquadra 1',
   'Caposquadra 2'
 ];
 
-// MAPPATURA COLORI ACCENTO (Hex per Favicon e classi Tailwind)
 const ACCENT_COLORS = {
   blue: { hex: '#2563eb', label: 'Blu Reale', class: 'blue' },
   violet: { hex: '#7c3aed', label: 'Viola Ultra', class: 'violet' },
@@ -78,22 +73,15 @@ const ACCENT_COLORS = {
   cyan: { hex: '#0891b2', label: 'Ciano', class: 'cyan' },
 };
 
-// LOGICA SELEZIONE DATI
 const getLeadersList = () => {
   try {
-    // Tentiamo di usare externalTeamLeaders se definito (importato)
     let data = null;
-    
-    // PER L'ANTEPRIMA (dove l'import è commentato), usiamo il fallback:
     if (typeof externalTeamLeaders !== 'undefined') {
        data = (externalTeamLeaders && externalTeamLeaders.default) ? externalTeamLeaders.default : externalTeamLeaders;
     } else {
        data = fallbackForPreview;
     }
-
-    if (Array.isArray(data) && data.length > 0) {
-      return data;
-    }
+    if (Array.isArray(data) && data.length > 0) return data;
   } catch (e) {
     console.warn("Nessun file JSON caricato o array vuoto. Uso fallback.");
   }
@@ -102,7 +90,6 @@ const getLeadersList = () => {
 
 const ACTIVE_TEAM_LEADERS = getLeadersList();
 
-// Funzione helper per formattare la data in LOCALE
 const formatDateAsLocal = (date) => {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -110,14 +97,12 @@ const formatDateAsLocal = (date) => {
   return `${year}-${month}-${day}`;
 };
 
-// Funzione helper per formattare la data IT
 const formatDateIT = (dateString) => {
   if (!dateString) return '';
   const [year, month, day] = dateString.split('-');
   return `${day}/${month}/${year}`;
 };
 
-// Generatore Codice Recupero
 const generateRecoveryCode = () => {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; 
   let result = '';
@@ -129,6 +114,7 @@ const generateRecoveryCode = () => {
 };
 
 export default function App() {
+  const [showIntro, setShowIntro] = useState(true); // AGGIUNTA: Stato per l'Intro
   const [user, setUser] = useState(null);
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -136,57 +122,45 @@ export default function App() {
   const [authError, setAuthError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   
-  // STATI PER IL CALENDARIO E NAVIGAZIONE
   const [view, setView] = useState('calendar'); 
   const [selectedDate, setSelectedDate] = useState(new Date()); 
   const [currentMonth, setCurrentMonth] = useState(new Date()); 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef(null);
 
-  // STATI DATI DINAMICI
   const [availableLeaders] = useState(ACTIVE_TEAM_LEADERS); 
-
-  // NUOVI STATI PER MULTI-SELEZIONE CAPISQUADRA
   const [selectedLeaders, setSelectedLeaders] = useState([]); 
   const [isLeaderDropdownOpen, setIsLeaderDropdownOpen] = useState(false); 
   const leaderDropdownRef = useRef(null);
 
-  // NUOVI STATI PER HEADER PROFILE DROPDOWN
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   const profileDropdownRef = useRef(null);
 
-  // STATI PER GESTIONE ERRORI E CONFERME
   const [formError, setFormError] = useState('');
   const [logToDelete, setLogToDelete] = useState(null); 
   const [showDownloadConfirm, setShowDownloadConfirm] = useState(false); 
   const [showPreviewModal, setShowPreviewModal] = useState(false); 
   const [showGuideModal, setShowGuideModal] = useState(false); 
 
-  // STATI PER ELIMINAZIONE ACCOUNT
   const [showDeleteAuthModal, setShowDeleteAuthModal] = useState(false); 
   const [showDeleteFinalConfirm, setShowDeleteFinalConfirm] = useState(false); 
   const [deletePassword, setDeletePassword] = useState('');
   const [deleteError, setDeleteError] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // STATI PER LOGIN POPUP E SICUREZZA
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [generatedRecoveryCode, setGeneratedRecoveryCode] = useState(''); 
   const [showRecoveryModal, setShowRecoveryModal] = useState(false); 
   
-  // Stati per Lockout
   const [failedAttempts, setFailedAttempts] = useState(0);
   const [isLocked, setIsLocked] = useState(false);
   const [unlockCodeInput, setUnlockCodeInput] = useState('');
   const [recoveryStep, setRecoveryStep] = useState(1); 
   const [newResetPassword, setNewResetPassword] = useState('');
 
-  // AGGIUNTA: Stato per la ricerca nel report
   const [reportSearchQuery, setReportSearchQuery] = useState('');
-  // AGGIUNTA: Stato per l'espansione dei dettagli nel report
   const [expandedLogId, setExpandedLogId] = useState(null);
 
-  // Gestione Tema e Colore Accento
   const [theme, setTheme] = useState(() => {
     if (typeof window !== 'undefined') return localStorage.getItem('theme') || 'light';
     return 'light';
@@ -198,26 +172,25 @@ export default function App() {
   });
 
   const [authData, setAuthData] = useState({ username: '', password: '' });
-  
-  // Stato del form
   const [formData, setFormData] = useState({
-    standardHours: 0, 
-    overtimeHours: '',
-    notes: '',
-    type: 'work' 
+    standardHours: 0, overtimeHours: '', notes: '', type: 'work' 
   });
-  
-  // Stato visibilità input
   const [showOvertimeInput, setShowOvertimeInput] = useState(false);
   const [showNotesInput, setShowNotesInput] = useState(false); 
 
-  // Calcolo se è weekend
   const isWeekend = useMemo(() => {
     const day = selectedDate.getDay();
     return day === 0 || day === 6; 
   }, [selectedDate]);
 
-  // Effetto Tema
+  // Gestione Intro Timer
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowIntro(false);
+    }, 3200); // 3.2 secondi di intro
+    return () => clearTimeout(timer);
+  }, []);
+
   useEffect(() => {
     const root = window.document.documentElement;
     if (theme === 'dark') root.classList.add('dark');
@@ -225,21 +198,15 @@ export default function App() {
     localStorage.setItem('theme', theme);
   }, [theme]);
 
-  // Click Outside per chiudere la tendina custom (Capisquadra e Profilo)
   useEffect(() => {
     function handleClickOutsideDropdown(event) {
-      if (leaderDropdownRef.current && !leaderDropdownRef.current.contains(event.target)) {
-        setIsLeaderDropdownOpen(false);
-      }
-      if (profileDropdownRef.current && !profileDropdownRef.current.contains(event.target)) {
-        setIsProfileDropdownOpen(false);
-      }
+      if (leaderDropdownRef.current && !leaderDropdownRef.current.contains(event.target)) setIsLeaderDropdownOpen(false);
+      if (profileDropdownRef.current && !profileDropdownRef.current.contains(event.target)) setIsProfileDropdownOpen(false);
     }
     document.addEventListener("mousedown", handleClickOutsideDropdown);
     return () => document.removeEventListener("mousedown", handleClickOutsideDropdown);
   }, []);
 
-  // Effetto Sync Tema e Colore da Firestore
   useEffect(() => {
     if (!user) return;
     const loadUserTheme = async () => {
@@ -256,12 +223,10 @@ export default function App() {
     loadUserTheme();
   }, [user]);
 
-  // --- Generatore Favicon Dinamica ---
   useEffect(() => {
     const setDynamicFavicon = () => {
       const hexColor = ACCENT_COLORS[accentColor]?.hex || '#2563eb';
       const encodedColor = hexColor.replace('#', '%23');
-      
       const link = document.querySelector("link[rel*='icon']") || document.createElement('link');
       link.type = 'image/svg+xml';
       link.rel = 'shortcut icon';
@@ -273,9 +238,7 @@ export default function App() {
 
   useEffect(() => {
     function handleClickOutside(event) {
-      if (menuRef.current && !menuRef.current.contains(event.target)) {
-        setIsMenuOpen(false);
-      }
+      if (menuRef.current && !menuRef.current.contains(event.target)) setIsMenuOpen(false);
     }
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
@@ -298,9 +261,7 @@ export default function App() {
     if (user) {
       try {
         await setDoc(doc(db, 'artifacts', APP_ID, 'users', user.uid, 'settings', 'theme'), {
-          mode: currentTheme,
-          accent: currentAccent,
-          updatedAt: serverTimestamp()
+          mode: currentTheme, accent: currentAccent, updatedAt: serverTimestamp()
         }, { merge: true });
       } catch (e) { console.error(e); }
     }
@@ -313,9 +274,7 @@ export default function App() {
     };
     initAuth();
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      if (!showRecoveryModal) {
-         setUser(currentUser);
-      }
+      if (!showRecoveryModal) setUser(currentUser);
       setLoading(false);
     });
     return () => unsubscribe();
@@ -338,7 +297,6 @@ export default function App() {
     e.preventDefault();
     setAuthError('');
     setIsSubmitting(true);
-    
     const cleanUsername = authData.username.trim().toLowerCase().replace(/\s/g, '');
     if (!cleanUsername.includes('.')) {
       setAuthError("L'ID deve essere 'nome.cognome'");
@@ -346,7 +304,6 @@ export default function App() {
       return;
     }
     const internalEmail = `${cleanUsername}${INTERNAL_DOMAIN}`;
-
     try {
       if (authMode === 'login') {
         if (isLocked) {
@@ -363,8 +320,7 @@ export default function App() {
         const recoveryCode = generateRecoveryCode();
         setGeneratedRecoveryCode(recoveryCode);
         await setDoc(doc(db, 'artifacts', APP_ID, 'users', cred.user.uid, 'settings', 'security'), {
-           recoveryCode: recoveryCode,
-           createdAt: serverTimestamp()
+           recoveryCode: recoveryCode, createdAt: serverTimestamp()
         });
         setShowAuthModal(false); 
         setShowRecoveryModal(true); 
@@ -374,12 +330,8 @@ export default function App() {
          const newAttempts = failedAttempts + 1;
          setFailedAttempts(newAttempts);
          if (newAttempts >= 3) {
-            setIsLocked(true);
-            setRecoveryStep(1);
-            setAuthError("Troppi tentativi falliti. Account bloccato.");
-         } else {
-            setAuthError(`Password errata. Tentativi rimasti: ${3 - newAttempts}`);
-         }
+            setIsLocked(true); setRecoveryStep(1); setAuthError("Troppi tentativi falliti. Account bloccato.");
+         } else setAuthError(`Password errata. Tentativi rimasti: ${3 - newAttempts}`);
       } else {
          if (error.code === 'auth/email-already-in-use') setAuthError("Utente già registrato.");
          else setAuthError("Errore durante la registrazione.");
@@ -387,50 +339,20 @@ export default function App() {
     } finally { setIsSubmitting(false); }
   };
 
-  const handleRecoveryCodeSaved = () => {
-    setShowRecoveryModal(false);
-    setUser(auth.currentUser); 
-  };
-
+  const handleRecoveryCodeSaved = () => { setShowRecoveryModal(false); setUser(auth.currentUser); };
   const handleVerifyCode = () => {
-     if (unlockCodeInput.length < 16) {
-        setAuthError("Codice non valido.");
-        return;
-     }
-     setAuthError("");
-     setRecoveryStep(2);
+     if (unlockCodeInput.length < 16) { setAuthError("Codice non valido."); return; }
+     setAuthError(""); setRecoveryStep(2);
   };
-
   const handleFinalPasswordReset = () => {
-    if (newResetPassword.length < 6) {
-      setAuthError("La password deve essere di almeno 6 caratteri.");
-      return;
-    }
-    setIsLocked(false);
-    setFailedAttempts(0);
-    setAuthError("");
-    setUnlockCodeInput('');
-    setNewResetPassword('');
-    setRecoveryStep(1);
+    if (newResetPassword.length < 6) { setAuthError("La password deve essere di almeno 6 caratteri."); return; }
+    setIsLocked(false); setFailedAttempts(0); setAuthError(""); setUnlockCodeInput(''); setNewResetPassword(''); setRecoveryStep(1);
     alert("Password reimpostata con successo! Ora puoi accedere.");
   };
 
-  const handleLogout = () => { 
-    signOut(auth); 
-    setView('calendar'); 
-    setFailedAttempts(0);
-    setIsLocked(false);
-    setIsProfileDropdownOpen(false);
-  };
-
+  const handleLogout = () => { signOut(auth); setView('calendar'); setFailedAttempts(0); setIsLocked(false); setIsProfileDropdownOpen(false); };
   const toggleLeaderSelection = (leaderName) => {
-    setSelectedLeaders(prev => {
-      if (prev.includes(leaderName)) {
-        return prev.filter(name => name !== leaderName);
-      } else {
-        return [...prev, leaderName];
-      }
-    });
+    setSelectedLeaders(prev => prev.includes(leaderName) ? prev.filter(n => n !== leaderName) : [...prev, leaderName]);
   };
 
   const handleSubmitLog = async (e) => {
@@ -438,36 +360,22 @@ export default function App() {
     if (!user) return;
     setFormError('');
     const dateString = formatDateAsLocal(selectedDate);
-    const alreadyExists = logs.some(l => l.date === dateString);
-    if (alreadyExists) {
+    if (logs.some(l => l.date === dateString)) {
       setFormError("Attenzione: Esiste già una voce per questa data! Cancella quella esistente se vuoi modificarla.");
       return;
     }
     try {
       const logsCollection = collection(db, 'artifacts', APP_ID, 'users', user.uid, 'work_logs');
-      const teamLeaderString = selectedLeaders.join(', ');
       await addDoc(logsCollection, {
-        ...formData,
-        standardHours: Number(formData.standardHours) || 0,
-        overtimeHours: Number(formData.overtimeHours) || 0,
-        teamLeader: teamLeaderString,
-        date: dateString,
-        userId: user.uid,
-        userName: user.displayName,
-        createdAt: serverTimestamp()
+        ...formData, standardHours: Number(formData.standardHours) || 0, overtimeHours: Number(formData.overtimeHours) || 0,
+        teamLeader: selectedLeaders.join(', '), date: dateString, userId: user.uid, userName: user.displayName, createdAt: serverTimestamp()
       });
       setFormData({ standardHours: 0, overtimeHours: '', notes: '', type: 'work' });
-      setSelectedLeaders([]); 
-      setShowOvertimeInput(false);
-      setShowNotesInput(false); 
-      setIsLeaderDropdownOpen(false);
+      setSelectedLeaders([]); setShowOvertimeInput(false); setShowNotesInput(false); setIsLeaderDropdownOpen(false);
     } catch (e) { console.error(e); }
   };
 
-  const requestDeleteLog = (id) => {
-    setLogToDelete(id);
-  };
-
+  const requestDeleteLog = (id) => setLogToDelete(id);
   const confirmDelete = async () => {
     if (!logToDelete) return;
     try {
@@ -476,82 +384,30 @@ export default function App() {
     } catch (e) { console.error(e); }
   };
 
-  const handleInitiateDeleteAccount = () => {
-    setShowDeleteAuthModal(true);
-    setDeletePassword('');
-    setDeleteError('');
-  };
-
+  const handleInitiateDeleteAccount = () => { setShowDeleteAuthModal(true); setDeletePassword(''); setDeleteError(''); };
   const verifyPasswordAndDelete = async (e) => {
     e.preventDefault();
     setDeleteError('');
-    if (!deletePassword) {
-      setDeleteError("Inserisci la password per confermare.");
-      return;
-    }
+    if (!deletePassword) { setDeleteError("Inserisci la password per confermare."); return; }
     setIsDeleting(true);
     try {
       const credential = EmailAuthProvider.credential(user.email, deletePassword);
       await reauthenticateWithCredential(user, credential);
-      setIsDeleting(false);
-      setShowDeleteAuthModal(false);
-      setShowDeleteFinalConfirm(true);
-    } catch (error) {
-      console.error(error);
-      setIsDeleting(false);
-      setDeleteError("Password non corretta. Riprova.");
-    }
+      setIsDeleting(false); setShowDeleteAuthModal(false); setShowDeleteFinalConfirm(true);
+    } catch (error) { setIsDeleting(false); setDeleteError("Password non corretta. Riprova."); }
   };
-
   const confirmFinalAccountDeletion = async () => {
     setIsDeleting(true);
-    try {
-      await deleteUser(user);
-    } catch (error) {
-      console.error("Errore eliminazione account:", error);
-      setIsDeleting(false);
-      alert("Si è verificato un errore durante l'eliminazione. Riprova più tardi.");
-    }
+    try { await deleteUser(user); } catch (error) { setIsDeleting(false); alert("Si è verificato un errore durante l'eliminazione. Riprova più tardi."); }
   };
 
-  const handleDownloadRequest = () => {
-    setShowDownloadConfirm(true);
-  };
+  const handleDownloadRequest = () => setShowDownloadConfirm(true);
+  const confirmDownload = () => { setShowDownloadConfirm(false); setTimeout(() => window.print(), 300); };
 
-  const confirmDownload = () => {
-    setShowDownloadConfirm(false);
-    setTimeout(() => {
-      window.print();
-    }, 300);
-  };
-
-  const handleSetStandard = () => {
-    setFormError(''); 
-    setFormData(prev => ({ 
-      ...prev, 
-      standardHours: STANDARD_HOURS_VALUE, 
-      type: 'work',
-    }));
-  };
-
-  const handleSetFerie = () => {
-    setFormError('');
-    setFormData({ standardHours: 0, overtimeHours: '', notes: 'Ferie', type: 'ferie' });
-    setSelectedLeaders([]);
-    setShowOvertimeInput(false);
-  };
-
-  const handleSetMalattia = () => {
-    setFormError('');
-    setFormData({ standardHours: 0, overtimeHours: '', notes: 'Malattia', type: 'malattia' });
-    setSelectedLeaders([]);
-    setShowOvertimeInput(false);
-  };
-
-  const toggleOvertime = () => {
-    setFormError('');
-    setShowOvertimeInput(!showOvertimeInput);
-  };
+  const handleSetStandard = () => { setFormError(''); setFormData(prev => ({ ...prev, standardHours: STANDARD_HOURS_VALUE, type: 'work' })); };
+  const handleSetFerie = () => { setFormError(''); setFormData({ standardHours: 0, overtimeHours: '', notes: 'Ferie', type: 'ferie' }); setSelectedLeaders([]); setShowOvertimeInput(false); };
+  const handleSetMalattia = () => { setFormError(''); setFormData({ standardHours: 0, overtimeHours: '', notes: 'Malattia', type: 'malattia' }); setSelectedLeaders([]); setShowOvertimeInput(false); };
+  const toggleOvertime = () => { setFormError(''); setShowOvertimeInput(!showOvertimeInput); };
 
   const currentMonthLogs = useMemo(() => {
     const targetMonth = currentMonth.getMonth(); 
@@ -565,19 +421,14 @@ export default function App() {
   const filteredMonthLogs = useMemo(() => {
     if (!reportSearchQuery) return currentMonthLogs;
     const query = reportSearchQuery.toLowerCase();
-    return currentMonthLogs.filter(log => 
-      log.notes?.toLowerCase().includes(query) || 
-      log.teamLeader?.toLowerCase().includes(query)
-    );
+    return currentMonthLogs.filter(log => log.notes?.toLowerCase().includes(query) || log.teamLeader?.toLowerCase().includes(query));
   }, [currentMonthLogs, reportSearchQuery]);
 
   const monthlyStats = useMemo(() => {
     const uniqueDays = new Set();
     let totalOvertime = 0;
     currentMonthLogs.forEach(log => {
-        if (log.type !== 'ferie' && log.type !== 'malattia') {
-           uniqueDays.add(log.date);
-        }
+        if (log.type !== 'ferie' && log.type !== 'malattia') uniqueDays.add(log.date);
         totalOvertime += Number(log.overtimeHours || 0);
     });
     return { daysWorked: uniqueDays.size, ext: totalOvertime };
@@ -592,48 +443,33 @@ export default function App() {
     return { days, offset };
   };
 
-  const changeMonth = (increment) => {
-    setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + increment, 1));
-  };
-
+  const changeMonth = (increment) => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + increment, 1));
   const selectDay = (day) => {
-    const newDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
-    setSelectedDate(newDate);
+    setSelectedDate(new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day));
     setFormData({ standardHours: 0, overtimeHours: '', notes: '', type: 'work' });
-    setSelectedLeaders([]); 
-    setShowOvertimeInput(false);
-    setShowNotesInput(false); 
-    setFormError('');
-    setView('day');
+    setSelectedLeaders([]); setShowOvertimeInput(false); setShowNotesInput(false); setFormError(''); setView('day');
   };
 
-  const dailyLogs = useMemo(() => {
-    const dateString = formatDateAsLocal(selectedDate);
-    return logs.filter(l => l.date === dateString);
-  }, [logs, selectedDate]);
+  const dailyLogs = useMemo(() => logs.filter(l => l.date === formatDateAsLocal(selectedDate)), [logs, selectedDate]);
+  const hasData = (day) => logs.some(l => l.date === formatDateAsLocal(new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day)));
+  const handleMenuNavigation = (targetView) => { setView(targetView); setIsMenuOpen(false); };
+  const openAuthModal = (mode) => { setAuthMode(mode); setAuthError(''); setAuthData({ username: '', password: '' }); setShowAuthModal(true); };
+  const copyToClipboard = () => { navigator.clipboard.writeText(generatedRecoveryCode); alert("Codice copiato negli appunti!"); };
 
-  const hasData = (day) => {
-    const checkDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
-    const dateString = formatDateAsLocal(checkDate);
-    return logs.some(l => l.date === dateString);
-  };
-
-  const handleMenuNavigation = (targetView) => {
-    setView(targetView);
-    setIsMenuOpen(false);
-  };
-
-  const openAuthModal = (mode) => {
-    setAuthMode(mode);
-    setAuthError('');
-    setAuthData({ username: '', password: '' });
-    setShowAuthModal(true);
-  };
-
-  const copyToClipboard = () => {
-    navigator.clipboard.writeText(generatedRecoveryCode);
-    alert("Codice copiato negli appunti!");
-  };
+  // --- RENDERING INTRO ---
+  if (showIntro) {
+    return (
+      <div className="h-screen w-full bg-slate-950 flex flex-col items-center justify-center p-8 animate-in fade-in duration-700">
+         <div className={`p-8 bg-${accentColor}-600 rounded-[2.5rem] text-white shadow-2xl shadow-${accentColor}-500/30 animate-pulse duration-[2000ms] mb-10`}>
+            <Clock size={80} />
+         </div>
+         <div className="text-center overflow-hidden">
+            <h1 className="text-6xl font-black italic tracking-tighter text-white animate-in slide-in-from-bottom-8 duration-1000">TIMEVAULT</h1>
+            <p className="text-slate-500 text-sm font-black uppercase tracking-[0.5em] mt-4 opacity-0 animate-in fade-in fill-mode-forwards delay-700 duration-1000">Personal Edition</p>
+         </div>
+      </div>
+    );
+  }
 
   if (loading) return <div className="h-screen flex items-center justify-center bg-slate-900 text-blue-500 font-bold animate-pulse uppercase tracking-widest italic">Caricamento Vault...</div>;
 
@@ -654,7 +490,7 @@ export default function App() {
              <p className="text-slate-400 dark:text-slate-500 text-xs font-black uppercase tracking-[0.4em]">Personal Edition</p>
           </div>
           <div className="space-y-4">
-            <button onClick={() => openAuthModal('login')} className="w-full bg-slate-900 dark:bg-white text-white dark:text-slate-900 p-5 rounded-2xl font-black uppercase tracking-widest shadow-xl hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-3">
+            <button onClick={() => openAuthModal('login')} className={`w-full bg-slate-900 dark:bg-white text-white dark:text-slate-900 p-5 rounded-2xl font-black uppercase tracking-widest shadow-xl hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-3`}>
               <LogIn size={20} /> Accedi al Vault
             </button>
             <button onClick={() => openAuthModal('register')} className="w-full bg-transparent border-2 border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 p-5 rounded-2xl font-black uppercase tracking-widest hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white transition-all flex items-center justify-center gap-3">
@@ -732,6 +568,7 @@ export default function App() {
   return (
     <>
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-300 print:hidden">
+      {/* GUIDE MODAL */}
       {showGuideModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[60] flex items-center justify-center p-4 animate-in fade-in duration-200">
           <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] w-full max-w-md shadow-2xl border border-slate-100 dark:border-slate-800 relative overflow-y-auto max-h-[80vh]">
@@ -748,7 +585,7 @@ export default function App() {
                  <h3 className="font-black text-slate-900 dark:text-white flex items-center gap-2 mb-3"><span className="text-xl"></span> iOS (iPhone/iPad)</h3>
                  <ol className="text-sm text-slate-600 dark:text-slate-300 space-y-3 list-decimal list-inside font-medium marker:text-slate-400 marker:font-bold">
                     <li>Apri <strong>Safari</strong>.</li>
-                    <li>Tocca l'icona <strong>Condividi</strong> <span className="inline-block align-middle bg-slate-200 dark:bg-slate-700 p-1 rounded"><Share size={12}/></span> nella barra in basso.</li>
+                    <li>Tocca l'icona <strong>Condividi</strong> nella barra in basso.</li>
                     <li>Scorri e seleziona <strong>"Aggiungi alla schermata Home"</strong>.</li>
                  </ol>
               </div>
@@ -766,6 +603,7 @@ export default function App() {
         </div>
       )}
 
+      {/* POPUP ELIMINA */}
       {logToDelete && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white dark:bg-slate-900 p-8 rounded-[2rem] shadow-2xl max-w-sm w-full border border-slate-100 dark:border-slate-800">
@@ -773,77 +611,6 @@ export default function App() {
             <div className="grid grid-cols-2 gap-3">
               <button onClick={() => setLogToDelete(null)} className="p-4 rounded-xl font-black text-xs uppercase bg-slate-100 dark:bg-slate-800 text-slate-500">No</button>
               <button onClick={confirmDelete} className="p-4 rounded-xl font-black text-xs uppercase bg-red-500 text-white">Sì, Cancella</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showDeleteAuthModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[60] flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 p-8 rounded-[2rem] shadow-2xl max-w-sm w-full">
-            <h3 className="text-lg font-black text-center mb-4">Password Richiesta</h3>
-            <form onSubmit={verifyPasswordAndDelete} className="space-y-3">
-               <input type="password" placeholder="Password attuale" className="w-full p-3 bg-slate-100 dark:bg-slate-800 rounded-xl font-bold outline-none" value={deletePassword} onChange={e => setDeletePassword(e.target.value)} />
-               {deleteError && <p className="text-red-500 text-xs font-bold">{deleteError}</p>}
-               <div className="grid grid-cols-2 gap-3 mt-4">
-                  <button type="button" onClick={() => setShowDeleteAuthModal(false)} className="p-3 bg-slate-100 dark:bg-slate-800 rounded-xl font-bold text-xs uppercase text-slate-500">Annulla</button>
-                  <button type="submit" disabled={isDeleting} className="p-3 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl font-bold text-xs uppercase">Conferma</button>
-               </div>
-            </form>
-          </div>
-        </div>
-      )}
-      
-      {showDeleteFinalConfirm && (
-        <div className="fixed inset-0 bg-red-900/40 backdrop-blur-md z-[70] flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 p-8 rounded-[2rem] border-2 border-red-500 max-w-sm w-full text-center">
-            <ShieldAlert size={48} className="mx-auto text-red-600 mb-4" />
-            <h3 className="text-xl font-black text-red-600 uppercase mb-2">Eliminare Account?</h3>
-            <p className="text-sm mb-6">Tutti i dati verranno persi per sempre.</p>
-            <button onClick={confirmFinalAccountDeletion} disabled={isDeleting} className="w-full p-4 bg-red-600 text-white rounded-xl font-black uppercase mb-3">Elimina per sempre</button>
-            <button onClick={() => setShowDeleteFinalConfirm(false)} className="w-full p-4 bg-slate-100 dark:bg-slate-800 rounded-xl font-black uppercase text-slate-500">Annulla</button>
-          </div>
-        </div>
-      )}
-
-      {showDownloadConfirm && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 p-8 rounded-[2rem] shadow-2xl max-w-sm w-full text-center">
-            <h3 className="text-lg font-black mb-2">Scaricare PDF?</h3>
-            <p className="text-sm text-slate-500 mb-6">Si aprirà la finestra di stampa.</p>
-            <div className="grid grid-cols-2 gap-3">
-              <button onClick={() => setShowDownloadConfirm(false)} className="p-4 bg-slate-100 dark:bg-slate-800 rounded-xl font-black text-xs uppercase text-slate-500">Annulla</button>
-              <button onClick={confirmDownload} className={`p-4 bg-${accentColor}-600 text-white rounded-xl font-black text-xs uppercase`}>Procedi</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showPreviewModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 w-full max-w-2xl max-h-[80vh] rounded-[2.5rem] shadow-2xl flex flex-col overflow-hidden">
-            <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-800/50">
-              <h3 className="text-xl font-black italic uppercase">Dettaglio {monthName}</h3>
-              <button onClick={() => setShowPreviewModal(false)} className="p-2 bg-slate-200 dark:bg-slate-700 rounded-full"><X size={20}/></button>
-            </div>
-            <div className="p-6 overflow-y-auto">
-               <div className="space-y-3">
-                  {currentMonthLogs.map(log => (
-                     <div key={log.id} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800">
-                        <div className="flex items-center gap-4">
-                            <div className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600">{new Date(log.date).getDate()}</div>
-                            <div>
-                               <p className="text-xs font-black uppercase">{log.type === 'work' ? 'Lavoro' : log.type}</p>
-                               {log.notes && <p className="text-[10px] text-slate-400 truncate max-w-[120px]">{log.notes}</p>}
-                            </div>
-                        </div>
-                        <div className="text-right">
-                            {log.overtimeHours > 0 ? <span className="text-sm font-black text-orange-500">+{log.overtimeHours}h</span> : <span className="text-xs font-bold text-slate-300">-</span>}
-                        </div>
-                     </div>
-                  ))}
-                  {currentMonthLogs.length === 0 && <p className="text-center text-slate-400 py-4 italic">Nessun dato.</p>}
-               </div>
             </div>
           </div>
         </div>
@@ -868,7 +635,7 @@ export default function App() {
             <button onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)} className="flex items-center gap-2 group focus:outline-none">
               <div className={`bg-${accentColor}-50 dark:bg-slate-800 px-4 py-2 rounded-2xl border border-${accentColor}-100 dark:border-slate-700 hidden sm:block transition-transform group-hover:scale-95`}>
                 <p className={`text-[9px] text-${accentColor}-400 dark:text-${accentColor}-300 font-black uppercase mb-0.5 leading-none text-right`}>Ciao</p>
-                <p className={`text-sm font-black text-${accentColor}-700 dark:text-${accentColor}-400 uppercase italic leading-none`}>{user.displayName}</p>
+                <p className={`text-sm font-black text-${accentColor}-700 dark:text-${accentColor}-400 uppercase italic leading-none`}>{user?.displayName}</p>
               </div>
               <div className={`w-10 h-10 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700 group-hover:bg-${accentColor}-100 dark:group-hover:bg-slate-700 transition-colors`}>
                  <User size={20} />
@@ -876,13 +643,7 @@ export default function App() {
             </button>
             {isProfileDropdownOpen && (
               <div className="absolute top-full right-0 mt-2 w-56 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-100 dark:border-slate-800 p-2 animate-in fade-in slide-in-from-top-2">
-                 <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-800 mb-2 sm:hidden">
-                    <p className="text-[9px] text-slate-400 font-black uppercase">Utente</p>
-                    <p className="text-sm font-black text-slate-800 dark:text-white truncate">{user.displayName}</p>
-                 </div>
-                 <button onClick={handleLogout} className="w-full flex items-center gap-3 p-3 rounded-xl text-sm font-bold text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
-                    <LogOut size={18} /> Disconnetti
-                 </button>
+                 <button onClick={handleLogout} className="w-full flex items-center gap-3 p-3 rounded-xl text-sm font-bold text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"><LogOut size={18} /> Disconnetti</button>
               </div>
             )}
         </div>
@@ -941,7 +702,6 @@ export default function App() {
             <h2 className="text-3xl font-black italic text-slate-800 dark:text-white capitalize">{selectedDate.toLocaleDateString('it-IT', { day: 'numeric', month: 'long' })}{isWeekend && <span className="block text-xs font-bold text-orange-500 not-italic mt-1 uppercase tracking-widest">Weekend • Straordinario</span>}</h2>
             <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] shadow-sm border border-slate-200 dark:border-slate-800">
               <h3 className="text-xs font-black mb-6 uppercase text-slate-400 tracking-widest">Aggiungi Ore</h3>
-              {formError && <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-2xl text-sm font-bold flex items-center gap-2"><AlertTriangle size={18} className="shrink-0" />{formError}</div>}
               <div className="grid grid-cols-2 gap-4 mb-6">
                  {!isWeekend && (
                    <>
@@ -973,15 +733,12 @@ export default function App() {
                             </div>
                             {isLeaderDropdownOpen && (
                                <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-[1.25rem] shadow-xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-200 p-2 max-h-60 overflow-y-auto">
-                                 {availableLeaders.map(leader => {
-                                   const isSelected = selectedLeaders.includes(leader);
-                                   return (
-                                     <div key={leader} onClick={() => toggleLeaderSelection(leader)} className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-colors ${isSelected ? `bg-${accentColor}-50 dark:bg-${accentColor}-900/20` : 'hover:bg-slate-50 dark:hover:bg-slate-700'}`}>
-                                       <div className={`w-5 h-5 rounded-md flex items-center justify-center border transition-colors ${isSelected ? `bg-${accentColor}-600 border-${accentColor}-600` : 'bg-transparent border-slate-300 dark:border-slate-600'}`}>{isSelected && <CheckSquare size={14} className="text-white" />}</div>
-                                       <span className={`text-sm font-bold ${isSelected ? `text-${accentColor}-700 dark:text-${accentColor}-300` : 'text-slate-600 dark:text-slate-300'}`}>{leader}</span>
+                                 {availableLeaders.map(leader => (
+                                     <div key={leader} onClick={() => toggleLeaderSelection(leader)} className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-colors ${selectedLeaders.includes(leader) ? `bg-${accentColor}-50 dark:bg-${accentColor}-900/20` : 'hover:bg-slate-50 dark:hover:bg-slate-700'}`}>
+                                       <div className={`w-5 h-5 rounded-md flex items-center justify-center border transition-colors ${selectedLeaders.includes(leader) ? `bg-${accentColor}-600 border-${accentColor}-600 text-white` : 'bg-transparent border-slate-300 dark:border-slate-600'}`}>{selectedLeaders.includes(leader) && <CheckSquare size={14} />}</div>
+                                       <span className={`text-sm font-bold ${selectedLeaders.includes(leader) ? `text-${accentColor}-700 dark:text-${accentColor}-300` : 'text-slate-600 dark:text-slate-300'}`}>{leader}</span>
                                      </div>
-                                   );
-                                 })}
+                                 ))}
                                </div>
                             )}
                         </div>
@@ -1021,7 +778,6 @@ export default function App() {
           <div className="space-y-8 animate-in fade-in zoom-in duration-300">
              <div className="flex justify-between items-center">
                  <h2 className="text-2xl font-black italic text-slate-800 dark:text-white uppercase tracking-tight leading-none">Resoconto Mese</h2>
-                 {/* NAVIGAZIONE MESE DINAMICA */}
                  <div className="flex items-center gap-4 bg-white dark:bg-slate-900 px-4 py-2 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm transition-colors duration-300">
                     <button onClick={() => changeMonth(-1)} className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors text-slate-500"><ChevronLeft size={20} /></button>
                     <p className="text-sm font-bold text-slate-700 dark:text-slate-300 capitalize min-w-[120px] text-center">{monthName}</p>
@@ -1045,16 +801,14 @@ export default function App() {
                     <input type="text" placeholder="Cerca per note o caposquadra..." className="w-full pl-12 pr-4 py-4 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl font-bold outline-none focus:ring-2 focus:ring-slate-200 transition-all text-slate-900 dark:text-white" value={reportSearchQuery} onChange={(e) => setReportSearchQuery(e.target.value)} />
                  </div>
                  <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar text-left">
-                    {filteredMonthLogs.map(log => {
-                       const isExpanded = expandedLogId === log.id;
-                       return (
-                         <div key={log.id} onClick={() => setExpandedLogId(isExpanded ? null : log.id)} className={`p-4 bg-slate-50/50 dark:bg-slate-800/30 rounded-2xl border border-slate-100 dark:border-slate-700/50 cursor-pointer transition-all hover:border-${accentColor}-200 dark:hover:border-${accentColor}-800 ${isExpanded ? `ring-2 ring-${accentColor}-500/20 border-${accentColor}-300 dark:border-${accentColor}-700 shadow-lg` : ''}`}>
+                    {filteredMonthLogs.map(log => (
+                         <div key={log.id} onClick={() => setExpandedLogId(expandedLogId === log.id ? null : log.id)} className={`p-4 bg-slate-50/50 dark:bg-slate-800/30 rounded-2xl border border-slate-100 dark:border-slate-700/50 cursor-pointer transition-all hover:border-${accentColor}-200 dark:hover:border-${accentColor}-800 ${expandedLogId === log.id ? `ring-2 ring-${accentColor}-500/20 border-${accentColor}-300 dark:border-${accentColor}-700 shadow-lg` : ''}`}>
                             <div className="flex items-center justify-between">
                                <div className="flex items-center gap-4">
-                                  <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 transition-colors ${isExpanded ? `text-${accentColor}-600 border-${accentColor}-500 shadow-sm` : ''}`}>{new Date(log.date).getDate()}</div>
+                                  <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 transition-colors ${expandedLogId === log.id ? `text-${accentColor}-600 border-${accentColor}-500 shadow-sm` : ''}`}>{new Date(log.date).getDate()}</div>
                                   <div>
                                      <p className="text-[10px] font-black uppercase text-slate-400">{log.type === 'work' ? 'Lavoro' : log.type}</p>
-                                     <p className={`text-sm font-bold text-slate-700 dark:text-slate-300 ${isExpanded ? '' : 'truncate max-w-[200px]'}`}>{log.notes || "Nessuna nota"}</p>
+                                     <p className={`text-sm font-bold text-slate-700 dark:text-slate-300 ${expandedLogId === log.id ? '' : 'truncate max-w-[200px]'}`}>{log.notes || "Nessuna nota"}</p>
                                   </div>
                                </div>
                                <div className="text-right flex items-center gap-3">
@@ -1062,10 +816,10 @@ export default function App() {
                                     {log.overtimeHours > 0 && <p className="text-xs font-black text-orange-500 leading-none">+{log.overtimeHours}h Extra</p>}
                                     <p className="text-xs font-bold text-slate-400">{log.standardHours > 0 ? `${log.standardHours}h std` : ''}</p>
                                   </div>
-                                  <div className={`text-slate-300 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`}><ChevronDown size={14} /></div>
+                                  <div className={`text-slate-300 transition-transform duration-300 ${expandedLogId === log.id ? 'rotate-180' : ''}`}><ChevronDown size={14} /></div>
                                </div>
                             </div>
-                            {isExpanded && (
+                            {expandedLogId === log.id && (
                                <div className="mt-4 pt-4 border-t border-slate-200/50 dark:border-slate-700/50 animate-in slide-in-from-top-2 duration-300">
                                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                      <div>
@@ -1080,9 +834,7 @@ export default function App() {
                                </div>
                             )}
                          </div>
-                       );
-                    })}
-                    {filteredMonthLogs.length === 0 && <p className="text-center text-slate-400 py-8 italic uppercase font-black tracking-widest text-[10px]">Nessun risultato</p>}
+                    ))}
                  </div>
                  <button onClick={handleDownloadRequest} className={`mt-8 w-full p-4 bg-slate-100 dark:bg-slate-800 hover:bg-${accentColor}-50 dark:hover:bg-${accentColor}-900/30 text-slate-600 dark:text-slate-300 hover:text-${accentColor}-600 dark:hover:text-${accentColor}-400 rounded-2xl font-black uppercase text-xs tracking-widest transition-all flex items-center justify-center gap-2`}><Download size={18} /> Scarica PDF Report</button>
              </div>
@@ -1094,19 +846,13 @@ export default function App() {
             <h2 className="text-2xl font-black italic text-slate-800 dark:text-white uppercase tracking-tight">Impostazioni</h2>
             <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] shadow-sm border border-slate-200 dark:border-slate-800 space-y-8">
                <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-8">
-                  <div>
-                    <h3 className="font-bold text-slate-900 dark:text-white mb-1">Aspetto Applicazione</h3>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">Scegli tra modalità chiara e scura</p>
-                  </div>
+                  <div><h3 className="font-bold text-slate-900 dark:text-white mb-1">Aspetto Applicazione</h3><p className="text-xs text-slate-500 dark:text-slate-400">Scegli tra modalità chiara e scura</p></div>
                   <button onClick={toggleTheme} className="flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-slate-800 rounded-xl font-bold text-sm text-slate-600 dark:text-slate-300 transition-colors">
                     {theme === 'light' ? <><Moon size={16}/> Dark Mode</> : <><Sun size={16}/> Light Mode</>}
                   </button>
                </div>
                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                  <div>
-                    <h3 className="font-bold text-slate-900 dark:text-white mb-1 flex items-center gap-2"><Palette size={18}/> Stile Colore</h3>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">Personalizza lo stile grafico</p>
-                  </div>
+                  <div><h3 className="font-bold text-slate-900 dark:text-white mb-1 flex items-center gap-2"><Palette size={18}/> Stile Colore</h3><p className="text-xs text-slate-500 dark:text-slate-400">Personalizza lo stile grafico</p></div>
                   <div className="flex items-center gap-3 overflow-x-auto pb-2 sm:pb-0">
                     {Object.entries(ACCENT_COLORS).map(([key, { label, hex }]) => (
                       <button key={key} onClick={() => changeAccentColor(key)} title={label} style={{ backgroundColor: hex }} className={`w-10 h-10 rounded-full border-2 transition-all ${accentColor === key ? 'border-slate-900 dark:border-white scale-110 shadow-lg' : 'border-transparent hover:scale-105 opacity-70 hover:opacity-100'}`}>
@@ -1116,37 +862,12 @@ export default function App() {
                   </div>
                </div>
             </div>
-            <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] shadow-sm border border-slate-200 dark:border-slate-800">
-               <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="font-bold text-slate-900 dark:text-white mb-1 flex items-center gap-2"><Smartphone size={18}/> App Mobile</h3>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">Come installare TimeVault sulla Home</p>
-                  </div>
-                  <button onClick={() => setShowGuideModal(true)} className="flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-slate-800 rounded-xl font-bold text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">Apri Guida</button>
-               </div>
-            </div>
-            <div className="bg-red-50 dark:bg-red-900/10 p-8 rounded-[2.5rem] border border-red-100 dark:border-red-900/20">
-               <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="font-bold text-red-600 dark:text-red-500 mb-1 flex items-center gap-2"><AlertTriangle size={16}/> Zona Pericolo</h3>
-                    <p className="text-xs text-red-400 dark:text-red-400/70">Eliminazione definitiva account</p>
-                  </div>
-                  <button onClick={handleInitiateDeleteAccount} className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-red-900/40 text-red-600 dark:text-red-400 rounded-xl font-bold text-sm shadow-sm hover:bg-red-50 dark:hover:bg-red-900/60 transition-colors">Elimina Account</button>
-               </div>
-            </div>
+            <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] shadow-sm border border-slate-200 dark:border-slate-800"><div className="flex items-center justify-between"><div><h3 className="font-bold text-slate-900 dark:text-white mb-1 flex items-center gap-2"><Smartphone size={18}/> App Mobile</h3><p className="text-xs text-slate-500 dark:text-slate-400">Come installare TimeVault sulla Home</p></div><button onClick={() => setShowGuideModal(true)} className="flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-slate-800 rounded-xl font-bold text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">Apri Guida</button></div></div>
+            <div className="bg-red-50 dark:bg-red-900/10 p-8 rounded-[2.5rem] border border-red-100 dark:border-red-900/20"><div className="flex items-center justify-between"><div><h3 className="font-bold text-red-600 dark:text-red-500 mb-1 flex items-center gap-2"><AlertTriangle size={16}/> Zona Pericolo</h3><p className="text-xs text-red-400 dark:text-red-400/70">Eliminazione definitiva account</p></div><button onClick={handleInitiateDeleteAccount} className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-red-900/40 text-red-600 dark:text-red-400 rounded-xl font-bold text-sm shadow-sm hover:bg-red-50 dark:hover:bg-red-900/60 transition-colors">Elimina Account</button></div></div>
           </div>
         )}
       </main>
-      <footer className="max-w-6xl mx-auto p-12 text-center text-[10px] font-black text-slate-300 dark:text-slate-600 uppercase tracking-[0.5em]">TimeVault v0.7.9</footer>
-      
-      <div className="hidden">
-        <div className="bg-blue-50 bg-violet-50 bg-emerald-50 bg-rose-50 bg-amber-50 bg-cyan-50"></div>
-        <div className="bg-blue-100 bg-violet-100 bg-emerald-100 bg-rose-100 bg-amber-100 bg-cyan-100"></div>
-        <div className="bg-blue-400 bg-violet-400 bg-emerald-400 bg-rose-400 bg-amber-400 bg-cyan-400"></div>
-        <div className="bg-blue-500 bg-violet-500 bg-emerald-500 bg-rose-500 bg-amber-500 bg-cyan-500"></div>
-        <div className="bg-blue-600 bg-violet-600 bg-emerald-600 bg-rose-600 bg-amber-600 bg-cyan-600"></div>
-        <div className="shadow-blue-500/30 shadow-violet-500/30 shadow-emerald-500/30 shadow-rose-500/30 shadow-amber-500/30 shadow-cyan-500/30"></div>
-      </div>
+      <footer className="max-w-6xl mx-auto p-12 text-center text-[10px] font-black text-slate-300 dark:text-slate-600 uppercase tracking-[0.5em]">TimeVault v0.8.0</footer>
     </div>
     
     <div className="hidden print:block fixed inset-0 bg-white z-[9999] p-6 font-sans text-black overflow-hidden">
@@ -1168,10 +889,8 @@ export default function App() {
                     <td className="py-1 font-bold text-right">{log.overtimeHours > 0 ? <span className="text-orange-700">+{log.overtimeHours}h</span> : <span className="text-slate-300">-</span>}</td>
                  </tr>
               ))}
-              {currentMonthLogs.length === 0 && <tr><td colSpan="3" className="py-8 text-center text-slate-400 italic">Nessun dato registrato per questo mese.</td></tr>}
            </tbody>
         </table>
-        <div className="fixed bottom-4 left-6 right-6 text-center border-t border-slate-100 pt-2"><p className="text-[8px] text-slate-400 uppercase tracking-widest">Generato da TimeVault App • {new Date().toLocaleDateString()}</p></div>
     </div>
     </>
   );
