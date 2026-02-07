@@ -1,80 +1,46 @@
-🔒 TimeVault Enterprise - Registro Ore Team
+# ⏱️ TimeVault — Personal Edition
 
-TimeVault è un'applicazione web moderna progettata per la registrazione collaborativa delle ore lavorative (standard e straordinari). Utilizza React per l'interfaccia e Firebase per la gestione dei dati in tempo reale.
+**TimeVault** è una web app sviluppata in **React + Vite** per la gestione delle ore lavorative, straordinari, ferie, malattia e riposi.  
+Include autenticazione con **Firebase**, salvataggio dati su **Firestore**, report mensili stampabili in PDF e personalizzazione grafica (tema e colore principale).
 
-🚀 Caratteristiche
+---
 
-Autenticazione Aziendale: Accesso tramite formato nome.cognome (ID interno @time.vault).
+## 🚀 Funzionalità principali
 
-Real-time Sync: I dati inseriti dai colleghi sono visibili istantaneamente a tutto il team.
+- 🔐 **Autenticazione utenti** (login / registrazione) con Firebase Auth  
+- 🛡️ **Sistema di sicurezza con codice di recupero** per:
+  - Sblocco account dopo tentativi falliti
+  - Eliminazione definitiva dell’account
+- 📅 **Calendario mensile** con:
+  - Inserimento ore standard
+  - Inserimento straordinari
+  - Ferie, malattia, riposo, riposo compensativo
+- 👥 **Selezione multipla capisquadra** (da file JSON esterno)
+- 📝 **Note opzionali** per ogni giornata
+- 📊 **Resoconto mensile**:
+  - Giorni lavorati
+  - Totale ore extra
+  - Ricerca per note o caposquadra
+- 🖨️ **Esportazione report in PDF** tramite stampa
+- 🌗 **Tema chiaro / scuro**
+- 🎨 **Personalizzazione colore principale dell’app**
+- 📱 **Installabile come PWA** (aggiunta alla Home su iOS / Android)
+- 🤖 **Automazione weekend**: inserisce automaticamente “Riposo” per sabato e domenica se mancanti
 
-Privacy: Ogni utente può eliminare solo i propri record.
+---
 
-Statistiche: Calcolo automatico dei totali (Standard vs Extra) per il singolo e per il team.
+## 🧱 Stack tecnologico
 
-🛠️ Requisiti Premilinari
+- **Frontend:** React + Vite
+- **UI & Icone:** Tailwind CSS + lucide-react
+- **Backend / Auth / DB:** Firebase
+  - Firebase Authentication
+  - Firestore
+- **Build & Deploy:** Vite, Vercel (o simili)
 
-Node.js installato sul PC.
+---
 
-Un progetto attivo su Firebase Console.
+## 📂 Struttura dati (Firestore)
 
-📦 Installazione Locale
+I dati vengono salvati con questa struttura logica:
 
-Clona la repository o scarica i file in una cartella.
-
-Apri il terminale nella cartella del progetto ed esegui:
-
-npm install
-
-
-Configura le tue chiavi Firebase nel file src/App.jsx all'interno dell'oggetto firebaseConfig.
-
-⚙️ Configurazione Firebase (Obbligatoria)
-
-Per far funzionare l'autenticazione e il database, segui questi passaggi nella console di Firebase:
-
-1. Authentication
-
-Vai su Authentication > Sign-in method.
-
-Abilita il provider Email/Password.
-
-2. Firestore Database
-
-Crea un database Firestore in modalità produzione.
-
-Nella scheda Rules, incolla queste regole per permettere l'uso del percorso richiesto:
-
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    match /artifacts/time-vault-pro/public/data/work_logs/{document} {
-      allow read, write: if request.auth != null;
-    }
-  }
-}
-
-
-💻 Sviluppo e Produzione
-
-Per avviare l'app in locale:
-
-npm run dev
-
-
-Per creare la versione ottimizzata per la pubblicazione:
-
-npm run build
-
-
-👥 Guida per i Colleghi
-
-Quando condividi l'app, comunica ai tuoi colleghi di:
-
-Usare il formato nome.cognome come username.
-
-Creare un account tramite il tasto "Registrati ora" al primo accesso.
-
-Segnalare le ore standard (default 8) e gli eventuali straordinari separatamente.
-
-Sviluppato con React + Vite + Tailwind CSS
