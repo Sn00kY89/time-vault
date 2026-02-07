@@ -27,7 +27,7 @@ import {
 import { 
   Clock, Plus, Trash2, Calendar as CalendarIcon, LogOut, TrendingUp, 
   Briefcase, Sun, Moon, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, ArrowLeft, CheckCircle2,
-  Menu, Home, FileText, Settings, X, Zap, Palmtree, Thermometer, AlertTriangle, Download, Eye, ShieldAlert, Lock, LogIn, UserPlus, Key, Copy, AlertOctagon, ShieldCheck, Unlock, RefreshCw, Users, CheckSquare, Square, User
+  Menu, Home, FileText, Settings, X, Zap, Palmtree, Thermometer, AlertTriangle, Download, Eye, ShieldAlert, Lock, LogIn, UserPlus, Key, Copy, AlertOctagon, ShieldCheck, Unlock, RefreshCw, Users, CheckSquare, Square, User, Palette
 } from 'lucide-react';
 
 // -----------------------------------------------------------------------------
@@ -62,11 +62,19 @@ const FALLBACK_TEAM_LEADERS = [
   'Caposquadra 2'
 ];
 
+// MAPPATURA COLORI ACCENTO (Hex per Favicon e classi Tailwind)
+const ACCENT_COLORS = {
+  blue: { hex: '#2563eb', label: 'Blu Reale', class: 'blue' },
+  violet: { hex: '#7c3aed', label: 'Viola Ultra', class: 'violet' },
+  emerald: { hex: '#059669', label: 'Smeraldo', class: 'emerald' },
+  rose: { hex: '#e11d48', label: 'Rosa Vivo', class: 'rose' },
+  amber: { hex: '#d97706', label: 'Ambra', class: 'amber' },
+  cyan: { hex: '#0891b2', label: 'Ciano', class: 'cyan' },
+};
+
 // LOGICA SELEZIONE DATI
 const getLeadersList = () => {
   try {
-    // Gestione robusta dell'importazione:
-    // Alcuni bundler espongono il JSON come oggetto con proprietà 'default', altri direttamente come array.
     const data = (externalTeamLeaders && externalTeamLeaders.default) 
       ? externalTeamLeaders.default 
       : externalTeamLeaders;
@@ -127,8 +135,8 @@ export default function App() {
   const [availableLeaders] = useState(ACTIVE_TEAM_LEADERS); 
 
   // NUOVI STATI PER MULTI-SELEZIONE CAPISQUADRA
-  const [selectedLeaders, setSelectedLeaders] = useState([]); // Array per gestire selezioni multiple
-  const [isLeaderDropdownOpen, setIsLeaderDropdownOpen] = useState(false); // Toggle per la tendina custom
+  const [selectedLeaders, setSelectedLeaders] = useState([]); 
+  const [isLeaderDropdownOpen, setIsLeaderDropdownOpen] = useState(false); 
   const leaderDropdownRef = useRef(null);
 
   // NUOVI STATI PER HEADER PROFILE DROPDOWN
@@ -160,10 +168,15 @@ export default function App() {
   const [recoveryStep, setRecoveryStep] = useState(1); 
   const [newResetPassword, setNewResetPassword] = useState('');
 
-  // Gestione Tema
+  // Gestione Tema e Colore Accento
   const [theme, setTheme] = useState(() => {
     if (typeof window !== 'undefined') return localStorage.getItem('theme') || 'light';
     return 'light';
+  });
+  
+  const [accentColor, setAccentColor] = useState(() => {
+    if (typeof window !== 'undefined') return localStorage.getItem('accentColor') || 'blue';
+    return 'blue';
   });
 
   const [authData, setAuthData] = useState({ username: '', password: '' });
@@ -197,11 +210,9 @@ export default function App() {
   // Click Outside per chiudere la tendina custom (Capisquadra e Profilo)
   useEffect(() => {
     function handleClickOutsideDropdown(event) {
-      // Chiudi dropdown capisquadra
       if (leaderDropdownRef.current && !leaderDropdownRef.current.contains(event.target)) {
         setIsLeaderDropdownOpen(false);
       }
-      // Chiudi dropdown profilo header
       if (profileDropdownRef.current && !profileDropdownRef.current.contains(event.target)) {
         setIsProfileDropdownOpen(false);
       }
@@ -210,7 +221,7 @@ export default function App() {
     return () => document.removeEventListener("mousedown", handleClickOutsideDropdown);
   }, []);
 
-  // Effetto Sync Tema
+  // Effetto Sync Tema e Colore da Firestore
   useEffect(() => {
     if (!user) return;
     const loadUserTheme = async () => {
@@ -218,25 +229,30 @@ export default function App() {
         const themeDocRef = doc(db, 'artifacts', APP_ID, 'users', user.uid, 'settings', 'theme');
         const themeSnap = await getDoc(themeDocRef);
         if (themeSnap.exists()) {
-          const savedTheme = themeSnap.data().mode;
-          if (savedTheme) setTheme(savedTheme);
+          const data = themeSnap.data();
+          if (data.mode) setTheme(data.mode);
+          if (data.accent && ACCENT_COLORS[data.accent]) setAccentColor(data.accent);
         }
       } catch (error) { console.error("Errore tema:", error); }
     };
     loadUserTheme();
   }, [user]);
 
-  // --- Generatore Favicon Dinamica ---
+  // --- Generatore Favicon Dinamica (Aggiornato con accentColor) ---
   useEffect(() => {
     const setDynamicFavicon = () => {
+      const hexColor = ACCENT_COLORS[accentColor]?.hex || '#2563eb';
+      // Codifica il colore per l'URL SVG (il # deve essere %23)
+      const encodedColor = hexColor.replace('#', '%23');
+      
       const link = document.querySelector("link[rel*='icon']") || document.createElement('link');
       link.type = 'image/svg+xml';
       link.rel = 'shortcut icon';
-      link.href = `data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><circle cx=%2250%22 cy=%2250%22 r=%2250%22 fill=%22%232563eb%22/><path d=%22M50 25V50L65 65%22 stroke=%22white%22 stroke-width=%228%22 stroke-linecap=%22round%22 fill=%22none%22/></svg>`;
+      link.href = `data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><circle cx=%2250%22 cy=%2250%22 r=%2250%22 fill=%22${encodedColor}%22/><path d=%22M50 25V50L65 65%22 stroke=%22white%22 stroke-width=%228%22 stroke-linecap=%22round%22 fill=%22none%22/></svg>`;
       document.getElementsByTagName('head')[0].appendChild(link);
     };
     setDynamicFavicon();
-  }, []);
+  }, [accentColor]); // Dipendenza da accentColor
 
   useEffect(() => {
     function handleClickOutside(event) {
@@ -251,10 +267,22 @@ export default function App() {
   const toggleTheme = async () => {
     const newTheme = theme === 'light' ? 'dark' : 'light';
     setTheme(newTheme);
+    localStorage.setItem('theme', newTheme);
+    saveThemeSettings(newTheme, accentColor);
+  };
+
+  const changeAccentColor = async (newColor) => {
+    setAccentColor(newColor);
+    localStorage.setItem('accentColor', newColor);
+    saveThemeSettings(theme, newColor);
+  };
+
+  const saveThemeSettings = async (currentTheme, currentAccent) => {
     if (user) {
       try {
         await setDoc(doc(db, 'artifacts', APP_ID, 'users', user.uid, 'settings', 'theme'), {
-          mode: newTheme,
+          mode: currentTheme,
+          accent: currentAccent,
           updatedAt: serverTimestamp()
         }, { merge: true });
       } catch (e) { console.error(e); }
@@ -415,14 +443,13 @@ export default function App() {
     try {
       const logsCollection = collection(db, 'artifacts', APP_ID, 'users', user.uid, 'work_logs');
       
-      // Unisco i capisquadra selezionati in una stringa unica
       const teamLeaderString = selectedLeaders.join(', ');
 
       await addDoc(logsCollection, {
         ...formData,
         standardHours: Number(formData.standardHours) || 0,
         overtimeHours: Number(formData.overtimeHours) || 0,
-        teamLeader: teamLeaderString, // Salvo come stringa separata da virgole
+        teamLeader: teamLeaderString,
         date: dateString,
         userId: user.uid,
         userName: user.displayName,
@@ -430,7 +457,7 @@ export default function App() {
       });
       // Reset form
       setFormData({ standardHours: 0, overtimeHours: '', notes: '', type: 'work' });
-      setSelectedLeaders([]); // Reset selezione capisquadra
+      setSelectedLeaders([]); 
       setShowOvertimeInput(false);
       setShowNotesInput(false); 
       setIsLeaderDropdownOpen(false);
@@ -510,7 +537,6 @@ export default function App() {
       standardHours: STANDARD_HOURS_VALUE, 
       type: 'work',
     }));
-    // Non resetto i capisquadra qui per comodità
   };
 
   const handleSetFerie = () => {
@@ -576,7 +602,7 @@ export default function App() {
     const newDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
     setSelectedDate(newDate);
     setFormData({ standardHours: 0, overtimeHours: '', notes: '', type: 'work' });
-    setSelectedLeaders([]); // Reset capisquadra al cambio giorno
+    setSelectedLeaders([]); 
     setShowOvertimeInput(false);
     setShowNotesInput(false); 
     setFormError('');
@@ -614,8 +640,7 @@ export default function App() {
   if (loading) return <div className="h-screen flex items-center justify-center bg-slate-900 text-blue-500 font-bold animate-pulse uppercase tracking-widest italic">Caricamento Vault...</div>;
 
   if (!user || showRecoveryModal) {
-    // ... [Il blocco di codice per Auth è rimasto invariato e viene riutilizzato per brevità] ...
-    // Nota: In un file unico devo rimetterlo tutto. Riporto il codice completo qui sotto.
+    // Schermata di Login/Registrazione
     return (
       <div className="min-h-screen bg-slate-50 dark:bg-slate-950 transition-colors duration-300 flex items-center justify-center p-6 relative overflow-hidden">
         
@@ -628,7 +653,8 @@ export default function App() {
           </div>
           
           <div className="mb-12 mt-6">
-             <div className="inline-flex p-6 bg-blue-600 rounded-[2rem] text-white mb-6 shadow-2xl shadow-blue-500/40 animate-bounce-slow">
+             {/* Utilizziamo il colore accento corrente, se impostato, altrimenti default blu */}
+             <div className={`inline-flex p-6 bg-${accentColor}-600 rounded-[2rem] text-white mb-6 shadow-2xl shadow-${accentColor}-500/40 animate-bounce-slow transition-colors duration-300`}>
                <Clock size={48} />
              </div>
              <h1 className="text-5xl font-black italic tracking-tighter text-slate-900 dark:text-white leading-none mb-2">TIMEVAULT</h1>
@@ -699,7 +725,7 @@ export default function App() {
                 ) : (
                    <>
                    <div className="text-center mb-8">
-                     <div className={`inline-flex p-4 rounded-2xl text-white mb-4 shadow-lg ${authMode === 'login' ? 'bg-blue-500 shadow-blue-500/30' : 'bg-purple-600 shadow-purple-500/30'}`}>
+                     <div className={`inline-flex p-4 rounded-2xl text-white mb-4 shadow-lg ${authMode === 'login' ? `bg-${accentColor}-600 shadow-${accentColor}-500/30` : 'bg-purple-600 shadow-purple-500/30'} transition-colors duration-300`}>
                        {authMode === 'login' ? <LogIn size={28} /> : <UserPlus size={28} />}
                      </div>
                      <h2 className="text-2xl font-black italic text-slate-900 dark:text-white uppercase tracking-tight">{authMode === 'login' ? 'Bentornato' : 'Nuovo Utente'}</h2>
@@ -708,7 +734,7 @@ export default function App() {
                      <input type="text" placeholder="nome.cognome" required className="w-full p-4.5 bg-slate-100 dark:bg-slate-800 dark:text-white rounded-2xl font-bold outline-none" value={authData.username} onChange={e => setAuthData({...authData, username: e.target.value})} />
                      <input type="password" placeholder="••••••••" required className="w-full p-4.5 bg-slate-100 dark:bg-slate-800 dark:text-white rounded-2xl font-bold outline-none" value={authData.password} onChange={e => setAuthData({...authData, password: e.target.value})} />
                      {authError && <div className="text-red-600 text-[11px] font-black">{authError}</div>}
-                     <button type="submit" disabled={isSubmitting} className={`w-full text-white p-5 rounded-2xl font-black uppercase tracking-widest shadow-xl ${authMode === 'login' ? 'bg-blue-600' : 'bg-purple-600'}`}>{isSubmitting ? '...' : authMode === 'login' ? 'Entra' : 'Registra'}</button>
+                     <button type="submit" disabled={isSubmitting} className={`w-full text-white p-5 rounded-2xl font-black uppercase tracking-widest shadow-xl transition-colors duration-300 ${authMode === 'login' ? `bg-${accentColor}-600 hover:bg-${accentColor}-700` : 'bg-purple-600'}`}>{isSubmitting ? '...' : authMode === 'login' ? 'Entra' : 'Registra'}</button>
                    </form>
                    <div className="mt-6 text-center"><button onClick={() => setAuthMode(authMode === 'login' ? 'register' : 'login')} className="text-slate-400 font-bold text-[10px] uppercase">{authMode === 'login' ? "Crea account" : "Accedi"}</button></div>
                    </>
@@ -777,7 +803,7 @@ export default function App() {
             <p className="text-sm text-slate-500 mb-6">Si aprirà la finestra di stampa.</p>
             <div className="grid grid-cols-2 gap-3">
               <button onClick={() => setShowDownloadConfirm(false)} className="p-4 bg-slate-100 dark:bg-slate-800 rounded-xl font-black text-xs uppercase text-slate-500">Annulla</button>
-              <button onClick={confirmDownload} className="p-4 bg-blue-600 text-white rounded-xl font-black text-xs uppercase">Procedi</button>
+              <button onClick={confirmDownload} className={`p-4 bg-${accentColor}-600 text-white rounded-xl font-black text-xs uppercase`}>Procedi</button>
             </div>
           </div>
         </div>
@@ -836,11 +862,14 @@ export default function App() {
               onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
               className="flex items-center gap-2 group focus:outline-none"
             >
-              <div className="bg-blue-50 dark:bg-slate-800 px-4 py-2 rounded-2xl border border-blue-100 dark:border-slate-700 hidden sm:block transition-transform group-hover:scale-95">
-                <p className="text-[9px] text-blue-400 dark:text-blue-300 font-black uppercase mb-0.5 leading-none text-right">Ciao</p>
-                <p className="text-sm font-black text-blue-700 dark:text-blue-400 uppercase italic leading-none">{user.displayName}</p>
+              {/* Box Ciao con colori dinamici */}
+              <div className={`bg-${accentColor}-50 dark:bg-slate-800 px-4 py-2 rounded-2xl border border-${accentColor}-100 dark:border-slate-700 hidden sm:block transition-transform group-hover:scale-95`}>
+                <p className={`text-[9px] text-${accentColor}-400 dark:text-${accentColor}-300 font-black uppercase mb-0.5 leading-none text-right`}>Ciao</p>
+                <p className={`text-sm font-black text-${accentColor}-700 dark:text-${accentColor}-400 uppercase italic leading-none`}>{user.displayName}</p>
               </div>
-              <div className="w-10 h-10 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700 group-hover:bg-blue-100 dark:group-hover:bg-slate-700 transition-colors">
+              
+              {/* Icona Profilo con Hover dinamico */}
+              <div className={`w-10 h-10 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700 group-hover:bg-${accentColor}-100 dark:group-hover:bg-slate-700 transition-colors`}>
                  <User size={20} />
               </div>
             </button>
@@ -896,9 +925,21 @@ export default function App() {
                   const isToday = new Date().getDate() === day && new Date().getMonth() === currentMonth.getMonth() && new Date().getFullYear() === currentMonth.getFullYear();
                   const active = hasData(day);
                   return (
-                    <button key={day} onClick={() => selectDay(day)} className={`aspect-square rounded-2xl flex flex-col items-center justify-center relative transition-all duration-200 ${isToday ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-lg scale-105' : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-slate-700 hover:scale-95'}`}>
+                    <button 
+                      key={day} 
+                      onClick={() => selectDay(day)} 
+                      className={`aspect-square rounded-2xl flex flex-col items-center justify-center relative transition-all duration-200 ${
+                          isToday 
+                          ? `bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-lg scale-105` 
+                          : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 hover:scale-95'
+                      }`}
+                    >
                       <span className="text-sm md:text-lg font-bold">{day}</span>
-                      {active && <div className={`w-1.5 h-1.5 rounded-full mt-1 ${isToday ? 'bg-blue-400' : 'bg-blue-600 dark:bg-blue-400'}`}></div>}
+                      {active && (
+                          <div className={`w-1.5 h-1.5 rounded-full mt-1 ${
+                              isToday ? `bg-${accentColor}-400` : `bg-${accentColor}-600 dark:bg-${accentColor}-400`
+                          }`}></div>
+                      )}
                     </button>
                   );
                 })}
@@ -918,7 +959,8 @@ export default function App() {
               <div className="grid grid-cols-2 gap-4 mb-6">
                  {!isWeekend && (
                    <>
-                     <button type="button" onClick={handleSetStandard} className={`p-4 rounded-2xl font-black uppercase text-[10px] tracking-widest flex flex-col items-center gap-2 transition-all ${formData.type === 'work' && formData.standardHours === STANDARD_HOURS_VALUE ? 'bg-blue-600 text-white shadow-xl shadow-blue-500/30' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'}`}><Briefcase size={20} />Standard ({STANDARD_HOURS_VALUE}h)</button>
+                     {/* Pulsante Standard con colore dinamico */}
+                     <button type="button" onClick={handleSetStandard} className={`p-4 rounded-2xl font-black uppercase text-[10px] tracking-widest flex flex-col items-center gap-2 transition-all ${formData.type === 'work' && formData.standardHours === STANDARD_HOURS_VALUE ? `bg-${accentColor}-600 text-white shadow-xl shadow-${accentColor}-500/30` : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'}`}><Briefcase size={20} />Standard ({STANDARD_HOURS_VALUE}h)</button>
                      <button type="button" onClick={handleSetFerie} className={`p-4 rounded-2xl font-black uppercase text-[10px] tracking-widest flex flex-col items-center gap-2 transition-all ${formData.type === 'ferie' ? 'bg-emerald-500 text-white shadow-xl shadow-emerald-500/30' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'}`}><Palmtree size={20} />Ferie</button>
                    </>
                  )}
@@ -935,7 +977,7 @@ export default function App() {
                 )}
                 <div className="border-t border-slate-100 dark:border-slate-800 pt-4">
                   <button type="button" onClick={() => setShowNotesInput(!showNotesInput)} className="w-full flex items-center justify-center group p-2">
-                    <div className={`p-2 rounded-full bg-slate-50 dark:bg-slate-800 text-slate-400 group-hover:text-blue-500 transition-colors ${showNotesInput ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-500' : ''}`}>{showNotesInput ? <ChevronUp size={16} /> : <ChevronDown size={16} />}</div>
+                    <div className={`p-2 rounded-full bg-slate-50 dark:bg-slate-800 text-slate-400 group-hover:text-${accentColor}-500 transition-colors ${showNotesInput ? `bg-${accentColor}-50 dark:bg-${accentColor}-900/20 text-${accentColor}-500` : ''}`}>{showNotesInput ? <ChevronUp size={16} /> : <ChevronDown size={16} />}</div>
                   </button>
 
                   {showNotesInput && (
@@ -969,12 +1011,12 @@ export default function App() {
                                    <div 
                                      key={leader}
                                      onClick={() => toggleLeaderSelection(leader)}
-                                     className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-colors ${isSelected ? 'bg-blue-50 dark:bg-blue-900/20' : 'hover:bg-slate-50 dark:hover:bg-slate-700'}`}
+                                     className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-colors ${isSelected ? `bg-${accentColor}-50 dark:bg-${accentColor}-900/20` : 'hover:bg-slate-50 dark:hover:bg-slate-700'}`}
                                    >
-                                     <div className={`w-5 h-5 rounded-md flex items-center justify-center border transition-colors ${isSelected ? 'bg-blue-600 border-blue-600' : 'bg-transparent border-slate-300 dark:border-slate-600'}`}>
+                                     <div className={`w-5 h-5 rounded-md flex items-center justify-center border transition-colors ${isSelected ? `bg-${accentColor}-600 border-${accentColor}-600` : 'bg-transparent border-slate-300 dark:border-slate-600'}`}>
                                         {isSelected && <CheckSquare size={14} className="text-white" />}
                                      </div>
-                                     <span className={`text-sm font-bold ${isSelected ? 'text-blue-700 dark:text-blue-300' : 'text-slate-600 dark:text-slate-300'}`}>
+                                     <span className={`text-sm font-bold ${isSelected ? `text-${accentColor}-700 dark:text-${accentColor}-300` : 'text-slate-600 dark:text-slate-300'}`}>
                                        {leader}
                                      </span>
                                    </div>
@@ -986,18 +1028,19 @@ export default function App() {
 
                         <div>
                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 ml-1">Note (Opzionale)</label>
-                           <textarea placeholder="Dettagli attività..." className="w-full p-4.5 bg-slate-50 dark:bg-slate-800 dark:text-white border border-slate-200 dark:border-slate-700 rounded-[1.25rem] font-medium outline-none placeholder:text-slate-300 dark:placeholder:text-slate-600 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900/20" rows="3" value={formData.notes} onChange={e => setFormData({...formData, notes: e.target.value})}></textarea>
+                           <textarea placeholder="Dettagli attività..." className={`w-full p-4.5 bg-slate-50 dark:bg-slate-800 dark:text-white border border-slate-200 dark:border-slate-700 rounded-[1.25rem] font-medium outline-none placeholder:text-slate-300 dark:placeholder:text-slate-600 focus:border-${accentColor}-500 focus:ring-2 focus:ring-${accentColor}-100 dark:focus:ring-${accentColor}-900/20`} rows="3" value={formData.notes} onChange={e => setFormData({...formData, notes: e.target.value})}></textarea>
                         </div>
                       </div>
                   )}
                 </div>
-                <button disabled={!!formError} className={`w-full p-4 rounded-[1.25rem] font-black uppercase tracking-widest shadow-xl flex items-center justify-center gap-2 ${formError ? 'bg-slate-200 dark:bg-slate-800 text-slate-400' : 'bg-slate-900 dark:bg-blue-600 hover:bg-black dark:hover:bg-blue-700 text-white'}`}><CheckCircle2 size={18} /> Salva Voce</button>
+                {/* Tasto Salva con colore dinamico */}
+                <button disabled={!!formError} className={`w-full p-4 rounded-[1.25rem] font-black uppercase tracking-widest shadow-xl flex items-center justify-center gap-2 transition-colors ${formError ? 'bg-slate-200 dark:bg-slate-800 text-slate-400' : `bg-slate-900 dark:bg-${accentColor}-600 hover:bg-black dark:hover:bg-${accentColor}-700 text-white`}`}><CheckCircle2 size={18} /> Salva Voce</button>
               </form>
             </div>
 
             <div className="space-y-4">
               {dailyLogs.map(log => (
-                <div key={log.id} className="bg-white dark:bg-slate-900 p-6 rounded-[2rem] border border-slate-200 dark:border-slate-800 flex items-center justify-between group hover:border-blue-200 dark:hover:border-blue-800 transition-colors">
+                <div key={log.id} className={`bg-white dark:bg-slate-900 p-6 rounded-[2rem] border border-slate-200 dark:border-slate-800 flex items-center justify-between group hover:border-${accentColor}-200 dark:hover:border-${accentColor}-800 transition-colors`}>
                   <div>
                     <div className="flex items-center gap-2 mb-1">
                       {log.type === 'ferie' && <span className="text-xs font-black bg-emerald-100 text-emerald-600 px-2 py-1 rounded-lg uppercase">Ferie</span>}
@@ -1006,7 +1049,7 @@ export default function App() {
                       {log.overtimeHours > 0 && <span className="text-sm font-black text-orange-600 dark:text-orange-500 bg-orange-50 dark:bg-orange-900/20 px-2 py-0.5 rounded-lg">+{log.overtimeHours}h Extra</span>}
                     </div>
                     <div>
-                      {log.teamLeader && <p className="text-[10px] font-black text-blue-500 uppercase tracking-widest mb-1 flex items-center gap-1"><Users size={12} /> {log.teamLeader}</p>}
+                      {log.teamLeader && <p className={`text-[10px] font-black text-${accentColor}-500 uppercase tracking-widest mb-1 flex items-center gap-1`}><Users size={12} /> {log.teamLeader}</p>}
                       <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">{log.notes || "Nessuna nota"}</p>
                     </div>
                   </div>
@@ -1026,7 +1069,7 @@ export default function App() {
              </div>
              
              <div className="bg-white dark:bg-slate-900 p-10 rounded-[2.5rem] shadow-xl border border-slate-200 dark:border-slate-800 text-center">
-                 <button onClick={() => setShowPreviewModal(true)} className="inline-flex p-6 bg-blue-50 dark:bg-slate-800 rounded-full text-blue-600 dark:text-blue-400 mb-6 hover:scale-110 transition-transform cursor-pointer shadow-lg shadow-blue-500/20"><FileText size={48} /></button>
+                 <button onClick={() => setShowPreviewModal(true)} className={`inline-flex p-6 bg-${accentColor}-50 dark:bg-slate-800 rounded-full text-${accentColor}-600 dark:text-${accentColor}-400 mb-6 hover:scale-110 transition-transform cursor-pointer shadow-lg shadow-${accentColor}-500/20`}><FileText size={48} /></button>
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-12 mt-4">
                     <div>
                         <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Giornate Lavorate</p>
@@ -1039,7 +1082,7 @@ export default function App() {
                         <p className="text-sm font-bold text-slate-400 mt-2">Accumulati questo mese</p>
                     </div>
                  </div>
-                 <button onClick={handleDownloadRequest} className="mt-8 w-full p-4 bg-slate-100 dark:bg-slate-800 hover:bg-blue-50 dark:hover:bg-blue-900/30 text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 rounded-2xl font-black uppercase text-xs tracking-widest transition-all flex items-center justify-center gap-2"><Download size={18} /> Scarica PDF Report</button>
+                 <button onClick={handleDownloadRequest} className={`mt-8 w-full p-4 bg-slate-100 dark:bg-slate-800 hover:bg-${accentColor}-50 dark:hover:bg-${accentColor}-900/30 text-slate-600 dark:text-slate-300 hover:text-${accentColor}-600 dark:hover:text-${accentColor}-400 rounded-2xl font-black uppercase text-xs tracking-widest transition-all flex items-center justify-center gap-2`}><Download size={18} /> Scarica PDF Report</button>
              </div>
           </div>
         )}
@@ -1049,14 +1092,39 @@ export default function App() {
           <div className="space-y-6 animate-in fade-in zoom-in duration-300">
             <h2 className="text-2xl font-black italic text-slate-800 dark:text-white uppercase tracking-tight">Impostazioni</h2>
             <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] shadow-sm border border-slate-200 dark:border-slate-800 space-y-8">
-               <div className="flex items-center justify-between">
+               
+               {/* TEMA DARK/LIGHT */}
+               <div className="flex items-center justify-between pb-8 border-b border-slate-100 dark:border-slate-800">
                   <div>
                     <h3 className="font-bold text-slate-900 dark:text-white mb-1">Aspetto Applicazione</h3>
                     <p className="text-xs text-slate-500 dark:text-slate-400">Scegli tra modalità chiara e scura</p>
                   </div>
                   <button onClick={toggleTheme} className="flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-slate-800 rounded-xl font-bold text-sm text-slate-600 dark:text-slate-300">{theme === 'light' ? <><Moon size={16}/> Dark Mode</> : <><Sun size={16}/> Light Mode</>}</button>
                </div>
+
+               {/* SELETTORE COLORE ACCENTO */}
+               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div>
+                    <h3 className="font-bold text-slate-900 dark:text-white mb-1 flex items-center gap-2"><Palette size={18}/> Colore Accento</h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Personalizza lo stile grafico</p>
+                  </div>
+                  <div className="flex items-center gap-3 overflow-x-auto pb-2 sm:pb-0">
+                    {Object.entries(ACCENT_COLORS).map(([key, { label, class: colorClass }]) => (
+                      <button
+                        key={key}
+                        onClick={() => changeAccentColor(key)}
+                        title={label}
+                        className={`w-10 h-10 rounded-full bg-${colorClass}-600 border-2 transition-all ${accentColor === key ? 'border-slate-900 dark:border-white scale-110 shadow-lg' : 'border-transparent hover:scale-105 opacity-70 hover:opacity-100'}`}
+                      >
+                         {accentColor === key && <CheckCircle2 size={16} className="text-white mx-auto" />}
+                      </button>
+                    ))}
+                  </div>
+               </div>
+
             </div>
+            
+            {/* ZONA PERICOLO */}
             <div className="bg-red-50 dark:bg-red-900/10 p-8 rounded-[2.5rem] border border-red-100 dark:border-red-900/20">
                <div className="flex items-center justify-between">
                   <div>
@@ -1069,7 +1137,7 @@ export default function App() {
           </div>
         )}
       </main>
-      <footer className="max-w-6xl mx-auto p-12 text-center text-[10px] font-black text-slate-300 dark:text-slate-600 uppercase tracking-[0.5em]">TimeVault v0.7.7</footer>
+      <footer className="max-w-6xl mx-auto p-12 text-center text-[10px] font-black text-slate-300 dark:text-slate-600 uppercase tracking-[0.5em]">TimeVault v0.7.8</footer>
     </div>
     
     {/* --- PRINT LAYOUT --- */}
