@@ -1,0 +1,12 @@
+time-vault/
+├── public/              # Asset statici (loghi, icone, index.html se non usi Vite)
+│   └── favicon.ico
+├── src/                 # Codice sorgente dell'app
+│   ├── App.jsx          # Il file principale che abbiamo creato
+│   ├── index.css        # Stili globali (Tailwind)
+│   └── main.jsx         # Entry point di React
+├── .gitignore           # File da escludere (node_modules, .env)
+├── package.json         # Dipendenze e script del progetto
+├── tailwind.config.js   # Configurazione di Tailwind CSS
+├── vite.config.js       # Configurazione di Vite (se usato)
+└── README.md            # Documentazione del progetto
