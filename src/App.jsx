@@ -34,9 +34,9 @@ import {
 // ISTRUZIONI PER L'USO DEL FILE JSON ESTERNO
 // -----------------------------------------------------------------------------
 // NOTA IMPORTANTE PER L'USO LOCALE:
-// 1. Assicurati che il file 'capisquadra.json' sia nella cartella 'src'.
+// 1. Assicurati che il file 'capisquadra.json' sea nella cartella 'src'.
 // 2. TOGLI IL COMMENTO (//) dalla riga seguente per attivare l'importazione:
-// import externalTeamLeaders from './capisquadra.json';
+import externalTeamLeaders from './capisquadra.json';
 
 // VARIABILE DI RISERVA (Per evitare errori in questa anteprima se l'import è commentato)
 // Se scommenti l'import sopra, questa variabile verrà ignorata dalla logica sotto.
@@ -256,11 +256,10 @@ export default function App() {
     loadUserTheme();
   }, [user]);
 
-  // --- Generatore Favicon Dinamica (Aggiornato con accentColor) ---
+  // --- Generatore Favicon Dinamica ---
   useEffect(() => {
     const setDynamicFavicon = () => {
       const hexColor = ACCENT_COLORS[accentColor]?.hex || '#2563eb';
-      // Codifica il colore per l'URL SVG (il # deve essere %23)
       const encodedColor = hexColor.replace('#', '%23');
       
       const link = document.querySelector("link[rel*='icon']") || document.createElement('link');
@@ -270,7 +269,7 @@ export default function App() {
       document.getElementsByTagName('head')[0].appendChild(link);
     };
     setDynamicFavicon();
-  }, [accentColor]); // Dipendenza da accentColor
+  }, [accentColor]);
 
   useEffect(() => {
     function handleClickOutside(event) {
@@ -355,23 +354,18 @@ export default function App() {
            setIsSubmitting(false);
            return;
         }
-
         await signInWithEmailAndPassword(auth, internalEmail, authData.password);
         setFailedAttempts(0);
         setShowAuthModal(false);
-
       } else {
         const cred = await createUserWithEmailAndPassword(auth, internalEmail, authData.password);
         await updateProfile(cred.user, { displayName: cleanUsername });
-        
         const recoveryCode = generateRecoveryCode();
         setGeneratedRecoveryCode(recoveryCode);
-        
         await setDoc(doc(db, 'artifacts', APP_ID, 'users', cred.user.uid, 'settings', 'security'), {
            recoveryCode: recoveryCode,
            createdAt: serverTimestamp()
         });
-
         setShowAuthModal(false); 
         setShowRecoveryModal(true); 
       }
@@ -381,7 +375,7 @@ export default function App() {
          setFailedAttempts(newAttempts);
          if (newAttempts >= 3) {
             setIsLocked(true);
-            setRecoveryStep(1); // Reset allo step 1
+            setRecoveryStep(1);
             setAuthError("Troppi tentativi falliti. Account bloccato.");
          } else {
             setAuthError(`Password errata. Tentativi rimasti: ${3 - newAttempts}`);
@@ -398,30 +392,26 @@ export default function App() {
     setUser(auth.currentUser); 
   };
 
-  // Step 1: Verifica Codice
   const handleVerifyCode = () => {
      if (unlockCodeInput.length < 16) {
         setAuthError("Codice non valido.");
         return;
      }
      setAuthError("");
-     setRecoveryStep(2); // Passa allo step nuova password
+     setRecoveryStep(2);
   };
 
-  // Step 2: Resetta Password e Sblocca
   const handleFinalPasswordReset = () => {
     if (newResetPassword.length < 6) {
       setAuthError("La password deve essere di almeno 6 caratteri.");
       return;
     }
-    
     setIsLocked(false);
     setFailedAttempts(0);
     setAuthError("");
     setUnlockCodeInput('');
     setNewResetPassword('');
     setRecoveryStep(1);
-    
     alert("Password reimpostata con successo! Ora puoi accedere.");
   };
 
@@ -430,10 +420,9 @@ export default function App() {
     setView('calendar'); 
     setFailedAttempts(0);
     setIsLocked(false);
-    setIsProfileDropdownOpen(false); // Chiudi il menu se aperto
+    setIsProfileDropdownOpen(false);
   };
 
-  // Funzione per gestire i click sulla checkbox
   const toggleLeaderSelection = (leaderName) => {
     setSelectedLeaders(prev => {
       if (prev.includes(leaderName)) {
@@ -448,21 +437,15 @@ export default function App() {
     e.preventDefault();
     if (!user) return;
     setFormError('');
-
     const dateString = formatDateAsLocal(selectedDate);
-    
-    // CONTROLLO DUPLICATI
     const alreadyExists = logs.some(l => l.date === dateString);
     if (alreadyExists) {
       setFormError("Attenzione: Esiste già una voce per questa data! Cancella quella esistente se vuoi modificarla.");
       return;
     }
-
     try {
       const logsCollection = collection(db, 'artifacts', APP_ID, 'users', user.uid, 'work_logs');
-      
       const teamLeaderString = selectedLeaders.join(', ');
-
       await addDoc(logsCollection, {
         ...formData,
         standardHours: Number(formData.standardHours) || 0,
@@ -473,7 +456,6 @@ export default function App() {
         userName: user.displayName,
         createdAt: serverTimestamp()
       });
-      // Reset form
       setFormData({ standardHours: 0, overtimeHours: '', notes: '', type: 'work' });
       setSelectedLeaders([]); 
       setShowOvertimeInput(false);
@@ -494,7 +476,6 @@ export default function App() {
     } catch (e) { console.error(e); }
   };
 
-  // --- LOGICA ELIMINAZIONE ACCOUNT ---
   const handleInitiateDeleteAccount = () => {
     setShowDeleteAuthModal(true);
     setDeletePassword('');
@@ -508,12 +489,10 @@ export default function App() {
       setDeleteError("Inserisci la password per confermare.");
       return;
     }
-
     setIsDeleting(true);
     try {
       const credential = EmailAuthProvider.credential(user.email, deletePassword);
       await reauthenticateWithCredential(user, credential);
-      
       setIsDeleting(false);
       setShowDeleteAuthModal(false);
       setShowDeleteFinalConfirm(true);
@@ -535,7 +514,6 @@ export default function App() {
     }
   };
 
-  // --- LOGICA PDF ---
   const handleDownloadRequest = () => {
     setShowDownloadConfirm(true);
   };
@@ -547,7 +525,6 @@ export default function App() {
     }, 300);
   };
 
-  // --- LOGICA PULSANTI ---
   const handleSetStandard = () => {
     setFormError(''); 
     setFormData(prev => ({ 
@@ -576,7 +553,6 @@ export default function App() {
     setShowOvertimeInput(!showOvertimeInput);
   };
 
-  // Dati filtrati per il mese corrente (per il report PDF)
   const currentMonthLogs = useMemo(() => {
     const targetMonth = currentMonth.getMonth(); 
     const targetYear = currentMonth.getFullYear();
@@ -586,7 +562,6 @@ export default function App() {
     }).sort((a, b) => new Date(a.date) - new Date(b.date)); 
   }, [logs, currentMonth]);
 
-  // AGGIUNTA: Logica di filtro per la ricerca
   const filteredMonthLogs = useMemo(() => {
     if (!reportSearchQuery) return currentMonthLogs;
     const query = reportSearchQuery.toLowerCase();
@@ -599,18 +574,13 @@ export default function App() {
   const monthlyStats = useMemo(() => {
     const uniqueDays = new Set();
     let totalOvertime = 0;
-
     currentMonthLogs.forEach(log => {
         if (log.type !== 'ferie' && log.type !== 'malattia') {
            uniqueDays.add(log.date);
         }
         totalOvertime += Number(log.overtimeHours || 0);
     });
-
-    return { 
-      daysWorked: uniqueDays.size, 
-      ext: totalOvertime 
-    };
+    return { daysWorked: uniqueDays.size, ext: totalOvertime };
   }, [currentMonthLogs]);
 
   const getDaysInMonth = (date) => {
@@ -668,18 +638,14 @@ export default function App() {
   if (loading) return <div className="h-screen flex items-center justify-center bg-slate-900 text-blue-500 font-bold animate-pulse uppercase tracking-widest italic">Caricamento Vault...</div>;
 
   if (!user || showRecoveryModal) {
-    // Schermata di Login/Registrazione
     return (
       <div className="min-h-screen bg-slate-50 dark:bg-slate-950 transition-colors duration-300 flex items-center justify-center p-6 relative overflow-hidden">
-        
-        {/* --- LANDING PAGE --- */}
         <div className="bg-white dark:bg-slate-900 p-10 rounded-[2.5rem] w-full max-w-md shadow-2xl border border-slate-200 dark:border-slate-800 text-center relative z-10 animate-in fade-in zoom-in duration-500">
           <div className="flex justify-end mb-4 absolute top-6 right-6">
              <button onClick={toggleTheme} className="p-2 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
                {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
              </button>
           </div>
-          
           <div className="mb-12 mt-6">
              <div className={`inline-flex p-6 bg-${accentColor}-600 rounded-[2rem] text-white mb-6 shadow-2xl shadow-${accentColor}-500/40 animate-bounce-slow transition-colors duration-300`}>
                <Clock size={48} />
@@ -687,27 +653,17 @@ export default function App() {
              <h1 className="text-5xl font-black italic tracking-tighter text-slate-900 dark:text-white leading-none mb-2">TIMEVAULT</h1>
              <p className="text-slate-400 dark:text-slate-500 text-xs font-black uppercase tracking-[0.4em]">Personal Edition</p>
           </div>
-
           <div className="space-y-4">
-            <button 
-              onClick={() => openAuthModal('login')}
-              className="w-full bg-slate-900 dark:bg-white text-white dark:text-slate-900 p-5 rounded-2xl font-black uppercase tracking-widest shadow-xl hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-3"
-            >
+            <button onClick={() => openAuthModal('login')} className="w-full bg-slate-900 dark:bg-white text-white dark:text-slate-900 p-5 rounded-2xl font-black uppercase tracking-widest shadow-xl hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-3">
               <LogIn size={20} /> Accedi al Vault
             </button>
-
-            <button 
-              onClick={() => openAuthModal('register')}
-              className="w-full bg-transparent border-2 border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 p-5 rounded-2xl font-black uppercase tracking-widest hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white transition-all flex items-center justify-center gap-3"
-            >
+            <button onClick={() => openAuthModal('register')} className="w-full bg-transparent border-2 border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 p-5 rounded-2xl font-black uppercase tracking-widest hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white transition-all flex items-center justify-center gap-3">
               <UserPlus size={20} /> Nuovo Account
             </button>
           </div>
-          
           <p className="mt-8 text-[10px] text-slate-400 font-medium">Gestisci il tuo tempo, monitora gli straordinari.</p>
         </div>
 
-        {/* --- RECOVERY CODE MODAL --- */}
         {showRecoveryModal && (
            <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[60] flex items-center justify-center p-4 animate-in fade-in duration-300">
               <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] w-full max-w-sm shadow-2xl border-2 border-red-500 relative animate-in zoom-in-95 duration-300 text-center">
@@ -715,9 +671,7 @@ export default function App() {
                     <ShieldCheck size={36} />
                  </div>
                  <h2 className="text-2xl font-black italic text-red-600 uppercase tracking-tight mb-2">Sicurezza</h2>
-                 <p className="text-sm text-slate-600 dark:text-slate-300 font-medium mb-6">
-                    Salva questo codice di recupero.
-                 </p>
+                 <p className="text-sm text-slate-600 dark:text-slate-300 font-medium mb-6">Salva questo codice di recupero.</p>
                  <div className="bg-slate-100 dark:bg-slate-950 p-4 rounded-xl border border-slate-200 dark:border-slate-800 mb-6 relative group">
                     <p className="font-mono text-lg font-black text-slate-800 dark:text-white tracking-widest break-all">{generatedRecoveryCode}</p>
                     <button onClick={copyToClipboard} className="absolute right-2 top-2 p-2 bg-white dark:bg-slate-800 rounded-lg text-slate-400 hover:text-blue-500 shadow-sm"><Copy size={16} /></button>
@@ -727,7 +681,6 @@ export default function App() {
            </div>
         )}
 
-        {/* --- AUTH MODAL --- */}
         {showAuthModal && (
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
              <div className={`bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] w-full max-w-sm shadow-2xl border relative animate-in zoom-in-95 duration-300 ${isLocked ? 'border-red-500' : (authMode === 'login' ? 'border-slate-100 dark:border-slate-800' : 'border-purple-100 dark:border-purple-900/30')}`}>
@@ -779,13 +732,10 @@ export default function App() {
   return (
     <>
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-300 print:hidden">
-      
-      {/* --- GUIDE MODAL (NUOVO) --- */}
       {showGuideModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[60] flex items-center justify-center p-4 animate-in fade-in duration-200">
           <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] w-full max-w-md shadow-2xl border border-slate-100 dark:border-slate-800 relative overflow-y-auto max-h-[80vh]">
             <button onClick={() => setShowGuideModal(false)} className="absolute top-6 right-6 p-2 bg-slate-100 dark:bg-slate-800 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"><X size={20} /></button>
-            
             <div className="text-center mb-8">
                 <div className={`inline-flex p-4 rounded-2xl bg-${accentColor}-100 dark:bg-${accentColor}-900/30 text-${accentColor}-600 dark:text-${accentColor}-400 mb-4 shadow-lg`}>
                   <Smartphone size={32} />
@@ -793,7 +743,6 @@ export default function App() {
                 <h2 className="text-2xl font-black italic text-slate-900 dark:text-white uppercase tracking-tight">Installa App</h2>
                 <p className="text-sm text-slate-500 dark:text-slate-400 font-medium mt-2">Aggiungi TimeVault alla tua Home</p>
             </div>
-
             <div className="space-y-6">
               <div className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-2xl border border-slate-100 dark:border-slate-800">
                  <h3 className="font-black text-slate-900 dark:text-white flex items-center gap-2 mb-3"><span className="text-xl"></span> iOS (iPhone/iPad)</h3>
@@ -803,7 +752,6 @@ export default function App() {
                     <li>Scorri e seleziona <strong>"Aggiungi alla schermata Home"</strong>.</li>
                  </ol>
               </div>
-
               <div className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-2xl border border-slate-100 dark:border-slate-800">
                  <h3 className="font-black text-slate-900 dark:text-white flex items-center gap-2 mb-3"><span className="text-lg">🤖</span> Android (Chrome)</h3>
                  <ol className="text-sm text-slate-600 dark:text-slate-300 space-y-3 list-decimal list-inside font-medium marker:text-slate-400 marker:font-bold">
@@ -813,13 +761,11 @@ export default function App() {
                  </ol>
               </div>
             </div>
-            
             <button onClick={() => setShowGuideModal(false)} className={`w-full mt-8 bg-slate-900 dark:bg-${accentColor}-600 text-white p-4 rounded-2xl font-black uppercase tracking-widest shadow-xl hover:scale-105 active:scale-95 transition-all`}>Capito</button>
           </div>
         </div>
       )}
 
-      {/* --- POPUP ELIMINA --- */}
       {logToDelete && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white dark:bg-slate-900 p-8 rounded-[2rem] shadow-2xl max-w-sm w-full border border-slate-100 dark:border-slate-800">
@@ -832,7 +778,6 @@ export default function App() {
         </div>
       )}
 
-      {/* --- DELETE ACCOUNT MODALS --- */}
       {showDeleteAuthModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[60] flex items-center justify-center p-4">
           <div className="bg-white dark:bg-slate-900 p-8 rounded-[2rem] shadow-2xl max-w-sm w-full">
@@ -861,7 +806,6 @@ export default function App() {
         </div>
       )}
 
-      {/* --- CONFIRM DOWNLOAD --- */}
       {showDownloadConfirm && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white dark:bg-slate-900 p-8 rounded-[2rem] shadow-2xl max-w-sm w-full text-center">
@@ -875,7 +819,6 @@ export default function App() {
         </div>
       )}
 
-      {/* --- PREVIEW MODAL --- */}
       {showPreviewModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-50 flex items-center justify-center p-4">
           <div className="bg-white dark:bg-slate-900 w-full max-w-2xl max-h-[80vh] rounded-[2.5rem] shadow-2xl flex flex-col overflow-hidden">
@@ -921,22 +864,16 @@ export default function App() {
           )}
         </div>
         <div className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10"><h1 className="text-2xl font-black tracking-tighter italic leading-none text-slate-900 dark:text-white">TIMEVAULT</h1></div>
-        
         <div className="relative z-20" ref={profileDropdownRef}>
-            <button 
-              onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
-              className="flex items-center gap-2 group focus:outline-none"
-            >
+            <button onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)} className="flex items-center gap-2 group focus:outline-none">
               <div className={`bg-${accentColor}-50 dark:bg-slate-800 px-4 py-2 rounded-2xl border border-${accentColor}-100 dark:border-slate-700 hidden sm:block transition-transform group-hover:scale-95`}>
                 <p className={`text-[9px] text-${accentColor}-400 dark:text-${accentColor}-300 font-black uppercase mb-0.5 leading-none text-right`}>Ciao</p>
                 <p className={`text-sm font-black text-${accentColor}-700 dark:text-${accentColor}-400 uppercase italic leading-none`}>{user.displayName}</p>
               </div>
-              
               <div className={`w-10 h-10 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700 group-hover:bg-${accentColor}-100 dark:group-hover:bg-slate-700 transition-colors`}>
                  <User size={20} />
               </div>
             </button>
-
             {isProfileDropdownOpen && (
               <div className="absolute top-full right-0 mt-2 w-56 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-100 dark:border-slate-800 p-2 animate-in fade-in slide-in-from-top-2">
                  <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-800 mb-2 sm:hidden">
@@ -952,7 +889,6 @@ export default function App() {
       </header>
 
       <main className="max-w-4xl mx-auto p-4 md:p-8 space-y-8">
-        
         {view === 'calendar' && (
           <div className="space-y-8 animate-in fade-in zoom-in duration-300">
             <div className="grid grid-cols-2 gap-4">
@@ -988,21 +924,9 @@ export default function App() {
                   const isToday = new Date().getDate() === day && new Date().getMonth() === currentMonth.getMonth() && new Date().getFullYear() === currentMonth.getFullYear();
                   const active = hasData(day);
                   return (
-                    <button 
-                      key={day} 
-                      onClick={() => selectDay(day)} 
-                      className={`aspect-square rounded-2xl flex flex-col items-center justify-center relative transition-all duration-200 ${
-                          isToday 
-                          ? `bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-lg scale-105` 
-                          : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 hover:scale-95'
-                      }`}
-                    >
+                    <button key={day} onClick={() => selectDay(day)} className={`aspect-square rounded-2xl flex flex-col items-center justify-center relative transition-all duration-200 ${isToday ? `bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-lg scale-105` : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 hover:scale-95'}`}>
                       <span className="text-sm md:text-lg font-bold">{day}</span>
-                      {active && (
-                          <div className={`w-1.5 h-1.5 rounded-full mt-1 ${
-                              isToday ? `bg-${accentColor}-400` : `bg-${accentColor}-600 dark:bg-${accentColor}-400`
-                          }`}></div>
-                      )}
+                      {active && <div className={`w-1.5 h-1.5 rounded-full mt-1 ${isToday ? `bg-${accentColor}-400` : `bg-${accentColor}-600 dark:bg-${accentColor}-400`}`}></div>}
                     </button>
                   );
                 })}
@@ -1018,7 +942,6 @@ export default function App() {
             <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] shadow-sm border border-slate-200 dark:border-slate-800">
               <h3 className="text-xs font-black mb-6 uppercase text-slate-400 tracking-widest">Aggiungi Ore</h3>
               {formError && <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-2xl text-sm font-bold flex items-center gap-2"><AlertTriangle size={18} className="shrink-0" />{formError}</div>}
-              
               <div className="grid grid-cols-2 gap-4 mb-6">
                  {!isWeekend && (
                    <>
@@ -1029,7 +952,6 @@ export default function App() {
                  <button type="button" onClick={handleSetMalattia} className={`p-4 rounded-2xl font-black uppercase text-[10px] tracking-widest flex flex-col items-center gap-2 transition-all ${formData.type === 'malattia' ? 'bg-pink-500 text-white shadow-xl shadow-pink-500/30' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'}`}><Thermometer size={20} />Malattia</button>
                  <button type="button" onClick={toggleOvertime} className={`p-4 rounded-2xl font-black uppercase text-[10px] tracking-widest flex flex-col items-center gap-2 transition-all ${showOvertimeInput ? 'bg-orange-500 text-white shadow-xl shadow-orange-500/30' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'}`}><Zap size={20} />Straordinario</button>
               </div>
-
               <form onSubmit={handleSubmitLog} className="space-y-6">
                 {showOvertimeInput && (
                    <div className="animate-in slide-in-from-top-2 fade-in">
@@ -1041,49 +963,28 @@ export default function App() {
                   <button type="button" onClick={() => setShowNotesInput(!showNotesInput)} className="w-full flex items-center justify-center group p-2">
                     <div className={`p-2 rounded-full bg-slate-50 dark:bg-slate-800 text-slate-400 group-hover:text-${accentColor}-500 transition-colors ${showNotesInput ? `bg-${accentColor}-50 dark:bg-${accentColor}-900/20 text-${accentColor}-500` : ''}`}>{showNotesInput ? <ChevronUp size={16} /> : <ChevronDown size={16} />}</div>
                   </button>
-
                   {showNotesInput && (
                       <div className="mt-4 animate-in slide-in-from-top-2 fade-in space-y-3">
                         <div ref={leaderDropdownRef} className="relative">
-                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 ml-1">
-                               Capisquadra (Multipla)
-                            </label>
-                            
-                            <div 
-                               onClick={() => setIsLeaderDropdownOpen(!isLeaderDropdownOpen)}
-                               className="w-full p-4.5 bg-slate-50 dark:bg-slate-800 dark:text-white border border-slate-200 dark:border-slate-700 rounded-[1.25rem] font-medium cursor-pointer flex justify-between items-center hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors"
-                            >
-                               <span className={selectedLeaders.length === 0 ? "text-slate-300 dark:text-slate-600" : "text-slate-900 dark:text-white"}>
-                                  {selectedLeaders.length === 0 
-                                   ? "Seleziona Capisquadra..." 
-                                   : selectedLeaders.join(', ')}
-                               </span>
+                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 ml-1">Capisquadra (Multipla)</label>
+                            <div onClick={() => setIsLeaderDropdownOpen(!isLeaderDropdownOpen)} className="w-full p-4.5 bg-slate-50 dark:bg-slate-800 dark:text-white border border-slate-200 dark:border-slate-700 rounded-[1.25rem] font-medium cursor-pointer flex justify-between items-center hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors">
+                               <span className={selectedLeaders.length === 0 ? "text-slate-300 dark:text-slate-600" : "text-slate-900 dark:text-white"}>{selectedLeaders.length === 0 ? "Seleziona Capisquadra..." : selectedLeaders.join(', ')}</span>
                                <ChevronDown size={16} className={`text-slate-400 transition-transform ${isLeaderDropdownOpen ? 'rotate-180' : ''}`} />
                             </div>
-
                             {isLeaderDropdownOpen && (
                                <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-[1.25rem] shadow-xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-200 p-2 max-h-60 overflow-y-auto">
                                  {availableLeaders.map(leader => {
                                    const isSelected = selectedLeaders.includes(leader);
                                    return (
-                                     <div 
-                                       key={leader}
-                                       onClick={() => toggleLeaderSelection(leader)}
-                                       className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-colors ${isSelected ? `bg-${accentColor}-50 dark:bg-${accentColor}-900/20` : 'hover:bg-slate-50 dark:hover:bg-slate-700'}`}
-                                     >
-                                       <div className={`w-5 h-5 rounded-md flex items-center justify-center border transition-colors ${isSelected ? `bg-${accentColor}-600 border-${accentColor}-600` : 'bg-transparent border-slate-300 dark:border-slate-600'}`}>
-                                          {isSelected && <CheckSquare size={14} className="text-white" />}
-                                       </div>
-                                       <span className={`text-sm font-bold ${isSelected ? `text-${accentColor}-700 dark:text-${accentColor}-300` : 'text-slate-600 dark:text-slate-300'}`}>
-                                         {leader}
-                                       </span>
+                                     <div key={leader} onClick={() => toggleLeaderSelection(leader)} className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-colors ${isSelected ? `bg-${accentColor}-50 dark:bg-${accentColor}-900/20` : 'hover:bg-slate-50 dark:hover:bg-slate-700'}`}>
+                                       <div className={`w-5 h-5 rounded-md flex items-center justify-center border transition-colors ${isSelected ? `bg-${accentColor}-600 border-${accentColor}-600` : 'bg-transparent border-slate-300 dark:border-slate-600'}`}>{isSelected && <CheckSquare size={14} className="text-white" />}</div>
+                                       <span className={`text-sm font-bold ${isSelected ? `text-${accentColor}-700 dark:text-${accentColor}-300` : 'text-slate-600 dark:text-slate-300'}`}>{leader}</span>
                                      </div>
                                    );
                                  })}
                                </div>
                             )}
                         </div>
-
                         <div>
                             <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 ml-1">Note (Opzionale)</label>
                             <textarea placeholder="Dettagli attività..." className={`w-full p-4.5 bg-slate-50 dark:bg-slate-800 dark:text-white border border-slate-200 dark:border-slate-700 rounded-[1.25rem] font-medium outline-none placeholder:text-slate-300 dark:placeholder:text-slate-600 focus:border-${accentColor}-500 focus:ring-2 focus:ring-${accentColor}-100 dark:focus:ring-${accentColor}-900/20`} rows="3" value={formData.notes} onChange={e => setFormData({...formData, notes: e.target.value})}></textarea>
@@ -1094,7 +995,6 @@ export default function App() {
                 <button disabled={!!formError} className={`w-full p-4 rounded-[1.25rem] font-black uppercase tracking-widest shadow-xl flex items-center justify-center gap-2 transition-colors ${formError ? 'bg-slate-200 dark:bg-slate-800 text-slate-400' : `bg-slate-900 dark:bg-${accentColor}-600 hover:bg-black dark:hover:bg-${accentColor}-700 text-white`}`}><CheckCircle2 size={18} /> Salva Voce</button>
               </form>
             </div>
-
             <div className="space-y-4">
               {dailyLogs.map(log => (
                 <div key={log.id} className={`bg-white dark:bg-slate-900 p-6 rounded-[2rem] border border-slate-200 dark:border-slate-800 flex items-center justify-between group hover:border-${accentColor}-200 dark:hover:border-${accentColor}-800 transition-colors`}>
@@ -1121,7 +1021,12 @@ export default function App() {
           <div className="space-y-8 animate-in fade-in zoom-in duration-300">
              <div className="flex justify-between items-center">
                  <h2 className="text-2xl font-black italic text-slate-800 dark:text-white uppercase tracking-tight leading-none">Resoconto Mese</h2>
-                 <p className="text-sm font-bold text-slate-500 dark:text-slate-400 capitalize">{monthName}</p>
+                 {/* NAVIGAZIONE MESE DINAMICA */}
+                 <div className="flex items-center gap-4 bg-white dark:bg-slate-900 px-4 py-2 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm transition-colors duration-300">
+                    <button onClick={() => changeMonth(-1)} className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors text-slate-500"><ChevronLeft size={20} /></button>
+                    <p className="text-sm font-bold text-slate-700 dark:text-slate-300 capitalize min-w-[120px] text-center">{monthName}</p>
+                    <button onClick={() => changeMonth(1)} className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors text-slate-500"><ChevronRight size={20} /></button>
+                 </div>
              </div>
              
              <div className="bg-white dark:bg-slate-900 p-10 rounded-[2.5rem] shadow-xl border border-slate-200 dark:border-slate-800 text-center">
@@ -1135,37 +1040,21 @@ export default function App() {
                         <p className="text-6xl font-black text-orange-600 dark:text-orange-500">{monthlyStats.ext}<span className="text-lg">h</span></p>
                     </div>
                  </div>
-
                  <div className="relative mb-6">
                     <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
-                    <input 
-                      type="text" 
-                      placeholder="Cerca per note o caposquadra..." 
-                      className="w-full pl-12 pr-4 py-4 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl font-bold outline-none focus:ring-2 focus:ring-slate-200 transition-all text-slate-900 dark:text-white"
-                      value={reportSearchQuery}
-                      onChange={(e) => setReportSearchQuery(e.target.value)}
-                    />
+                    <input type="text" placeholder="Cerca per note o caposquadra..." className="w-full pl-12 pr-4 py-4 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl font-bold outline-none focus:ring-2 focus:ring-slate-200 transition-all text-slate-900 dark:text-white" value={reportSearchQuery} onChange={(e) => setReportSearchQuery(e.target.value)} />
                  </div>
-
                  <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar text-left">
                     {filteredMonthLogs.map(log => {
                        const isExpanded = expandedLogId === log.id;
                        return (
-                         <div 
-                           key={log.id} 
-                           onClick={() => setExpandedLogId(isExpanded ? null : log.id)}
-                           className={`p-4 bg-slate-50/50 dark:bg-slate-800/30 rounded-2xl border border-slate-100 dark:border-slate-700/50 cursor-pointer transition-all hover:border-${accentColor}-200 dark:hover:border-${accentColor}-800 ${isExpanded ? `ring-2 ring-${accentColor}-500/20 border-${accentColor}-300 dark:border-${accentColor}-700 shadow-lg` : ''}`}
-                         >
+                         <div key={log.id} onClick={() => setExpandedLogId(isExpanded ? null : log.id)} className={`p-4 bg-slate-50/50 dark:bg-slate-800/30 rounded-2xl border border-slate-100 dark:border-slate-700/50 cursor-pointer transition-all hover:border-${accentColor}-200 dark:hover:border-${accentColor}-800 ${isExpanded ? `ring-2 ring-${accentColor}-500/20 border-${accentColor}-300 dark:border-${accentColor}-700 shadow-lg` : ''}`}>
                             <div className="flex items-center justify-between">
                                <div className="flex items-center gap-4">
-                                  <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 transition-colors ${isExpanded ? `text-${accentColor}-600 border-${accentColor}-500 shadow-sm` : ''}`}>
-                                    {new Date(log.date).getDate()}
-                                  </div>
+                                  <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 transition-colors ${isExpanded ? `text-${accentColor}-600 border-${accentColor}-500 shadow-sm` : ''}`}>{new Date(log.date).getDate()}</div>
                                   <div>
                                      <p className="text-[10px] font-black uppercase text-slate-400">{log.type === 'work' ? 'Lavoro' : log.type}</p>
-                                     <p className={`text-sm font-bold text-slate-700 dark:text-slate-300 ${isExpanded ? '' : 'truncate max-w-[200px]'}`}>
-                                       {log.notes || "Nessuna nota"}
-                                     </p>
+                                     <p className={`text-sm font-bold text-slate-700 dark:text-slate-300 ${isExpanded ? '' : 'truncate max-w-[200px]'}`}>{log.notes || "Nessuna nota"}</p>
                                   </div>
                                </div>
                                <div className="text-right flex items-center gap-3">
@@ -1173,12 +1062,9 @@ export default function App() {
                                     {log.overtimeHours > 0 && <p className="text-xs font-black text-orange-500 leading-none">+{log.overtimeHours}h Extra</p>}
                                     <p className="text-xs font-bold text-slate-400">{log.standardHours > 0 ? `${log.standardHours}h std` : ''}</p>
                                   </div>
-                                  <div className={`text-slate-300 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`}>
-                                     <ChevronDown size={14} />
-                                  </div>
+                                  <div className={`text-slate-300 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`}><ChevronDown size={14} /></div>
                                </div>
                             </div>
-
                             {isExpanded && (
                                <div className="mt-4 pt-4 border-t border-slate-200/50 dark:border-slate-700/50 animate-in slide-in-from-top-2 duration-300">
                                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -1198,7 +1084,6 @@ export default function App() {
                     })}
                     {filteredMonthLogs.length === 0 && <p className="text-center text-slate-400 py-8 italic uppercase font-black tracking-widest text-[10px]">Nessun risultato</p>}
                  </div>
-
                  <button onClick={handleDownloadRequest} className={`mt-8 w-full p-4 bg-slate-100 dark:bg-slate-800 hover:bg-${accentColor}-50 dark:hover:bg-${accentColor}-900/30 text-slate-600 dark:text-slate-300 hover:text-${accentColor}-600 dark:hover:text-${accentColor}-400 rounded-2xl font-black uppercase text-xs tracking-widest transition-all flex items-center justify-center gap-2`}><Download size={18} /> Scarica PDF Report</button>
              </div>
           </div>
@@ -1207,7 +1092,6 @@ export default function App() {
         {view === 'settings' && (
           <div className="space-y-6 animate-in fade-in zoom-in duration-300">
             <h2 className="text-2xl font-black italic text-slate-800 dark:text-white uppercase tracking-tight">Impostazioni</h2>
-            
             <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] shadow-sm border border-slate-200 dark:border-slate-800 space-y-8">
                <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-8">
                   <div>
@@ -1218,7 +1102,6 @@ export default function App() {
                     {theme === 'light' ? <><Moon size={16}/> Dark Mode</> : <><Sun size={16}/> Light Mode</>}
                   </button>
                </div>
-
                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div>
                     <h3 className="font-bold text-slate-900 dark:text-white mb-1 flex items-center gap-2"><Palette size={18}/> Stile Colore</h3>
@@ -1226,32 +1109,22 @@ export default function App() {
                   </div>
                   <div className="flex items-center gap-3 overflow-x-auto pb-2 sm:pb-0">
                     {Object.entries(ACCENT_COLORS).map(([key, { label, hex }]) => (
-                      <button
-                        key={key}
-                        onClick={() => changeAccentColor(key)}
-                        title={label}
-                        style={{ backgroundColor: hex }} 
-                        className={`w-10 h-10 rounded-full border-2 transition-all ${accentColor === key ? 'border-slate-900 dark:border-white scale-110 shadow-lg' : 'border-transparent hover:scale-105 opacity-70 hover:opacity-100'}`}
-                      >
+                      <button key={key} onClick={() => changeAccentColor(key)} title={label} style={{ backgroundColor: hex }} className={`w-10 h-10 rounded-full border-2 transition-all ${accentColor === key ? 'border-slate-900 dark:border-white scale-110 shadow-lg' : 'border-transparent hover:scale-105 opacity-70 hover:opacity-100'}`}>
                          {accentColor === key && <CheckCircle2 size={16} className="text-white mx-auto" />}
                       </button>
                     ))}
                   </div>
                </div>
             </div>
-
             <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] shadow-sm border border-slate-200 dark:border-slate-800">
                <div className="flex items-center justify-between">
                   <div>
                     <h3 className="font-bold text-slate-900 dark:text-white mb-1 flex items-center gap-2"><Smartphone size={18}/> App Mobile</h3>
                     <p className="text-xs text-slate-500 dark:text-slate-400">Come installare TimeVault sulla Home</p>
                   </div>
-                  <button onClick={() => setShowGuideModal(true)} className="flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-slate-800 rounded-xl font-bold text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
-                    Apri Guida
-                  </button>
+                  <button onClick={() => setShowGuideModal(true)} className="flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-slate-800 rounded-xl font-bold text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">Apri Guida</button>
                </div>
             </div>
-            
             <div className="bg-red-50 dark:bg-red-900/10 p-8 rounded-[2.5rem] border border-red-100 dark:border-red-900/20">
                <div className="flex items-center justify-between">
                   <div>
@@ -1264,7 +1137,7 @@ export default function App() {
           </div>
         )}
       </main>
-      <footer className="max-w-6xl mx-auto p-12 text-center text-[10px] font-black text-slate-300 dark:text-slate-600 uppercase tracking-[0.5em]">TimeVault v0.7.8</footer>
+      <footer className="max-w-6xl mx-auto p-12 text-center text-[10px] font-black text-slate-300 dark:text-slate-600 uppercase tracking-[0.5em]">TimeVault v0.7.9</footer>
       
       <div className="hidden">
         <div className="bg-blue-50 bg-violet-50 bg-emerald-50 bg-rose-50 bg-amber-50 bg-cyan-50"></div>
@@ -1272,7 +1145,6 @@ export default function App() {
         <div className="bg-blue-400 bg-violet-400 bg-emerald-400 bg-rose-400 bg-amber-400 bg-cyan-400"></div>
         <div className="bg-blue-500 bg-violet-500 bg-emerald-500 bg-rose-500 bg-amber-500 bg-cyan-500"></div>
         <div className="bg-blue-600 bg-violet-600 bg-emerald-600 bg-rose-600 bg-amber-600 bg-cyan-600"></div>
-        <div className="hover:bg-blue-700 hover:bg-violet-700 hover:bg-emerald-700 hover:bg-rose-700 hover:bg-amber-700 hover:bg-cyan-700"></div>
         <div className="shadow-blue-500/30 shadow-violet-500/30 shadow-emerald-500/30 shadow-rose-500/30 shadow-amber-500/30 shadow-cyan-500/30"></div>
       </div>
     </div>
