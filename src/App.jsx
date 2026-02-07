@@ -36,7 +36,7 @@ import {
 // NOTA IMPORTANTE PER L'USO LOCALE:
 // 1. Assicurati che il file 'capisquadra.json' sia nella cartella 'src'.
 // 2. TOGLI IL COMMENTO (//) dalla riga seguente per attivare l'importazione:
-// import externalTeamLeaders from './capisquadra.json';
+import externalTeamLeaders from './capisquadra.json';
 
 // VARIABILE DI RISERVA (Per evitare errori in questa anteprima se l'import è commentato)
 // Se scommenti l'import sopra, questa variabile verrà ignorata dalla logica sotto.
