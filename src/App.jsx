@@ -1109,12 +1109,14 @@ export default function App() {
                     <p className="text-xs text-slate-500 dark:text-slate-400">Personalizza lo stile grafico</p>
                   </div>
                   <div className="flex items-center gap-3 overflow-x-auto pb-2 sm:pb-0">
-                    {Object.entries(ACCENT_COLORS).map(([key, { label, class: colorClass }]) => (
+                    {Object.entries(ACCENT_COLORS).map(([key, { label, class: colorClass, hex }]) => (
                       <button
                         key={key}
                         onClick={() => changeAccentColor(key)}
                         title={label}
-                        className={`w-10 h-10 rounded-full bg-${colorClass}-600 border-2 transition-all ${accentColor === key ? 'border-slate-900 dark:border-white scale-110 shadow-lg' : 'border-transparent hover:scale-105 opacity-70 hover:opacity-100'}`}
+                        // MODIFICA CRUCIALE: Usiamo style in-line per il background per garantire che si veda anche se Tailwind purga la classe
+                        style={{ backgroundColor: hex }} 
+                        className={`w-10 h-10 rounded-full border-2 transition-all ${accentColor === key ? 'border-slate-900 dark:border-white scale-110 shadow-lg' : 'border-transparent hover:scale-105 opacity-70 hover:opacity-100'}`}
                       >
                          {accentColor === key && <CheckCircle2 size={16} className="text-white mx-auto" />}
                       </button>
@@ -1138,6 +1140,34 @@ export default function App() {
         )}
       </main>
       <footer className="max-w-6xl mx-auto p-12 text-center text-[10px] font-black text-slate-300 dark:text-slate-600 uppercase tracking-[0.5em]">TimeVault v0.7.8</footer>
+      
+      {/* SAFELIST NASCOSTA PER TAILWIND 
+        Questa sezione non viene renderizzata, ma serve a forzare Tailwind a includere le classi dinamiche nel bundle CSS.
+        Senza questo, classi come 'bg-rose-600' verrebbero rimosse durante la compilazione perché generate dinamicamente.
+      */}
+      <div className="hidden">
+        <div className="bg-blue-50 bg-violet-50 bg-emerald-50 bg-rose-50 bg-amber-50 bg-cyan-50"></div>
+        <div className="bg-blue-100 bg-violet-100 bg-emerald-100 bg-rose-100 bg-amber-100 bg-cyan-100"></div>
+        <div className="bg-blue-400 bg-violet-400 bg-emerald-400 bg-rose-400 bg-amber-400 bg-cyan-400"></div>
+        <div className="bg-blue-500 bg-violet-500 bg-emerald-500 bg-rose-500 bg-amber-500 bg-cyan-500"></div>
+        <div className="bg-blue-600 bg-violet-600 bg-emerald-600 bg-rose-600 bg-amber-600 bg-cyan-600"></div>
+        <div className="hover:bg-blue-700 hover:bg-violet-700 hover:bg-emerald-700 hover:bg-rose-700 hover:bg-amber-700 hover:bg-cyan-700"></div>
+        <div className="text-blue-300 text-violet-300 text-emerald-300 text-rose-300 text-amber-300 text-cyan-300"></div>
+        <div className="text-blue-400 text-violet-400 text-emerald-400 text-rose-400 text-amber-400 text-cyan-400"></div>
+        <div className="text-blue-500 text-violet-500 text-emerald-500 text-rose-500 text-amber-500 text-cyan-500"></div>
+        <div className="text-blue-600 text-violet-600 text-emerald-600 text-rose-600 text-amber-600 text-cyan-600"></div>
+        <div className="text-blue-700 text-violet-700 text-emerald-700 text-rose-700 text-amber-700 text-cyan-700"></div>
+        <div className="border-blue-100 border-violet-100 border-emerald-100 border-rose-100 border-amber-100 border-cyan-100"></div>
+        <div className="border-blue-200 border-violet-200 border-emerald-200 border-rose-200 border-amber-200 border-cyan-200"></div>
+        <div className="border-blue-500 border-violet-500 border-emerald-500 border-rose-500 border-amber-500 border-cyan-500"></div>
+        <div className="border-blue-600 border-violet-600 border-emerald-600 border-rose-600 border-amber-600 border-cyan-600"></div>
+        <div className="focus:border-blue-500 focus:border-violet-500 focus:border-emerald-500 focus:border-rose-500 focus:border-amber-500 focus:border-cyan-500"></div>
+        <div className="focus:ring-blue-100 focus:ring-violet-100 focus:ring-emerald-100 focus:ring-rose-100 focus:ring-amber-100 focus:ring-cyan-100"></div>
+        <div className="shadow-blue-500/30 shadow-violet-500/30 shadow-emerald-500/30 shadow-rose-500/30 shadow-amber-500/30 shadow-cyan-500/30"></div>
+        <div className="shadow-blue-500/20 shadow-violet-500/20 shadow-emerald-500/20 shadow-rose-500/20 shadow-amber-500/20 shadow-cyan-500/20"></div>
+        <div className="shadow-blue-500/40 shadow-violet-500/40 shadow-emerald-500/40 shadow-rose-500/40 shadow-amber-500/40 shadow-cyan-500/40"></div>
+      </div>
+
     </div>
     
     {/* --- PRINT LAYOUT --- */}
