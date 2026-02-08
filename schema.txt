@@ -11,12 +11,5 @@ time-vault/
 ├── vite.config.js       # Configurazione di Vite (se usato)
 └── README.md            # Documentazione del progetto
 
-// -----------------------------------------------------------------------------
-// ISTRUZIONI PER L'USO DEL FILE JSON ESTERNO
+// --- LETTURA VARIBILI CAPITURNO ---
 import externalTeamLeaders from './capisquadra.json';
-// -----------------------------------------------------------------------------
-const fallbackForPreview = []; 
-// -----------------------------------------------------------------------------
-
-
-vapidKey: 'BJXBFxWqNvvIyffYPT1Z9pZCm2tqz-VNrfN5w3tU0baYLX2ilVcoD_phNZKLNZbfuS-v9KYFMS1Ls9-Ym0-QUE4' 
