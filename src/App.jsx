@@ -10,7 +10,7 @@ import {
   updateProfile,
   setPersistence,
   browserLocalPersistence,
-  browserSessionPersistence, // Aggiunto per gestire la sessione temporanea
+  browserSessionPersistence, 
   EmailAuthProvider,
   reauthenticateWithCredential,
   deleteUser
@@ -168,7 +168,7 @@ export default function App() {
 
   // --- STATI REMINDER & FCM DEBUG ---
   const [reminderEnabled, setReminderEnabled] = useState(() => localStorage.getItem('reminder_enabled') === 'true');
-  const [reminderTime, setReminderTime] = useState(() => localStorage.getItem('reminder_time') || "18:00");
+  const reminderTime = "20:00"; // Default fissato alle 20:00
   const [notificationStatus, setNotificationStatus] = useState(typeof Notification !== 'undefined' ? Notification.permission : 'default');
   const [isSyncingPush, setIsSyncingPush] = useState(false);
   const [fcmTokenDisplay, setFcmTokenDisplay] = useState(''); 
@@ -251,7 +251,7 @@ export default function App() {
         enabled: reminderEnabled
       });
     }
-  }, [reminderEnabled, reminderTime, notificationStatus]);
+  }, [reminderEnabled, notificationStatus]); // reminderTime è costante ora
 
   // --- CARICAMENTO LIBRERIE PDF ---
   useEffect(() => {
@@ -552,16 +552,6 @@ export default function App() {
        console.error("Errore permessi:", e);
        alert("Errore durante la richiesta permessi.");
     }
-  };
-
-  const sendTestNotification = () => {
-    if (notificationStatus !== 'granted') {
-       alert("Abilita prima le notifiche nel browser."); return;
-    }
-    new Notification("TimeVault Test", {
-      body: "Il Vault comunica correttamente!",
-      icon: "/favicon.ico"
-    });
   };
 
   // --- MEMO STATS ---
@@ -978,20 +968,11 @@ export default function App() {
                     </div>
                     <div className="space-y-2">
                       <h3 className="font-black uppercase text-sm tracking-widest italic leading-none text-slate-900 dark:text-white">Reminder PWA Vault</h3>
-                      <p className="text-[10px] text-slate-400 font-bold uppercase italic tracking-[0.2em] leading-none">{notificationStatus === 'granted' ? 'Notifiche Native Attive' : 'Status: Non Autorizzato'}</p>
+                      <p className="text-[10px] text-slate-400 font-bold uppercase italic tracking-[0.2em] leading-none">{notificationStatus === 'granted' ? 'Notifiche Native Attive (h 20:00)' : 'Status: Non Autorizzato'}</p>
                     </div>
                   </div>
                   <div className="flex flex-col items-center gap-4">
                      <div className="flex flex-wrap items-center gap-6">
-                       {reminderEnabled && (
-                          <div className="animate-in slide-in-from-right duration-500 flex items-center gap-3">
-                             <input type="time" className="bg-slate-50 dark:bg-slate-800 p-4 rounded-xl font-black text-xs outline-none border border-slate-100 dark:border-slate-700 dark:text-white shadow-inner" value={reminderTime} onChange={(e) => { setReminderTime(e.target.value); localStorage.setItem('reminder_time', e.target.value); }} />
-                             <div className="flex gap-2">
-                                <button onClick={sendTestNotification} className="p-4 bg-slate-100 dark:bg-slate-800 text-slate-400 hover:text-blue-500 rounded-xl transition-all active:scale-90" title="Prova Notifica"><Send size={18}/></button>
-                                <button onClick={setupFCM} disabled={isSyncingPush} className={`p-4 bg-slate-100 dark:bg-slate-800 text-slate-400 hover:text-emerald-500 rounded-xl transition-all active:scale-90 ${isSyncingPush ? 'animate-spin' : ''}`} title="Sincronizza Token Push"><RefreshCw size={18}/></button>
-                             </div>
-                          </div>
-                       )}
                        {notificationStatus !== 'granted' ? (
                          <button onClick={requestNotificationPermission} className="text-[10px] font-black uppercase bg-blue-600 text-white px-8 py-4 rounded-2xl shadow-2xl shadow-blue-500/30 active:scale-95 transition-all tracking-[0.2em] italic leading-none">Abilita Notifiche Native</button>
                        ) : (
