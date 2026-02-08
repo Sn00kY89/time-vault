@@ -638,7 +638,7 @@ export default function App() {
     <div className="h-screen w-full bg-slate-950 flex flex-col items-center justify-center p-8 animate-in fade-in duration-500 text-center">
       <Clock size={80} className={`${T.text} animate-pulse`} />
       <h1 className="text-6xl font-black italic tracking-tighter text-white uppercase mt-10 leading-none">TIMEVAULT</h1>
-      <p className="text-slate-500 font-bold uppercase tracking-[0.4em] text-[10px] mt-4 animate-bounce duration-1000">Enterprise Grade Security</p>
+      <p className="text-slate-500 font-bold uppercase tracking-[0.4em] text-[10px] mt-4 animate-bounce duration-1000">Personal Workplace</p>
     </div>
   );
 
@@ -788,7 +788,7 @@ export default function App() {
               </div>
               <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] shadow-sm border border-slate-200 dark:border-slate-800 hover:shadow-xl transition-all group overflow-hidden relative">
                 <div className="absolute top-0 right-0 p-6 opacity-5 text-orange-600 group-hover:scale-125 transition-transform"><Zap size={80}/></div>
-                <p className="text-[11px] text-slate-400 font-black uppercase tracking-[0.2em] mb-1 italic leading-none">Extra del Mese</p>
+                <p className="text-[11px] text-slate-400 font-black uppercase tracking-[0.2em] mb-1 italic leading-none">Ore Straordinario</p>
                 <p className="text-4xl font-black text-orange-600 leading-none tracking-tighter">+{monthlyStats.ext}<span className="text-lg font-bold ml-1 italic leading-none">h</span></p>
               </div>
             </div>
@@ -888,7 +888,7 @@ export default function App() {
                   )}
                 </div>
                 {formError && <p className="text-red-600 text-[10px] font-black italic animate-bounce leading-none mt-4 uppercase tracking-widest">{formError}</p>}
-                <button type="submit" className={`w-full p-6 rounded-[1.5rem] font-black uppercase tracking-[0.4em] text-white shadow-2xl ${T.bg} ${T.shadow40} transition-all hover:scale-[1.01] active:scale-95 flex items-center justify-center gap-4 text-xs italic leading-none`}><CheckCircle2 size={22} /> Archivia nel Vault</button>
+                <button type="submit" className={`w-full p-6 rounded-[1.5rem] font-black uppercase tracking-[0.4em] text-white shadow-2xl ${T.bg} ${T.shadow40} transition-all hover:scale-[1.01] active:scale-95 flex items-center justify-center gap-4 text-xs italic leading-none`}><CheckCircle2 size={22} /> Salva Dati</button>
               </form>
             </div>
 
@@ -929,11 +929,11 @@ export default function App() {
                  <div className={`absolute top-0 left-0 w-2 h-full ${T.bg}`}></div>
                  <div className="grid grid-cols-2 gap-12 mb-14">
                     <div className="animate-in slide-in-from-left duration-500">
-                       <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.4em] mb-3 italic leading-none">Presenze</p>
+                       <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.4em] mb-3 italic leading-none">Giornate Lavorate</p>
                        <p className="text-7xl font-black dark:text-white tracking-tighter leading-none">{monthlyStats.daysWorked}</p>
                     </div>
                     <div className="animate-in slide-in-from-right duration-500">
-                       <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.4em] mb-3 italic leading-none">Extra</p>
+                       <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.4em] mb-3 italic leading-none">Ore Straordinario</p>
                        <p className="text-7xl font-black text-orange-600 tracking-tighter leading-none">{monthlyStats.ext}<span className="text-2xl font-black ml-1 italic leading-none">h</span></p>
                     </div>
                  </div>
@@ -990,8 +990,8 @@ export default function App() {
                
                <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-12 gap-8 relative z-10">
                   <div className="space-y-2">
-                    <h3 className="font-black text-slate-900 dark:text-white italic uppercase text-sm tracking-widest leading-none">Esperienza Visiva</h3>
-                    <p className="text-[11px] text-slate-400 italic font-medium tracking-tight leading-none">Interfaccia adattiva e colori accento</p>
+                    <h3 className="font-black text-slate-900 dark:text-white italic uppercase text-sm tracking-widest leading-none">Impostazioni Interfaccia</h3>
+                    <p className="text-[11px] text-slate-400 italic font-medium tracking-tight leading-none">Interfaccia adattiva e colori dettagli</p>
                   </div>
                   <div className="flex flex-wrap items-center gap-8">
                     <div className="flex gap-2.5 bg-slate-50 dark:bg-slate-800 p-2.5 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-inner">
@@ -1009,8 +1009,8 @@ export default function App() {
                       {reminderEnabled ? <Bell size={28} className="animate-ring"/> : <BellOff size={28}/>}
                     </div>
                     <div className="space-y-2">
-                      <h3 className="font-black uppercase text-sm tracking-widest italic leading-none text-slate-900 dark:text-white">Reminder PWA Vault</h3>
-                      <p className="text-[10px] text-slate-400 font-bold uppercase italic tracking-[0.2em] leading-none">{notificationStatus === 'granted' ? 'Notifiche Native Attive (h 20:00)' : 'Status: Non Autorizzato'}</p>
+                      <h3 className="font-black uppercase text-sm tracking-widest italic leading-none text-slate-900 dark:text-white">Abilita Notifiche</h3>
+                      <p className="text-[10px] text-slate-400 font-bold uppercase italic tracking-[0.2em] leading-none">{notificationStatus === 'granted' ? 'Notifiche Attive (h 20:00)' : 'Status: Non Autorizzato'}</p>
                     </div>
                   </div>
                   <div className="flex flex-col items-center gap-4">
@@ -1045,9 +1045,9 @@ export default function App() {
                   <div className="bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/20 p-10 md:p-14 rounded-[3rem] relative overflow-hidden group">
                     <div className="absolute top-0 right-0 p-10 opacity-5 text-red-600 group-hover:scale-125 transition-transform duration-700"><ShieldAlert size={140}/></div>
                     <div className="relative z-10">
-                       <h3 className="font-black text-red-600 dark:text-red-500 mb-3 flex items-center gap-4 uppercase text-sm tracking-[0.3em] italic leading-none"><AlertTriangle size={24} className="animate-pulse"/> Area Sotto Protocollo</h3>
+                       <h3 className="font-black text-red-600 dark:text-red-500 mb-3 flex items-center gap-4 uppercase text-sm tracking-[0.3em] italic leading-none"><AlertTriangle size={24} className="animate-pulse"/> Zona Pericolosa</h3>
                        <p className="text-[10px] font-bold text-red-400 dark:text-red-700/80 mb-10 italic uppercase tracking-[0.2em] leading-relaxed max-w-sm">Attenzione: l'eliminazione dell'account rimuoverà tutti i tuoi dati e i tuoi registri in modo definitivo dal server.</p>
-                       <button onClick={() => { setShowDeleteRecoveryModal(true); setDeleteRecoveryInput(''); setDeleteError(''); }} className="flex items-center gap-4 px-10 py-5 bg-red-600 text-white rounded-[1.5rem] font-black text-[10px] uppercase tracking-[0.3em] hover:bg-red-700 transition-all shadow-2xl active:scale-95 leading-none italic"><ShieldX size={18}/> Formatta Vault Privato</button>
+                       <button onClick={() => { setShowDeleteRecoveryModal(true); setDeleteRecoveryInput(''); setDeleteError(''); }} className="flex items-center gap-4 px-10 py-5 bg-red-600 text-white rounded-[1.5rem] font-black text-[10px] uppercase tracking-[0.3em] hover:bg-red-700 transition-all shadow-2xl active:scale-95 leading-none italic"><ShieldX size={18}/> Elimina Account</button>
                     </div>
                   </div>
                </div>
@@ -1062,7 +1062,7 @@ export default function App() {
             <div className="h-6 w-0.5 bg-slate-400"></div>
             <p className="text-[11px] font-black uppercase tracking-[1.2em] leading-none">TIMEVAULT</p>
          </div>
-         <p className="text-[10px] font-black text-slate-300 dark:text-slate-700 uppercase tracking-[0.6em] italic leading-none">Pro Edition v0.9.8 • Personal Vault System • 2024</p>
+         <p className="text-[10px] font-black text-slate-300 dark:text-slate-700 uppercase tracking-[0.6em] italic leading-none">Pro Edition v1.0 • build/08022026 • 2026</p>
       </footer>
     </div>
 
