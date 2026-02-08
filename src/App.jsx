@@ -163,37 +163,53 @@ export default function App() {
   const [reminderTime, setReminderTime] = useState(() => localStorage.getItem('reminder_time') || "18:00");
   const [notificationStatus, setNotificationStatus] = useState(typeof Notification !== 'undefined' ? Notification.permission : 'default');
   const [isSyncingPush, setIsSyncingPush] = useState(false);
-  const [fcmTokenDisplay, setFcmTokenDisplay] = useState(''); // Stato per il token debug
-  const [showTokenDebug, setShowTokenDebug] = useState(false); // Stato per mostrare il token
+  const [fcmTokenDisplay, setFcmTokenDisplay] = useState(''); 
+  const [showTokenDebug, setShowTokenDebug] = useState(false); 
 
-  // 1. --- REGISTRAZIONE SERVICE WORKER (FONDAMENTALE PER NOTIFICHE) ---
+  // 1. --- REGISTRAZIONE SERVICE WORKER (FIX REGISTRAZIONE SICURA) ---
   useEffect(() => {
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        // Richiamo esatto al file sw.js nella cartella public
-        navigator.serviceWorker.register('/sw.js').then(reg => {
-          console.log('TimeVault SW Registrato con successo');
-        }).catch(err => {
-          console.error('Errore registrazione SW:', err);
-        });
-      });
+    // Controllo se siamo in ambiente Blob (anteprima) dove i SW sono vietati
+    const isBlob = window.location.protocol === 'blob:';
+
+    if ('serviceWorker' in navigator && !isBlob) {
+        navigator.serviceWorker.register('/sw.js')
+          .then(reg => {
+            console.log('TimeVault SW Registrato:', reg.scope);
+          })
+          .catch(err => {
+            console.error('Errore registrazione SW:', err);
+          });
+    } else if (isBlob) {
+        console.warn("Service Worker disabilitato in modalità anteprima (protocollo blob:). Funzionerà dopo il deploy.");
     }
   }, []);
 
   // Funzione per sincronizzare il token FCM
   const setupFCM = async () => {
     if (!user) return;
+    
+    // Check ambiente anteprima
+    if (window.location.protocol === 'blob:') {
+        setFcmTokenDisplay("TOKEN_DEBUG_PREVIEW_MODE_ONLY (Deploy per Token Reale)");
+        return;
+    }
+
     setIsSyncingPush(true);
     try {
       const messaging = getMessaging(app);
+
+      // --- FIX CRITICO: RECUPERO REGISTRAZIONE SW ---
+      // Dobbiamo passare esplicitamente la registrazione del SW a getToken
+      const registration = await navigator.serviceWorker.ready;
+
       const token = await getToken(messaging, { 
-        vapidKey: 'BJXBFxWqNvvIyffYPT1Z9pZCm2tqz-VNrfN5w3tU0baYLX2ilVcoD_phNZKLNZbfuS-v9KYFMS1Ls9-Ym0-QUE4' 
+        vapidKey: 'BJXBFxWqNvvIyffYPT1Z9pZCm2tqz-VNrfN5w3tU0baYLX2ilVcoD_phNZKLNZbfuS-v9KYFMS1Ls9-Ym0-QUE4',
+        serviceWorkerRegistration: registration 
       });
       
       if (token) {
-        setFcmTokenDisplay(token); // Salva il token nello stato per il debug
+        setFcmTokenDisplay(token); 
         
-        // Salva il token nel profilo utente su Firestore
         await setDoc(doc(db, 'artifacts', APP_ID, 'users', user.uid, 'settings', 'push'), {
           fcmToken: token,
           updatedAt: serverTimestamp(),
@@ -205,7 +221,6 @@ export default function App() {
       }
     } catch (err) {
       console.error("Errore configurazione Push:", err);
-      // alert("Errore generazione token Push (vedi console). Controlla che il Service Worker sia registrato.");
     } finally {
         setIsSyncingPush(false);
     }
@@ -220,7 +235,8 @@ export default function App() {
 
   // 2. --- INVIO IMPOSTAZIONI AL SERVICE WORKER ---
   useEffect(() => {
-    if (reminderEnabled && notificationStatus === 'granted' && navigator.serviceWorker.controller) {
+    // Check se il SW è attivo e non siamo in blob
+    if (reminderEnabled && notificationStatus === 'granted' && navigator.serviceWorker.controller && window.location.protocol !== 'blob:') {
       navigator.serviceWorker.controller.postMessage({
         type: 'SET_REMINDER',
         time: reminderTime,
