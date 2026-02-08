@@ -38,11 +38,17 @@ import {
 } from 'lucide-react';
 
 // -----------------------------------------------------------------------------
-// ISTRUZIONI PER L'USO DEL FILE JSON ESTERNO
-import externalTeamLeaders from './capisquadra.json';
+// CONFIGURAZIONE CAPISQUADRA (HARDCODED PER STABILITÀ)
 // -----------------------------------------------------------------------------
-const fallbackForPreview = []; 
-// -----------------------------------------------------------------------------
+const ACTIVE_TEAM_LEADERS = [
+  'Sandro Sammartino',
+  'Rocco Canepa',
+  'Efisio Lorrai',
+  'Fabrizio Sanna',
+  'Renzo Picciau',
+  'Marco Lai',
+  'Ignazio Cocco'
+];
 
 // --- CONFIGURAZIONE FIREBASE ---
 const firebaseConfig = {
