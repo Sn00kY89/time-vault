@@ -244,11 +244,12 @@ export default function App() {
   // 2. --- INVIO IMPOSTAZIONI AL SERVICE WORKER ---
   useEffect(() => {
     // Check se il SW è attivo e non siamo in blob
-    if (reminderEnabled && notificationStatus === 'granted' && navigator.serviceWorker.controller && window.location.protocol !== 'blob:') {
+    // MODIFICA: Rimosso reminderEnabled dall'IF principale per permettere l'invio di 'false'
+    if (notificationStatus === 'granted' && navigator.serviceWorker.controller && window.location.protocol !== 'blob:') {
       navigator.serviceWorker.controller.postMessage({
         type: 'SET_REMINDER',
         time: reminderTime,
-        enabled: reminderEnabled
+        enabled: reminderEnabled // Qui verrà passato false se spento
       });
     }
   }, [reminderEnabled, notificationStatus]); // reminderTime è costante ora
