@@ -10,6 +10,7 @@ import {
   updateProfile,
   setPersistence,
   browserLocalPersistence,
+  browserSessionPersistence, // Aggiunto per gestire la sessione temporanea
   EmailAuthProvider,
   reauthenticateWithCredential,
   deleteUser
@@ -35,7 +36,7 @@ import {
 import { 
   Clock, Plus, Trash2, Calendar as CalendarIcon, LogOut, TrendingUp, 
   Briefcase, Sun, Moon, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, ArrowLeft, CheckCircle2,
-  Menu, Home, FileText, Settings, X, Zap, Palmtree, Thermometer, AlertTriangle, Download, Eye, ShieldAlert, Lock, LogIn, UserPlus, Key, Copy, AlertOctagon, ShieldCheck, Unlock, RefreshCw, Users, CheckSquare, Square, User, Palette, Smartphone, Share, Search, ShieldX, Coffee, Loader2, Bell, BellOff, HelpCircle, Info, Send, Terminal
+  Menu, Home, FileText, Settings, X, Zap, Palmtree, Thermometer, AlertTriangle, Download, Eye, EyeOff, ShieldAlert, Lock, LogIn, UserPlus, Key, Copy, AlertOctagon, ShieldCheck, Unlock, RefreshCw, Users, CheckSquare, Square, User, Palette, Smartphone, Share, Search, ShieldX, Coffee, Loader2, Bell, BellOff, HelpCircle, Info, Send, Terminal
 } from 'lucide-react';
 
 // -----------------------------------------------------------------------------
@@ -119,6 +120,10 @@ export default function App() {
   const [currentMonth, setCurrentMonth] = useState(new Date()); 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef(null);
+
+  // --- STATI AUTH AGGIUNTIVI ---
+  const [showPassword, setShowPassword] = useState(false); // Toggle Password
+  const [rememberMe, setRememberMe] = useState(false);     // Checkbox Ricordami
 
   // --- STATI CAPISQUADRA ---
   const [availableLeaders] = useState(ACTIVE_TEAM_LEADERS); 
@@ -301,7 +306,24 @@ export default function App() {
     };
     initAuth();
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      if (!showRecoveryModal) setUser(currentUser);
+      if (!showRecoveryModal) {
+         if (currentUser) {
+            // Check Sessione 36 Ore
+            const lastSignIn = currentUser.metadata.lastSignInTime ? new Date(currentUser.metadata.lastSignInTime).getTime() : Date.now();
+            const now = Date.now();
+            const thirtySixHours = 36 * 60 * 60 * 1000;
+            
+            if (now - lastSignIn > thirtySixHours) {
+               signOut(auth);
+               alert("Sessione scaduta per inattività (36h). Effettua nuovamente il login.");
+               setUser(null);
+            } else {
+               setUser(currentUser);
+            }
+         } else {
+            setUser(null);
+         }
+      }
       setLoading(false);
     });
     return () => unsubscribe();
@@ -374,6 +396,9 @@ export default function App() {
     const cleanUsername = authData.username.trim().toLowerCase().replace(/\s/g, '');
     const internalEmail = `${cleanUsername}${INTERNAL_DOMAIN}`;
     try {
+      // Imposta persistenza in base alla checkbox "Ricordami"
+      await setPersistence(auth, rememberMe ? browserLocalPersistence : browserSessionPersistence);
+
       if (authMode === 'login') {
         if (isLocked) { setAuthError("Account bloccato."); setIsSubmitting(false); return; }
         await signInWithEmailAndPassword(auth, internalEmail, authData.password);
@@ -632,7 +657,31 @@ export default function App() {
                    </div>
                    <form onSubmit={handleAuth} className="space-y-4">
                      <input type="text" placeholder="nome.cognome" required className="w-full p-4.5 bg-slate-100 dark:bg-slate-800 dark:text-white rounded-2xl font-bold outline-none focus:ring-2 focus:ring-blue-500/20 border border-slate-200 dark:border-slate-700 shadow-inner" value={authData.username} onChange={e => setAuthData({...authData, username: e.target.value})} />
-                     <input type="password" placeholder="••••••••" required className="w-full p-4.5 bg-slate-100 dark:bg-slate-800 dark:text-white rounded-2xl font-bold outline-none focus:ring-2 focus:ring-blue-500/20 border border-slate-200 dark:border-slate-700 shadow-inner" value={authData.password} onChange={e => setAuthData({...authData, password: e.target.value})} />
+                     
+                     <div className="relative">
+                        <input 
+                           type={showPassword ? "text" : "password"} 
+                           placeholder="••••••••" 
+                           required 
+                           className="w-full p-4.5 bg-slate-100 dark:bg-slate-800 dark:text-white rounded-2xl font-bold outline-none focus:ring-2 focus:ring-blue-500/20 border border-slate-200 dark:border-slate-700 shadow-inner pr-12" 
+                           value={authData.password} 
+                           onChange={e => setAuthData({...authData, password: e.target.value})} 
+                        />
+                        <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-blue-500 transition-colors">
+                           {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                        </button>
+                     </div>
+
+                     {/* CHECKBOX RICORDAMI */}
+                     {authMode === 'login' && (
+                        <div className="flex items-center gap-3 px-2">
+                           <div onClick={() => setRememberMe(!rememberMe)} className={`w-5 h-5 rounded-lg border-2 flex items-center justify-center cursor-pointer transition-all ${rememberMe ? `bg-${accentColor}-600 border-${accentColor}-600` : 'border-slate-300 dark:border-slate-600'}`}>
+                              {rememberMe && <CheckSquare size={14} className="text-white" />}
+                           </div>
+                           <label onClick={() => setRememberMe(!rememberMe)} className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest cursor-pointer select-none">Ricordami nel Vault</label>
+                        </div>
+                     )}
+
                      {authError && <div className="text-red-600 text-[11px] font-black italic animate-shake leading-none mt-2">{authError}</div>}
                      <button type="submit" disabled={isSubmitting} className={`w-full text-white p-5 rounded-2xl font-black uppercase tracking-widest bg-${accentColor}-600 shadow-xl active:scale-95 transition-all shadow-${accentColor}-500/20`}>{isSubmitting ? '...' : 'Entra nel Vault'}</button>
                    </form>
