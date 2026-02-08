@@ -480,13 +480,26 @@ export default function App() {
   };
 
   const requestNotificationPermission = async () => {
-    if (!("Notification" in window)) return;
-    const permission = await Notification.requestPermission();
-    setNotificationStatus(permission);
-    if (permission === 'granted') {
-      setReminderEnabled(true);
-      localStorage.setItem('reminder_enabled', 'true');
-      setupFCM();
+    if (!("Notification" in window)) {
+        alert("Il tuo browser non supporta le notifiche.");
+        return;
+    }
+    
+    try {
+      const permission = await Notification.requestPermission();
+      setNotificationStatus(permission);
+      
+      if (permission === 'granted') {
+        setReminderEnabled(true);
+        localStorage.setItem('reminder_enabled', 'true');
+        setupFCM();
+        alert("Notifiche attivate con successo!");
+      } else if (permission === 'denied') {
+        alert("Permesso negato. Devi abilitare le notifiche nelle impostazioni del browser.");
+      }
+    } catch (e) {
+       console.error("Errore permessi:", e);
+       alert("Errore durante la richiesta permessi.");
     }
   };
 
