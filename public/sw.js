@@ -1,7 +1,7 @@
-// TimeVault Service Worker - Versione IBRIDA (Locale + Firebase)
-importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js');
-importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/9.22.0/firebase-messaging-compat.js');
 
+// Configurazione Firebase identica a quella dell'App
 const firebaseConfig = {
   apiKey: "AIzaSyDdxN05Yj1CtPOY69x3JJjuFuhEUelXWsc",
   authDomain: "work-time-vault.firebaseapp.com",
@@ -11,53 +11,57 @@ const firebaseConfig = {
   appId: "1:957496336579:web:f82df8f2d580b92ec58276"
 };
 
+// Inizializza Firebase nel Service Worker
 firebase.initializeApp(firebaseConfig);
+
+// Recupera l'istanza di messaging
 const messaging = firebase.messaging();
 
-let reminderTime = "18:00";
-let reminderEnabled = false;
-
-// 1. GESTIONE NOTIFICHE PUSH (DA FIREBASE CONSOLE)
-messaging.onBackgroundMessage((payload) => {
-  console.log('[SW] Push ricevuto:', payload);
+// Gestione dei messaggi in background (quando l'app è chiusa o in background)
+messaging.onBackgroundMessage(function(payload) {
+  console.log('[sw.js] Messaggio ricevuto in background:', payload);
+  
+  // Personalizza la notifica
   const notificationTitle = payload.notification.title || 'TimeVault';
   const notificationOptions = {
-    body: payload.notification.body || 'Ricordati di registrare le ore!',
-    icon: '/favicon.ico',
+    body: payload.notification.body || 'Nuovo aggiornamento dal Vault.',
+    icon: '/favicon.ico', // Assicurati di avere un'icona
     badge: '/favicon.ico',
-    vibrate: [200, 100, 200],
-    tag: 'vault-push',
-    data: { url: '/' }
+    data: payload.data // Dati extra passati dal server
   };
-  return self.registration.showNotification(notificationTitle, notificationOptions);
+
+  self.registration.showNotification(notificationTitle, notificationOptions);
 });
 
-// 2. GESTIONE REMINDER LOCALE (TIMER INTERNO)
+// Gestione del click sulla notifica
+self.addEventListener('notificationclick', function(event) {
+  console.log('[sw.js] Notifica cliccata.');
+  event.notification.close();
+
+  // Cerca di aprire o focalizzare la finestra dell'app
+  event.waitUntil(
+    clients.matchAll({type: 'window', includeUncontrolled: true}).then(function(clientList) {
+      // Se c'è già una finestra aperta, focalizzala
+      for (var i = 0; i < clientList.length; i++) {
+        var client = clientList[i];
+        if (client.url.indexOf('/') > -1 && 'focus' in client) {
+          return client.focus();
+        }
+      }
+      // Altrimenti apri una nuova finestra
+      if (clients.openWindow) {
+        return clients.openWindow('/');
+      }
+    })
+  );
+});
+
+// Ascoltatore per messaggi interni dall'App (es. Impostazione Reminder locale)
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SET_REMINDER') {
-    reminderTime = event.data.time;
-    reminderEnabled = event.data.enabled;
-    console.log(`[SW] Timer locale sincronizzato: ${reminderTime}`);
+    console.log('[sw.js] Reminder configurato:', event.data);
+    // Nota: I Service Worker moderni possono essere "terminati" dal browser per risparmiare risorse.
+    // Per reminder locali affidabili, l'ideale è usare le Push Notifications dal server,
+    // ma questo ascoltatore conferma che il canale di comunicazione è attivo.
   }
-});
-
-setInterval(() => {
-  if (!reminderEnabled) return;
-  const now = new Date();
-  const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-  
-  if (currentTime === reminderTime) {
-    self.registration.showNotification('TimeVault: Reminder Locale', {
-      body: 'È l’orario impostato! Registra la tua giornata.',
-      icon: '/favicon.ico',
-      vibrate: [200, 100, 200],
-      tag: 'vault-local-reminder'
-    });
-  }
-}, 30000);
-
-// GESTIONE CLICK
-self.addEventListener('notificationclick', (event) => {
-  event.notification.close();
-  event.waitUntil(clients.openWindow('/'));
 });

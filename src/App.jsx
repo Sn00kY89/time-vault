@@ -34,32 +34,21 @@ import {
 import { 
   Clock, Plus, Trash2, Calendar as CalendarIcon, LogOut, TrendingUp, 
   Briefcase, Sun, Moon, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, ArrowLeft, CheckCircle2,
-  Menu, Home, FileText, Settings, X, Zap, Palmtree, Thermometer, AlertTriangle, Download, Eye, ShieldAlert, Lock, LogIn, UserPlus, Key, Copy, AlertOctagon, ShieldCheck, Unlock, RefreshCw, Users, CheckSquare, Square, User, Palette, Smartphone, Share, Search, ShieldX, Coffee, Loader2, Bell, BellOff, HelpCircle, Info, Send
+  Menu, Home, FileText, Settings, X, Zap, Palmtree, Thermometer, AlertTriangle, Download, Eye, ShieldAlert, Lock, LogIn, UserPlus, Key, Copy, AlertOctagon, ShieldCheck, Unlock, RefreshCw, Users, CheckSquare, Square, User, Palette, Smartphone, Share, Search, ShieldX, Coffee, Loader2, Bell, BellOff, HelpCircle, Info, Send, Terminal
 } from 'lucide-react';
 
 // -----------------------------------------------------------------------------
-// ISTRUZIONI PER L'USO DEL FILE JSON ESTERNO
-import externalTeamLeaders from './capisquadra.json';
+// CONFIGURAZIONE CAPISQUADRA (HARDCODED PER STABILITÀ)
 // -----------------------------------------------------------------------------
-const fallbackForPreview = []; 
-// -----------------------------------------------------------------------------
-
-
-const getLeadersList = () => {
-  try {
-    let data = null;
-    if (typeof externalTeamLeaders !== 'undefined') {
-       data = (externalTeamLeaders && externalTeamLeaders.default) ? externalTeamLeaders.default : externalTeamLeaders;
-    } else {
-       data = fallbackForPreview;
-    }
-    if (Array.isArray(data) && data.length > 0) return data;
-  } catch (e) {
-    console.warn("Nessun file JSON caricato. Uso fallback.");
-  }
-  return ['Caposquadra 1', 'Caposquadra 2', 'Caposquadra 3', 'Caposquadra 4'];
-};
-const ACTIVE_TEAM_LEADERS = getLeadersList();
+const ACTIVE_TEAM_LEADERS = [
+  'Sandro Sammartino',
+  'Rocco Canepa',
+  'Efisio Lorrai',
+  'Fabrizio Sanna',
+  'Renzo Picciau',
+  'Marco Lai',
+  'Ignazio Cocco'
+];
 
 // --- CONFIGURAZIONE FIREBASE ---
 const firebaseConfig = {
@@ -169,10 +158,13 @@ export default function App() {
   const [showOvertimeInput, setShowOvertimeInput] = useState(false);
   const [showNotesInput, setShowNotesInput] = useState(false); 
 
-  // --- STATI REMINDER ---
+  // --- STATI REMINDER & FCM DEBUG ---
   const [reminderEnabled, setReminderEnabled] = useState(() => localStorage.getItem('reminder_enabled') === 'true');
   const [reminderTime, setReminderTime] = useState(() => localStorage.getItem('reminder_time') || "18:00");
   const [notificationStatus, setNotificationStatus] = useState(typeof Notification !== 'undefined' ? Notification.permission : 'default');
+  const [isSyncingPush, setIsSyncingPush] = useState(false);
+  const [fcmTokenDisplay, setFcmTokenDisplay] = useState(''); // Stato per il token debug
+  const [showTokenDebug, setShowTokenDebug] = useState(false); // Stato per mostrare il token
 
   // 1. --- REGISTRAZIONE SERVICE WORKER (FONDAMENTALE PER NOTIFICHE) ---
   useEffect(() => {
@@ -188,33 +180,43 @@ export default function App() {
     }
   }, []);
 
-  // Aggiungi questa funzione dopo gli useEffect esistenti
-const setupFCM = async () => {
-  try {
-    const messaging = getMessaging(app);
-    const token = await getToken(messaging, { 
-      vapidKey: 'BJXBFxWqNvvIyffYPT1Z9pZCm2tqz-VNrfN5w3tU0baYLX2ilVcoD_phNZKLNZbfuS-v9KYFMS1Ls9-Ym0-QUE4' 
-    });
-    
-    if (token && user) {
-      // Salva il token nel profilo utente su Firestore
-      await setDoc(doc(db, 'artifacts', APP_ID, 'users', user.uid, 'settings', 'push'), {
-        fcmToken: token,
-        updatedAt: serverTimestamp()
-      }, { merge: true });
-      console.log("Vault Device Token salvato con successo.");
+  // Funzione per sincronizzare il token FCM
+  const setupFCM = async () => {
+    if (!user) return;
+    setIsSyncingPush(true);
+    try {
+      const messaging = getMessaging(app);
+      const token = await getToken(messaging, { 
+        vapidKey: 'BJXBFxWqNvvIyffYPT1Z9pZCm2tqz-VNrfN5w3tU0baYLX2ilVcoD_phNZKLNZbfuS-v9KYFMS1Ls9-Ym0-QUE4' 
+      });
+      
+      if (token) {
+        setFcmTokenDisplay(token); // Salva il token nello stato per il debug
+        
+        // Salva il token nel profilo utente su Firestore
+        await setDoc(doc(db, 'artifacts', APP_ID, 'users', user.uid, 'settings', 'push'), {
+          fcmToken: token,
+          updatedAt: serverTimestamp(),
+          platform: 'web_pwa'
+        }, { merge: true });
+        console.log("Vault Device Token salvato con successo.");
+      } else {
+        console.warn("Nessun token di registrazione disponibile.");
+      }
+    } catch (err) {
+      console.error("Errore configurazione Push:", err);
+      // alert("Errore generazione token Push (vedi console). Controlla che il Service Worker sia registrato.");
+    } finally {
+        setIsSyncingPush(false);
     }
-  } catch (err) {
-    console.error("Errore configurazione Push:", err);
-  }
-};
+  };
 
-// Richiama setupFCM quando l'utente è loggato e le notifiche sono permesse
-useEffect(() => {
-  if (user && notificationStatus === 'granted') {
-    setupFCM();
-  }
-}, [user, notificationStatus]);
+  // Richiama setupFCM quando l'utente è loggato e le notifiche sono permesse
+  useEffect(() => {
+    if (user && notificationStatus === 'granted') {
+      setupFCM();
+    }
+  }, [user, notificationStatus]);
 
   // 2. --- INVIO IMPOSTAZIONI AL SERVICE WORKER ---
   useEffect(() => {
@@ -398,8 +400,8 @@ useEffect(() => {
   };
 
   const handleVerifyCode = () => {
-     if (unlockCodeInput.length < 16) { setAuthError("Codice non valido."); return; }
-     setAuthError(""); setRecoveryStep(2);
+      if (unlockCodeInput.length < 16) { setAuthError("Codice non valido."); return; }
+      setAuthError(""); setRecoveryStep(2);
   };
 
   const handleFinalPasswordReset = () => {
@@ -485,12 +487,26 @@ useEffect(() => {
   };
 
   const requestNotificationPermission = async () => {
-    if (!("Notification" in window)) return;
-    const permission = await Notification.requestPermission();
-    setNotificationStatus(permission);
-    if (permission === 'granted') {
-      setReminderEnabled(true);
-      localStorage.setItem('reminder_enabled', 'true');
+    if (!("Notification" in window)) {
+        alert("Il tuo browser non supporta le notifiche.");
+        return;
+    }
+    
+    try {
+      const permission = await Notification.requestPermission();
+      setNotificationStatus(permission);
+      
+      if (permission === 'granted') {
+        setReminderEnabled(true);
+        localStorage.setItem('reminder_enabled', 'true');
+        setupFCM();
+        alert("Notifiche attivate con successo!");
+      } else if (permission === 'denied') {
+        alert("Permesso negato. Devi abilitare le notifiche nelle impostazioni del browser.");
+      }
+    } catch (e) {
+       console.error("Errore permessi:", e);
+       alert("Errore durante la richiesta permessi.");
     }
   };
 
@@ -699,7 +715,6 @@ useEffect(() => {
                   const logsForDay = logs.filter(l => l.date === dateStr);
                   const active = logsForDay.length > 0;
                   const isToday = formatDateAsLocal(new Date()) === dateStr;
-                  const logType = active ? logsForDay[0].type : null;
                   
                   return (
                     <button key={day} onClick={() => { setSelectedDate(new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day)); setView('day'); }} className={`aspect-square rounded-[1.5rem] md:rounded-[2rem] flex flex-col items-center justify-center relative transition-all group ${active ? `bg-${accentColor}-600 text-white shadow-xl shadow-${accentColor}-500/20 scale-100` : isToday ? 'bg-blue-50 dark:bg-blue-900/20 ring-2 ring-blue-500/30' : 'bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 hover:scale-105 active:scale-95 shadow-inner'}`}>
@@ -898,19 +913,39 @@ useEffect(() => {
                       <p className="text-[10px] text-slate-400 font-bold uppercase italic tracking-[0.2em] leading-none">{notificationStatus === 'granted' ? 'Notifiche Native Attive' : 'Status: Non Autorizzato'}</p>
                     </div>
                   </div>
-                  <div className="flex flex-wrap items-center gap-6">
-                     {reminderEnabled && (
-                        <div className="animate-in slide-in-from-right duration-500 flex items-center gap-3">
-                           <input type="time" className="bg-slate-50 dark:bg-slate-800 p-4 rounded-xl font-black text-xs outline-none border border-slate-100 dark:border-slate-700 dark:text-white shadow-inner" value={reminderTime} onChange={(e) => { setReminderTime(e.target.value); localStorage.setItem('reminder_time', e.target.value); }} />
-                           <button onClick={sendTestNotification} className="p-4 bg-slate-100 dark:bg-slate-800 text-slate-400 hover:text-blue-500 rounded-xl transition-all active:scale-90" title="Prova Notifica"><Send size={18}/></button>
+                  <div className="flex flex-col items-center gap-4">
+                     <div className="flex flex-wrap items-center gap-6">
+                       {reminderEnabled && (
+                          <div className="animate-in slide-in-from-right duration-500 flex items-center gap-3">
+                             <input type="time" className="bg-slate-50 dark:bg-slate-800 p-4 rounded-xl font-black text-xs outline-none border border-slate-100 dark:border-slate-700 dark:text-white shadow-inner" value={reminderTime} onChange={(e) => { setReminderTime(e.target.value); localStorage.setItem('reminder_time', e.target.value); }} />
+                             <div className="flex gap-2">
+                                <button onClick={sendTestNotification} className="p-4 bg-slate-100 dark:bg-slate-800 text-slate-400 hover:text-blue-500 rounded-xl transition-all active:scale-90" title="Prova Notifica"><Send size={18}/></button>
+                                <button onClick={setupFCM} disabled={isSyncingPush} className={`p-4 bg-slate-100 dark:bg-slate-800 text-slate-400 hover:text-emerald-500 rounded-xl transition-all active:scale-90 ${isSyncingPush ? 'animate-spin' : ''}`} title="Sincronizza Token Push"><RefreshCw size={18}/></button>
+                             </div>
+                          </div>
+                       )}
+                       {notificationStatus !== 'granted' ? (
+                         <button onClick={requestNotificationPermission} className="text-[10px] font-black uppercase bg-blue-600 text-white px-8 py-4 rounded-2xl shadow-2xl shadow-blue-500/30 active:scale-95 transition-all tracking-[0.2em] italic leading-none">Abilita Notifiche Native</button>
+                       ) : (
+                         <button onClick={() => { setReminderEnabled(!reminderEnabled); localStorage.setItem('reminder_enabled', !reminderEnabled); }} className={`w-16 h-9 rounded-full transition-all relative border-2 ${reminderEnabled ? `bg-${accentColor}-600 border-${accentColor}-600 shadow-lg` : 'bg-slate-300 dark:bg-slate-700 border-slate-200 dark:border-slate-600'}`}>
+                           <div className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all shadow-md ${reminderEnabled ? 'right-1' : 'left-1'}`}></div>
+                         </button>
+                       )}
+                     </div>
+
+                     {/* DEBUG TOKEN DISPLAY */}
+                     {fcmTokenDisplay && (
+                        <div className="w-full mt-4 animate-in fade-in">
+                          <button onClick={() => setShowTokenDebug(!showTokenDebug)} className="flex items-center gap-2 text-[10px] text-slate-400 font-mono uppercase tracking-widest hover:text-blue-500 transition-colors mx-auto italic">
+                             {showTokenDebug ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                             {showTokenDebug ? "Nascondi Token Debug" : "Mostra Token Debug"}
+                          </button>
+                          {showTokenDebug && (
+                             <div className="mt-2 p-4 bg-slate-100 dark:bg-slate-800 rounded-2xl break-all font-mono text-[10px] text-slate-500 select-all border border-slate-200 dark:border-slate-700 shadow-inner">
+                                {fcmTokenDisplay}
+                             </div>
+                          )}
                         </div>
-                     )}
-                     {notificationStatus !== 'granted' ? (
-                       <button onClick={requestNotificationPermission} className="text-[10px] font-black uppercase bg-blue-600 text-white px-8 py-4 rounded-2xl shadow-2xl shadow-blue-500/30 active:scale-95 transition-all tracking-[0.2em] italic leading-none">Abilita Notifiche Native</button>
-                     ) : (
-                       <button onClick={() => { setReminderEnabled(!reminderEnabled); localStorage.setItem('reminder_enabled', !reminderEnabled); }} className={`w-16 h-9 rounded-full transition-all relative border-2 ${reminderEnabled ? `bg-${accentColor}-600 border-${accentColor}-600 shadow-lg` : 'bg-slate-300 dark:bg-slate-700 border-slate-200 dark:border-slate-600'}`}>
-                         <div className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all shadow-md ${reminderEnabled ? 'right-1' : 'left-1'}`}></div>
-                       </button>
                      )}
                   </div>
                </div>
