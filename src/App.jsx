@@ -163,8 +163,11 @@ export default function App() {
   const [reminderTime, setReminderTime] = useState(() => localStorage.getItem('reminder_time') || "18:00");
   const [notificationStatus, setNotificationStatus] = useState(typeof Notification !== 'undefined' ? Notification.permission : 'default');
   const [isSyncingPush, setIsSyncingPush] = useState(false);
+<<<<<<< HEAD
   const [fcmTokenDisplay, setFcmTokenDisplay] = useState(''); // Stato per il token debug
   const [showTokenDebug, setShowTokenDebug] = useState(false); // Stato per mostrare il token
+=======
+>>>>>>> c3a4ad4c8632b8d20543e9d6cb165545f00942f8
 
   // 1. --- REGISTRAZIONE SERVICE WORKER (FONDAMENTALE PER NOTIFICHE) ---
   useEffect(() => {
@@ -191,8 +194,11 @@ export default function App() {
       });
       
       if (token) {
+<<<<<<< HEAD
         setFcmTokenDisplay(token); // Salva il token nello stato per il debug
         
+=======
+>>>>>>> c3a4ad4c8632b8d20543e9d6cb165545f00942f8
         // Salva il token nel profilo utente su Firestore
         await setDoc(doc(db, 'artifacts', APP_ID, 'users', user.uid, 'settings', 'push'), {
           fcmToken: token,
@@ -200,12 +206,18 @@ export default function App() {
           platform: 'web_pwa'
         }, { merge: true });
         console.log("Vault Device Token salvato con successo.");
+<<<<<<< HEAD
       } else {
         console.warn("Nessun token di registrazione disponibile.");
       }
     } catch (err) {
       console.error("Errore configurazione Push:", err);
       // alert("Errore generazione token Push (vedi console). Controlla che il Service Worker sia registrato.");
+=======
+      }
+    } catch (err) {
+      console.error("Errore configurazione Push:", err);
+>>>>>>> c3a4ad4c8632b8d20543e9d6cb165545f00942f8
     } finally {
         setIsSyncingPush(false);
     }
@@ -913,6 +925,7 @@ export default function App() {
                       <p className="text-[10px] text-slate-400 font-bold uppercase italic tracking-[0.2em] leading-none">{notificationStatus === 'granted' ? 'Notifiche Native Attive' : 'Status: Non Autorizzato'}</p>
                     </div>
                   </div>
+<<<<<<< HEAD
                   <div className="flex flex-col items-center gap-4">
                      <div className="flex flex-wrap items-center gap-6">
                        {reminderEnabled && (
@@ -945,6 +958,16 @@ export default function App() {
                                 {fcmTokenDisplay}
                              </div>
                           )}
+=======
+                  <div className="flex flex-wrap items-center gap-6">
+                     {reminderEnabled && (
+                        <div className="animate-in slide-in-from-right duration-500 flex items-center gap-3">
+                           <input type="time" className="bg-slate-50 dark:bg-slate-800 p-4 rounded-xl font-black text-xs outline-none border border-slate-100 dark:border-slate-700 dark:text-white shadow-inner" value={reminderTime} onChange={(e) => { setReminderTime(e.target.value); localStorage.setItem('reminder_time', e.target.value); }} />
+                           <div className="flex gap-2">
+                              <button onClick={sendTestNotification} className="p-4 bg-slate-100 dark:bg-slate-800 text-slate-400 hover:text-blue-500 rounded-xl transition-all active:scale-90" title="Prova Notifica"><Send size={18}/></button>
+                              <button onClick={setupFCM} disabled={isSyncingPush} className={`p-4 bg-slate-100 dark:bg-slate-800 text-slate-400 hover:text-emerald-500 rounded-xl transition-all active:scale-90 ${isSyncingPush ? 'animate-spin' : ''}`} title="Sincronizza Token Push"><RefreshCw size={18}/></button>
+                           </div>
+>>>>>>> c3a4ad4c8632b8d20543e9d6cb165545f00942f8
                         </div>
                      )}
                   </div>
