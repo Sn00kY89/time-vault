@@ -44,23 +44,6 @@ import externalTeamLeaders from './capisquadra.json';
 const fallbackForPreview = []; 
 // -----------------------------------------------------------------------------
 
-
-const getLeadersList = () => {
-  try {
-    let data = null;
-    if (typeof externalTeamLeaders !== 'undefined') {
-       data = (externalTeamLeaders && externalTeamLeaders.default) ? externalTeamLeaders.default : externalTeamLeaders;
-    } else {
-       data = fallbackForPreview;
-    }
-    if (Array.isArray(data) && data.length > 0) return data;
-  } catch (e) {
-    console.warn("Nessun file JSON caricato. Uso fallback.");
-  }
-  return ['Caposquadra 1', 'Caposquadra 2', 'Caposquadra 3', 'Caposquadra 4'];
-};
-const ACTIVE_TEAM_LEADERS = getLeadersList();
-
 // --- CONFIGURAZIONE FIREBASE ---
 const firebaseConfig = {
   apiKey: "AIzaSyDdxN05Yj1CtPOY69x3JJjuFuhEUelXWsc",
@@ -173,6 +156,7 @@ export default function App() {
   const [reminderEnabled, setReminderEnabled] = useState(() => localStorage.getItem('reminder_enabled') === 'true');
   const [reminderTime, setReminderTime] = useState(() => localStorage.getItem('reminder_time') || "18:00");
   const [notificationStatus, setNotificationStatus] = useState(typeof Notification !== 'undefined' ? Notification.permission : 'default');
+  const [isSyncingPush, setIsSyncingPush] = useState(false);
 
   // 1. --- REGISTRAZIONE SERVICE WORKER (FONDAMENTALE PER NOTIFICHE) ---
   useEffect(() => {
@@ -188,33 +172,38 @@ export default function App() {
     }
   }, []);
 
-  // Aggiungi questa funzione dopo gli useEffect esistenti
-const setupFCM = async () => {
-  try {
-    const messaging = getMessaging(app);
-    const token = await getToken(messaging, { 
-      vapidKey: 'BJXBFxWqNvvIyffYPT1Z9pZCm2tqz-VNrfN5w3tU0baYLX2ilVcoD_phNZKLNZbfuS-v9KYFMS1Ls9-Ym0-QUE4' 
-    });
-    
-    if (token && user) {
-      // Salva il token nel profilo utente su Firestore
-      await setDoc(doc(db, 'artifacts', APP_ID, 'users', user.uid, 'settings', 'push'), {
-        fcmToken: token,
-        updatedAt: serverTimestamp()
-      }, { merge: true });
-      console.log("Vault Device Token salvato con successo.");
+  // Funzione per sincronizzare il token FCM
+  const setupFCM = async () => {
+    if (!user) return;
+    setIsSyncingPush(true);
+    try {
+      const messaging = getMessaging(app);
+      const token = await getToken(messaging, { 
+        vapidKey: 'BJXBFxWqNvvIyffYPT1Z9pZCm2tqz-VNrfN5w3tU0baYLX2ilVcoD_phNZKLNZbfuS-v9KYFMS1Ls9-Ym0-QUE4' 
+      });
+      
+      if (token) {
+        // Salva il token nel profilo utente su Firestore
+        await setDoc(doc(db, 'artifacts', APP_ID, 'users', user.uid, 'settings', 'push'), {
+          fcmToken: token,
+          updatedAt: serverTimestamp(),
+          platform: 'web_pwa'
+        }, { merge: true });
+        console.log("Vault Device Token salvato con successo.");
+      }
+    } catch (err) {
+      console.error("Errore configurazione Push:", err);
+    } finally {
+        setIsSyncingPush(false);
     }
-  } catch (err) {
-    console.error("Errore configurazione Push:", err);
-  }
-};
+  };
 
-// Richiama setupFCM quando l'utente è loggato e le notifiche sono permesse
-useEffect(() => {
-  if (user && notificationStatus === 'granted') {
-    setupFCM();
-  }
-}, [user, notificationStatus]);
+  // Richiama setupFCM quando l'utente è loggato e le notifiche sono permesse
+  useEffect(() => {
+    if (user && notificationStatus === 'granted') {
+      setupFCM();
+    }
+  }, [user, notificationStatus]);
 
   // 2. --- INVIO IMPOSTAZIONI AL SERVICE WORKER ---
   useEffect(() => {
@@ -398,8 +387,8 @@ useEffect(() => {
   };
 
   const handleVerifyCode = () => {
-     if (unlockCodeInput.length < 16) { setAuthError("Codice non valido."); return; }
-     setAuthError(""); setRecoveryStep(2);
+      if (unlockCodeInput.length < 16) { setAuthError("Codice non valido."); return; }
+      setAuthError(""); setRecoveryStep(2);
   };
 
   const handleFinalPasswordReset = () => {
@@ -491,6 +480,7 @@ useEffect(() => {
     if (permission === 'granted') {
       setReminderEnabled(true);
       localStorage.setItem('reminder_enabled', 'true');
+      setupFCM();
     }
   };
 
@@ -699,7 +689,6 @@ useEffect(() => {
                   const logsForDay = logs.filter(l => l.date === dateStr);
                   const active = logsForDay.length > 0;
                   const isToday = formatDateAsLocal(new Date()) === dateStr;
-                  const logType = active ? logsForDay[0].type : null;
                   
                   return (
                     <button key={day} onClick={() => { setSelectedDate(new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day)); setView('day'); }} className={`aspect-square rounded-[1.5rem] md:rounded-[2rem] flex flex-col items-center justify-center relative transition-all group ${active ? `bg-${accentColor}-600 text-white shadow-xl shadow-${accentColor}-500/20 scale-100` : isToday ? 'bg-blue-50 dark:bg-blue-900/20 ring-2 ring-blue-500/30' : 'bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 hover:scale-105 active:scale-95 shadow-inner'}`}>
@@ -902,7 +891,10 @@ useEffect(() => {
                      {reminderEnabled && (
                         <div className="animate-in slide-in-from-right duration-500 flex items-center gap-3">
                            <input type="time" className="bg-slate-50 dark:bg-slate-800 p-4 rounded-xl font-black text-xs outline-none border border-slate-100 dark:border-slate-700 dark:text-white shadow-inner" value={reminderTime} onChange={(e) => { setReminderTime(e.target.value); localStorage.setItem('reminder_time', e.target.value); }} />
-                           <button onClick={sendTestNotification} className="p-4 bg-slate-100 dark:bg-slate-800 text-slate-400 hover:text-blue-500 rounded-xl transition-all active:scale-90" title="Prova Notifica"><Send size={18}/></button>
+                           <div className="flex gap-2">
+                              <button onClick={sendTestNotification} className="p-4 bg-slate-100 dark:bg-slate-800 text-slate-400 hover:text-blue-500 rounded-xl transition-all active:scale-90" title="Prova Notifica"><Send size={18}/></button>
+                              <button onClick={setupFCM} disabled={isSyncingPush} className={`p-4 bg-slate-100 dark:bg-slate-800 text-slate-400 hover:text-emerald-500 rounded-xl transition-all active:scale-90 ${isSyncingPush ? 'animate-spin' : ''}`} title="Sincronizza Token Push"><RefreshCw size={18}/></button>
+                           </div>
                         </div>
                      )}
                      {notificationStatus !== 'granted' ? (
