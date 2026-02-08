@@ -72,13 +72,96 @@ const INTERNAL_DOMAIN = "@time.vault";
 
 const STANDARD_HOURS_VALUE = 8; 
 
+// --- DEFINIZIONE COLORI E CLASSI ESPLICITE (FIX UI) ---
 const ACCENT_COLORS = {
-  blue: { hex: '#2563eb', label: 'Blu Reale', class: 'blue' },
-  violet: { hex: '#7c3aed', label: 'Viola Ultra', class: 'violet' },
-  emerald: { hex: '#059669', label: 'Smeraldo', class: 'emerald' },
-  rose: { hex: '#e11d48', label: 'Rosa Vivo', class: 'rose' },
-  amber: { hex: '#d97706', label: 'Ambra', class: 'amber' },
-  cyan: { hex: '#0891b2', label: 'Ciano', class: 'cyan' },
+  blue: { hex: '#2563eb', label: 'Blu Reale' },
+  violet: { hex: '#7c3aed', label: 'Viola Ultra' },
+  emerald: { hex: '#059669', label: 'Smeraldo' },
+  rose: { hex: '#e11d48', label: 'Rosa Vivo' },
+  amber: { hex: '#d97706', label: 'Ambra' },
+  cyan: { hex: '#0891b2', label: 'Ciano' },
+};
+
+// Mappa delle classi per garantire che Tailwind le rilevi
+const THEME_CLASSES = {
+  blue: {
+    bg: 'bg-blue-600',
+    text: 'text-blue-600',
+    text500: 'text-blue-500',
+    border: 'border-blue-600',
+    border500: 'border-blue-500',
+    shadow30: 'shadow-blue-500/30',
+    shadow20: 'shadow-blue-500/20',
+    shadow40: 'shadow-blue-500/40',
+    ring10: 'ring-blue-500/10',
+    bg100: 'bg-blue-100',
+    bg90030: 'bg-blue-900/30'
+  },
+  violet: {
+    bg: 'bg-violet-600',
+    text: 'text-violet-600',
+    text500: 'text-violet-500',
+    border: 'border-violet-600',
+    border500: 'border-violet-500',
+    shadow30: 'shadow-violet-500/30',
+    shadow20: 'shadow-violet-500/20',
+    shadow40: 'shadow-violet-500/40',
+    ring10: 'ring-violet-500/10',
+    bg100: 'bg-violet-100',
+    bg90030: 'bg-violet-900/30'
+  },
+  emerald: {
+    bg: 'bg-emerald-600',
+    text: 'text-emerald-600',
+    text500: 'text-emerald-500',
+    border: 'border-emerald-600',
+    border500: 'border-emerald-500',
+    shadow30: 'shadow-emerald-500/30',
+    shadow20: 'shadow-emerald-500/20',
+    shadow40: 'shadow-emerald-500/40',
+    ring10: 'ring-emerald-500/10',
+    bg100: 'bg-emerald-100',
+    bg90030: 'bg-emerald-900/30'
+  },
+  rose: {
+    bg: 'bg-rose-600',
+    text: 'text-rose-600',
+    text500: 'text-rose-500',
+    border: 'border-rose-600',
+    border500: 'border-rose-500',
+    shadow30: 'shadow-rose-500/30',
+    shadow20: 'shadow-rose-500/20',
+    shadow40: 'shadow-rose-500/40',
+    ring10: 'ring-rose-500/10',
+    bg100: 'bg-rose-100',
+    bg90030: 'bg-rose-900/30'
+  },
+  amber: {
+    bg: 'bg-amber-600',
+    text: 'text-amber-600',
+    text500: 'text-amber-500',
+    border: 'border-amber-600',
+    border500: 'border-amber-500',
+    shadow30: 'shadow-amber-500/30',
+    shadow20: 'shadow-amber-500/20',
+    shadow40: 'shadow-amber-500/40',
+    ring10: 'ring-amber-500/10',
+    bg100: 'bg-amber-100',
+    bg90030: 'bg-amber-900/30'
+  },
+  cyan: {
+    bg: 'bg-cyan-600',
+    text: 'text-cyan-600',
+    text500: 'text-cyan-500',
+    border: 'border-cyan-600',
+    border500: 'border-cyan-500',
+    shadow30: 'shadow-cyan-500/30',
+    shadow20: 'shadow-cyan-500/20',
+    shadow40: 'shadow-cyan-500/40',
+    ring10: 'ring-cyan-500/10',
+    bg100: 'bg-cyan-100',
+    bg90030: 'bg-cyan-900/30'
+  }
 };
 
 // --- UTILS ---
@@ -122,8 +205,8 @@ export default function App() {
   const menuRef = useRef(null);
 
   // --- STATI AUTH AGGIUNTIVI ---
-  const [showPassword, setShowPassword] = useState(false); // Toggle Password
-  const [rememberMe, setRememberMe] = useState(false);     // Checkbox Ricordami
+  const [showPassword, setShowPassword] = useState(false); 
+  const [rememberMe, setRememberMe] = useState(false);     
 
   // --- STATI CAPISQUADRA ---
   const [availableLeaders] = useState(ACTIVE_TEAM_LEADERS); 
@@ -168,64 +251,47 @@ export default function App() {
 
   // --- STATI REMINDER & FCM DEBUG ---
   const [reminderEnabled, setReminderEnabled] = useState(() => localStorage.getItem('reminder_enabled') === 'true');
-  const reminderTime = "20:00"; // Default fissato alle 20:00
+  const reminderTime = "20:00"; 
   const [notificationStatus, setNotificationStatus] = useState(typeof Notification !== 'undefined' ? Notification.permission : 'default');
   const [isSyncingPush, setIsSyncingPush] = useState(false);
   const [fcmTokenDisplay, setFcmTokenDisplay] = useState(''); 
   const [showTokenDebug, setShowTokenDebug] = useState(false); 
 
+  // Costante per lo stile corrente (Helper per pulire il codice)
+  const T = THEME_CLASSES[accentColor] || THEME_CLASSES['blue'];
+
   // 1. --- REGISTRAZIONE SERVICE WORKER (FIX REGISTRAZIONE SICURA) ---
   useEffect(() => {
-    // Controllo se siamo in ambiente Blob (anteprima) dove i SW sono vietati
     const isBlob = window.location.protocol === 'blob:';
-
     if ('serviceWorker' in navigator && !isBlob) {
         navigator.serviceWorker.register('/sw.js')
-          .then(reg => {
-            console.log('TimeVault SW Registrato:', reg.scope);
-          })
-          .catch(err => {
-            console.error('Errore registrazione SW:', err);
-          });
+          .then(reg => console.log('TimeVault SW Registrato:', reg.scope))
+          .catch(err => console.error('Errore registrazione SW:', err));
     } else if (isBlob) {
-        console.warn("Service Worker disabilitato in modalità anteprima (protocollo blob:). Funzionerà dopo il deploy.");
+        console.warn("Service Worker disabilitato in modalità anteprima.");
     }
   }, []);
 
   // Funzione per sincronizzare il token FCM
   const setupFCM = async () => {
     if (!user) return;
-    
-    // Check ambiente anteprima
     if (window.location.protocol === 'blob:') {
-        setFcmTokenDisplay("TOKEN_DEBUG_PREVIEW_MODE_ONLY (Deploy per Token Reale)");
+        setFcmTokenDisplay("TOKEN_DEBUG_PREVIEW_MODE_ONLY");
         return;
     }
-
     setIsSyncingPush(true);
     try {
       const messaging = getMessaging(app);
-
-      // --- FIX CRITICO: RECUPERO REGISTRAZIONE SW ---
-      // Dobbiamo passare esplicitamente la registrazione del SW a getToken
       const registration = await navigator.serviceWorker.ready;
-
       const token = await getToken(messaging, { 
         vapidKey: 'BJXBFxWqNvvIyffYPT1Z9pZCm2tqz-VNrfN5w3tU0baYLX2ilVcoD_phNZKLNZbfuS-v9KYFMS1Ls9-Ym0-QUE4',
         serviceWorkerRegistration: registration 
       });
-      
       if (token) {
         setFcmTokenDisplay(token); 
-        
         await setDoc(doc(db, 'artifacts', APP_ID, 'users', user.uid, 'settings', 'push'), {
-          fcmToken: token,
-          updatedAt: serverTimestamp(),
-          platform: 'web_pwa'
+          fcmToken: token, updatedAt: serverTimestamp(), platform: 'web_pwa'
         }, { merge: true });
-        console.log("Vault Device Token salvato con successo.");
-      } else {
-        console.warn("Nessun token di registrazione disponibile.");
       }
     } catch (err) {
       console.error("Errore configurazione Push:", err);
@@ -234,54 +300,42 @@ export default function App() {
     }
   };
 
-  // Richiama setupFCM quando l'utente è loggato e le notifiche sono permesse
   useEffect(() => {
-    if (user && notificationStatus === 'granted') {
-      setupFCM();
-    }
+    if (user && notificationStatus === 'granted') setupFCM();
   }, [user, notificationStatus]);
 
   // 2. --- INVIO IMPOSTAZIONI AL SERVICE WORKER ---
   useEffect(() => {
-    // Check se il SW è attivo e non siamo in blob
-    // MODIFICA: Rimosso reminderEnabled dall'IF principale per permettere l'invio di 'false'
     if (notificationStatus === 'granted' && navigator.serviceWorker.controller && window.location.protocol !== 'blob:') {
       navigator.serviceWorker.controller.postMessage({
         type: 'SET_REMINDER',
         time: reminderTime,
-        enabled: reminderEnabled // Qui verrà passato false se spento
+        enabled: reminderEnabled 
       });
     }
-  }, [reminderEnabled, notificationStatus]); // reminderTime è costante ora
+  }, [reminderEnabled, notificationStatus]); 
 
-  // --- CARICAMENTO LIBRERIE PDF ---
   useEffect(() => {
     const loadPdfScripts = () => {
       if (!document.getElementById('html2canvas-lib')) {
         const s1 = document.createElement('script');
-        s1.id = 'html2canvas-lib';
-        s1.src = "https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js";
-        s1.async = true;
+        s1.id = 'html2canvas-lib'; s1.src = "https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"; s1.async = true;
         document.body.appendChild(s1);
       }
       if (!document.getElementById('jspdf-lib')) {
         const s2 = document.createElement('script');
-        s2.id = 'jspdf-lib';
-        s2.src = "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js";
-        s2.async = true;
+        s2.id = 'jspdf-lib'; s2.src = "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"; s2.async = true;
         document.body.appendChild(s2);
       }
     };
     loadPdfScripts();
   }, []);
 
-  // --- INTRO TIMER ---
   useEffect(() => {
     const timer = setTimeout(() => setShowIntro(false), 3200); 
     return () => clearTimeout(timer);
   }, []);
 
-  // --- THEME SYNC ---
   useEffect(() => {
     const root = window.document.documentElement;
     if (theme === 'dark') root.classList.add('dark');
@@ -289,7 +343,6 @@ export default function App() {
     localStorage.setItem('theme', theme);
   }, [theme]);
 
-  // --- CLICK OUTSIDE HANDLERS ---
   useEffect(() => {
     function handleClickOutsideDropdown(event) {
       if (leaderDropdownRef.current && !leaderDropdownRef.current.contains(event.target)) setIsLeaderDropdownOpen(false);
@@ -300,7 +353,6 @@ export default function App() {
     return () => document.removeEventListener("mousedown", handleClickOutsideDropdown);
   }, []);
 
-  // --- USER DATA & PREFERENCES LOAD ---
   useEffect(() => {
     const initAuth = async () => {
       try { await setPersistence(auth, browserLocalPersistence); } catch (error) {}
@@ -309,12 +361,9 @@ export default function App() {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       if (!showRecoveryModal) {
          if (currentUser) {
-            // Check Sessione 36 Ore
             const lastSignIn = currentUser.metadata.lastSignInTime ? new Date(currentUser.metadata.lastSignInTime).getTime() : Date.now();
             const now = Date.now();
-            const thirtySixHours = 36 * 60 * 60 * 1000;
-            
-            if (now - lastSignIn > thirtySixHours) {
+            if (now - lastSignIn > 36 * 60 * 60 * 1000) {
                signOut(auth);
                alert("Sessione scaduta per inattività (36h). Effettua nuovamente il login.");
                setUser(null);
@@ -346,7 +395,6 @@ export default function App() {
     loadUserPrefs();
   }, [user]);
 
-  // --- FIREBASE SYNC LOGS ---
   useEffect(() => {
     if (!user) { setLogs([]); return; }
     const logsCollection = collection(db, 'artifacts', APP_ID, 'users', user.uid, 'work_logs');
@@ -359,7 +407,6 @@ export default function App() {
     return () => unsubscribe();
   }, [user]);
 
-  // --- AUTOMAZIONE RIPOSO WEEKEND ---
   useEffect(() => {
     if (!user || loading || logs.length === 0) return;
     const checkWeekendAutomation = async () => {
@@ -397,9 +444,7 @@ export default function App() {
     const cleanUsername = authData.username.trim().toLowerCase().replace(/\s/g, '');
     const internalEmail = `${cleanUsername}${INTERNAL_DOMAIN}`;
     try {
-      // Imposta persistenza in base alla checkbox "Ricordami"
       await setPersistence(auth, rememberMe ? browserLocalPersistence : browserSessionPersistence);
-
       if (authMode === 'login') {
         if (isLocked) { setAuthError("Account bloccato."); setIsSubmitting(false); return; }
         await signInWithEmailAndPassword(auth, internalEmail, authData.password);
@@ -536,11 +581,9 @@ export default function App() {
         alert("Il tuo browser non supporta le notifiche.");
         return;
     }
-    
     try {
       const permission = await Notification.requestPermission();
       setNotificationStatus(permission);
-      
       if (permission === 'granted') {
         setReminderEnabled(true);
         localStorage.setItem('reminder_enabled', 'true');
@@ -593,7 +636,7 @@ export default function App() {
 
   if (showIntro) return (
     <div className="h-screen w-full bg-slate-950 flex flex-col items-center justify-center p-8 animate-in fade-in duration-500 text-center">
-      <Clock size={80} className={`text-${accentColor}-600 animate-pulse`} />
+      <Clock size={80} className={`${T.text} animate-pulse`} />
       <h1 className="text-6xl font-black italic tracking-tighter text-white uppercase mt-10 leading-none">TIMEVAULT</h1>
       <p className="text-slate-500 font-bold uppercase tracking-[0.4em] text-[10px] mt-4 animate-bounce duration-1000">Enterprise Grade Security</p>
     </div>
@@ -607,7 +650,7 @@ export default function App() {
         <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-blue-600 via-violet-600 to-emerald-600 z-10"></div>
         <div className="bg-white dark:bg-slate-900 p-10 rounded-[2.5rem] w-full max-w-md shadow-2xl border border-slate-200 dark:border-slate-800 text-center relative animate-in zoom-in duration-300">
           <div className="mb-12 mt-6">
-             <div className={`inline-flex p-6 bg-${accentColor}-600 rounded-[2rem] text-white mb-6 shadow-xl shadow-${accentColor}-500/30 animate-in slide-in-from-top duration-500`}><Clock size={48} /></div>
+             <div className={`inline-flex p-6 ${T.bg} rounded-[2rem] text-white mb-6 shadow-xl ${T.shadow30} animate-in slide-in-from-top duration-500`}><Clock size={48} /></div>
              <h1 className="text-5xl font-black italic tracking-tighter text-slate-900 dark:text-white leading-none mb-2 uppercase tracking-tight">TIMEVAULT</h1>
              <p className="text-[10px] text-slate-400 font-black uppercase tracking-[0.3em] italic">Personal Workplace</p>
           </div>
@@ -643,12 +686,11 @@ export default function App() {
                 ) : (
                    <>
                    <div className="text-center mb-8">
-                     <div className={`inline-flex p-4 rounded-2xl text-white mb-4 bg-${accentColor}-600`}><LogIn size={28} /></div>
+                     <div className={`inline-flex p-4 rounded-2xl text-white mb-4 ${T.bg}`}><LogIn size={28} /></div>
                      <h2 className="text-2xl font-black italic uppercase text-slate-900 dark:text-white leading-none">{authMode === 'login' ? 'Bentornato' : 'Nuovo Utente'}</h2>
                    </div>
                    <form onSubmit={handleAuth} className="space-y-4">
                      <input type="text" placeholder="nome.cognome" required className="w-full p-4.5 bg-slate-100 dark:bg-slate-800 dark:text-white rounded-2xl font-bold outline-none focus:ring-2 focus:ring-blue-500/20 border border-slate-200 dark:border-slate-700 shadow-inner" value={authData.username} onChange={e => setAuthData({...authData, username: e.target.value})} />
-                     
                      <div className="relative">
                         <input 
                            type={showPassword ? "text" : "password"} 
@@ -663,10 +705,9 @@ export default function App() {
                         </button>
                      </div>
 
-                     {/* CHECKBOX RICORDAMI */}
                      {authMode === 'login' && (
                         <div className="flex items-center gap-3 px-2">
-                           <div onClick={() => setRememberMe(!rememberMe)} className={`w-5 h-5 rounded-lg border-2 flex items-center justify-center cursor-pointer transition-all ${rememberMe ? `bg-${accentColor}-600 border-${accentColor}-600` : 'border-slate-300 dark:border-slate-600'}`}>
+                           <div onClick={() => setRememberMe(!rememberMe)} className={`w-5 h-5 rounded-lg border-2 flex items-center justify-center cursor-pointer transition-all ${rememberMe ? `${T.bg} ${T.border}` : 'border-slate-300 dark:border-slate-600'}`}>
                               {rememberMe && <CheckSquare size={14} className="text-white" />}
                            </div>
                            <label onClick={() => setRememberMe(!rememberMe)} className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest cursor-pointer select-none">Ricordami nel Vault</label>
@@ -674,7 +715,7 @@ export default function App() {
                      )}
 
                      {authError && <div className="text-red-600 text-[11px] font-black italic animate-shake leading-none mt-2">{authError}</div>}
-                     <button type="submit" disabled={isSubmitting} className={`w-full text-white p-5 rounded-2xl font-black uppercase tracking-widest bg-${accentColor}-600 shadow-xl active:scale-95 transition-all shadow-${accentColor}-500/20`}>{isSubmitting ? '...' : 'Entra nel Vault'}</button>
+                     <button type="submit" disabled={isSubmitting} className={`w-full text-white p-5 rounded-2xl font-black uppercase tracking-widest ${T.bg} shadow-xl active:scale-95 transition-all ${T.shadow20}`}>{isSubmitting ? '...' : 'Entra nel Vault'}</button>
                    </form>
                    <div className="mt-6 text-center"><button onClick={() => setAuthMode(authMode === 'login' ? 'register' : 'login')} className="text-slate-400 font-bold text-[10px] uppercase italic tracking-[0.2em]">{authMode === 'login' ? "Registrati" : "Accedi"}</button></div>
                    </>
@@ -710,9 +751,9 @@ export default function App() {
           <div className="bg-slate-950 dark:bg-white p-2.5 rounded-2xl text-white dark:text-slate-900 shadow-lg"><Clock size={20} /></div>
           {isMenuOpen && (
             <div className="absolute top-full left-0 mt-2 w-64 bg-white dark:bg-slate-900 rounded-[2rem] shadow-2xl border border-slate-100 dark:border-slate-800 p-3 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
-               <button onClick={() => { setView('calendar'); setIsMenuOpen(false); }} className={`w-full flex items-center gap-3 p-4 rounded-2xl text-xs font-black uppercase tracking-widest transition-all ${view === 'calendar' ? `bg-${accentColor}-600 text-white` : 'hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-400'}`}><Home size={18} /> Diario</button>
-               <button onClick={() => { setView('report'); setIsMenuOpen(false); }} className={`w-full flex items-center gap-3 p-4 rounded-2xl text-xs font-black uppercase tracking-widest transition-all ${view === 'report' ? `bg-${accentColor}-600 text-white` : 'hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-400'}`}><FileText size={18} /> Resoconto</button>
-               <button onClick={() => { setView('settings'); setIsMenuOpen(false); }} className={`w-full flex items-center gap-3 p-4 rounded-2xl text-xs font-black uppercase tracking-widest transition-all ${view === 'settings' ? `bg-${accentColor}-600 text-white` : 'hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-400'}`}><Settings size={18} /> Impostazioni</button>
+               <button onClick={() => { setView('calendar'); setIsMenuOpen(false); }} className={`w-full flex items-center gap-3 p-4 rounded-2xl text-xs font-black uppercase tracking-widest transition-all ${view === 'calendar' ? `${T.bg} text-white` : 'hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-400'}`}><Home size={18} /> Diario</button>
+               <button onClick={() => { setView('report'); setIsMenuOpen(false); }} className={`w-full flex items-center gap-3 p-4 rounded-2xl text-xs font-black uppercase tracking-widest transition-all ${view === 'report' ? `${T.bg} text-white` : 'hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-400'}`}><FileText size={18} /> Resoconto</button>
+               <button onClick={() => { setView('settings'); setIsMenuOpen(false); }} className={`w-full flex items-center gap-3 p-4 rounded-2xl text-xs font-black uppercase tracking-widest transition-all ${view === 'settings' ? `${T.bg} text-white` : 'hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-400'}`}><Settings size={18} /> Impostazioni</button>
                <div className="mt-2 pt-2 border-t border-slate-100 dark:border-slate-800">
                   <button onClick={() => { setShowGuideModal(true); setIsMenuOpen(false); }} className="w-full flex items-center gap-3 p-4 rounded-2xl text-xs font-black uppercase tracking-widest text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/10 transition-all italic leading-none"><Smartphone size={18} /> Guida WebApp</button>
                </div>
@@ -724,7 +765,7 @@ export default function App() {
             <button onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)} className="flex items-center gap-3 focus:outline-none group">
               <div className="text-right hidden sm:block">
                 <p className="text-[9px] text-slate-400 font-black uppercase mb-0.5 leading-none tracking-widest">Vault User</p>
-                <p className={`text-sm font-black text-${accentColor}-600 uppercase italic leading-none transition-all group-hover:scale-105`}>{user?.displayName}</p>
+                <p className={`text-sm font-black ${T.text} uppercase italic leading-none transition-all group-hover:scale-105`}>{user?.displayName}</p>
               </div>
               <div className="w-11 h-11 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center border-2 border-slate-200 dark:border-slate-700 shadow-sm transition-all group-hover:border-blue-500"><User size={22} className="text-slate-500"/></div>
             </button>
@@ -741,7 +782,7 @@ export default function App() {
           <div className="space-y-10 animate-in fade-in zoom-in duration-300">
             <div className="grid grid-cols-2 gap-6">
               <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] shadow-sm border border-slate-200 dark:border-slate-800 hover:shadow-xl transition-all group overflow-hidden relative">
-                <div className={`absolute top-0 right-0 p-6 opacity-5 text-${accentColor}-600 group-hover:scale-125 transition-transform`}><CalendarIcon size={80}/></div>
+                <div className={`absolute top-0 right-0 p-6 opacity-5 ${T.text} group-hover:scale-125 transition-transform`}><CalendarIcon size={80}/></div>
                 <p className="text-[11px] text-slate-400 font-black uppercase tracking-[0.2em] mb-1 italic leading-none">Giornate Lavorate</p>
                 <p className="text-4xl font-black dark:text-white leading-none tracking-tighter">{monthlyStats.daysWorked}</p>
               </div>
@@ -776,7 +817,7 @@ export default function App() {
                   const isToday = formatDateAsLocal(new Date()) === dateStr;
                   
                   return (
-                    <button key={day} onClick={() => { setSelectedDate(new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day)); setView('day'); }} className={`aspect-square rounded-[1.5rem] md:rounded-[2rem] flex flex-col items-center justify-center relative transition-all group ${active ? `bg-${accentColor}-600 text-white shadow-xl shadow-${accentColor}-500/20 scale-100` : isToday ? 'bg-blue-50 dark:bg-blue-900/20 ring-2 ring-blue-500/30' : 'bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 hover:scale-105 active:scale-95 shadow-inner'}`}>
+                    <button key={day} onClick={() => { setSelectedDate(new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day)); setView('day'); }} className={`aspect-square rounded-[1.5rem] md:rounded-[2rem] flex flex-col items-center justify-center relative transition-all group ${active ? `${T.bg} text-white shadow-xl ${T.shadow20} scale-100` : isToday ? 'bg-blue-50 dark:bg-blue-900/20 ring-2 ring-blue-500/30' : 'bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 hover:scale-105 active:scale-95 shadow-inner'}`}>
                       <span className={`text-xl font-black tracking-tighter leading-none ${isToday && !active ? 'text-blue-600 dark:text-blue-400 underline underline-offset-4 decoration-2' : ''}`}>{day}</span>
                       {active && <div className="w-1.5 h-1.5 rounded-full mt-1.5 bg-white opacity-80 animate-pulse"></div>}
                     </button>
@@ -796,13 +837,13 @@ export default function App() {
             </div>
 
             <div className="bg-white dark:bg-slate-900 p-8 md:p-12 rounded-[3rem] shadow-2xl border border-slate-200 dark:border-slate-800 relative overflow-hidden">
-              <div className={`absolute top-0 left-0 h-full w-2 bg-${accentColor}-600`}></div>
+              <div className={`absolute top-0 left-0 h-full w-2 ${T.bg}`}></div>
               <h3 className="text-[11px] font-black mb-10 uppercase text-slate-400 tracking-[0.3em] italic leading-none border-l-4 border-blue-500 pl-4">Registrazione Attività</h3>
               
               <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-10">
                  {!isWeekend && (
                    <>
-                     <button type="button" onClick={() => setFormData(p => ({ ...p, standardHours: STANDARD_HOURS_VALUE, type: 'work' }))} className={`p-5 rounded-3xl font-black uppercase text-[9px] flex flex-col items-center gap-3 transition-all ${formData.type === 'work' && formData.standardHours === STANDARD_HOURS_VALUE ? `bg-${accentColor}-600 text-white shadow-xl scale-105 shadow-${accentColor}-500/20` : 'bg-slate-50 dark:bg-slate-800 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-100 dark:border-slate-800'}`}><Briefcase size={24} />Standard</button>
+                     <button type="button" onClick={() => setFormData(p => ({ ...p, standardHours: STANDARD_HOURS_VALUE, type: 'work' }))} className={`p-5 rounded-3xl font-black uppercase text-[9px] flex flex-col items-center gap-3 transition-all ${formData.type === 'work' && formData.standardHours === STANDARD_HOURS_VALUE ? `${T.bg} text-white shadow-xl scale-105 ${T.shadow20}` : 'bg-slate-50 dark:bg-slate-800 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-100 dark:border-slate-800'}`}><Briefcase size={24} />Standard</button>
                      <button type="button" onClick={() => setFormData({ standardHours: 0, overtimeHours: '', notes: 'Ferie', type: 'ferie' })} className={`p-5 rounded-3xl font-black uppercase text-[9px] flex flex-col items-center gap-3 transition-all ${formData.type === 'ferie' ? 'bg-emerald-500 text-white shadow-xl scale-105 shadow-emerald-500/20' : 'bg-slate-50 dark:bg-slate-800 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-100 dark:border-slate-800'}`}><Palmtree size={24} />Ferie</button>
                    </>
                  )}
@@ -832,7 +873,7 @@ export default function App() {
                               <div className="absolute top-full left-0 right-0 mt-3 bg-white dark:bg-slate-800 border dark:border-slate-700 rounded-[2rem] shadow-2xl z-[60] p-3 max-h-60 overflow-y-auto animate-in zoom-in-95">
                                   {availableLeaders.map(l => (
                                       <div key={l} onClick={() => toggleLeaderSelection(l)} className="flex items-center gap-4 p-4 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-700 cursor-pointer transition-all">
-                                          <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all ${selectedLeaders.includes(l) ? `bg-${accentColor}-600 text-white border-${accentColor}-600 shadow-lg shadow-${accentColor}-500/20` : 'border-slate-300 dark:border-slate-600'}`}>{selectedLeaders.includes(l) && <CheckSquare size={16} />}</div>
+                                          <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all ${selectedLeaders.includes(l) ? `${T.bg} text-white ${T.border} shadow-lg ${T.shadow20}` : 'border-slate-300 dark:border-slate-600'}`}>{selectedLeaders.includes(l) && <CheckSquare size={16} />}</div>
                                           <span className={`text-sm font-black uppercase tracking-tight ${selectedLeaders.includes(l) ? 'text-slate-900 dark:text-white' : 'text-slate-400'}`}>{l}</span>
                                       </div>
                                   ))}
@@ -847,21 +888,21 @@ export default function App() {
                   )}
                 </div>
                 {formError && <p className="text-red-600 text-[10px] font-black italic animate-bounce leading-none mt-4 uppercase tracking-widest">{formError}</p>}
-                <button type="submit" className={`w-full p-6 rounded-[1.5rem] font-black uppercase tracking-[0.4em] text-white shadow-2xl bg-${accentColor}-600 shadow-${accentColor}-500/40 transition-all hover:scale-[1.01] active:scale-95 flex items-center justify-center gap-4 text-xs italic leading-none`}><CheckCircle2 size={22} /> Archivia nel Vault</button>
+                <button type="submit" className={`w-full p-6 rounded-[1.5rem] font-black uppercase tracking-[0.4em] text-white shadow-2xl ${T.bg} ${T.shadow40} transition-all hover:scale-[1.01] active:scale-95 flex items-center justify-center gap-4 text-xs italic leading-none`}><CheckCircle2 size={22} /> Archivia nel Vault</button>
               </form>
             </div>
 
             <div className="space-y-6">
                {logs.filter(l => l.date === formatDateAsLocal(selectedDate)).map(log => (
                  <div key={log.id} className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between shadow-lg animate-in slide-in-from-right relative group overflow-hidden">
-                    <div className={`absolute left-0 top-0 h-full w-2 bg-${accentColor}-600`}></div>
+                    <div className={`absolute left-0 top-0 h-full w-2 ${T.bg}`}></div>
                     <div className="space-y-4">
                        <div className="flex flex-wrap items-center gap-3">
                           <span className={`text-[10px] font-black uppercase bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-xl italic tracking-[0.2em] text-slate-500 leading-none`}>{log.type.replace('_', ' ')}</span>
                           <span className="text-3xl font-black dark:text-white leading-none tracking-tighter">{log.standardHours > 0 ? log.standardHours + 'h' : ''}</span>
                           {log.overtimeHours > 0 && <span className="text-sm font-black text-orange-600 bg-orange-50 dark:bg-orange-900/20 px-3 py-1.5 rounded-xl leading-none">+{log.overtimeHours}h Extra</span>}
                        </div>
-                       {log.teamLeader && <p className={`text-[10px] font-black text-${accentColor}-500 uppercase tracking-[0.2em] flex items-center gap-2 italic leading-none`}><Users size={14}/> {log.teamLeader}</p>}
+                       {log.teamLeader && <p className={`text-[10px] font-black ${T.text500} uppercase tracking-[0.2em] flex items-center gap-2 italic leading-none`}><Users size={14}/> {log.teamLeader}</p>}
                        {log.notes && <p className="text-sm text-slate-500 dark:text-slate-400 font-medium italic border-l-2 border-slate-100 dark:border-slate-800 pl-4 py-1 leading-relaxed">{log.notes}</p>}
                     </div>
                     <div className="flex justify-end mt-6 sm:mt-0">
@@ -885,7 +926,7 @@ export default function App() {
              </div>
              
              <div className="bg-white dark:bg-slate-900 p-8 md:p-12 rounded-[3.5rem] shadow-2xl border border-slate-200 dark:border-slate-800 text-center relative overflow-hidden">
-                 <div className={`absolute top-0 left-0 w-2 h-full bg-${accentColor}-600`}></div>
+                 <div className={`absolute top-0 left-0 w-2 h-full ${T.bg}`}></div>
                  <div className="grid grid-cols-2 gap-12 mb-14">
                     <div className="animate-in slide-in-from-left duration-500">
                        <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.4em] mb-3 italic leading-none">Presenze</p>
@@ -904,10 +945,10 @@ export default function App() {
 
                  <div className="space-y-5 max-h-[600px] overflow-y-auto pr-3 custom-scrollbar text-left p-2">
                     {filteredMonthLogs.map(log => (
-                         <div key={log.id} className={`bg-slate-50/50 dark:bg-slate-800/20 rounded-[2rem] border-2 transition-all cursor-pointer hover:bg-white dark:hover:bg-slate-800 shadow-sm ${expandedLogId === log.id ? `ring-4 ring-${accentColor}-500/10 border-blue-500/30 scale-[1.02] bg-white dark:bg-slate-800` : 'border-transparent'}`} onClick={() => setExpandedLogId(expandedLogId === log.id ? null : log.id)}>
+                         <div key={log.id} className={`bg-slate-50/50 dark:bg-slate-800/20 rounded-[2rem] border-2 transition-all cursor-pointer hover:bg-white dark:hover:bg-slate-800 shadow-sm ${expandedLogId === log.id ? `ring-4 ${T.ring10} ${T.border500}/30 scale-[1.02] bg-white dark:bg-slate-800` : 'border-transparent'}`} onClick={() => setExpandedLogId(expandedLogId === log.id ? null : log.id)}>
                             <div className="p-6 md:p-8 flex items-center justify-between">
                                 <div className="flex items-center gap-6">
-                                   <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-lg font-black bg-white dark:bg-slate-700 border-2 shadow-sm ${expandedLogId === log.id ? `border-${accentColor}-500 text-${accentColor}-500 rotate-12 scale-110` : 'border-slate-100 dark:border-slate-600'}`}>{new Date(log.date).getDate()}</div>
+                                   <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-lg font-black bg-white dark:bg-slate-700 border-2 shadow-sm ${expandedLogId === log.id ? `${T.border500} ${T.text500} rotate-12 scale-110` : 'border-slate-100 dark:border-slate-600'}`}>{new Date(log.date).getDate()}</div>
                                    <div>
                                       <p className={`text-[10px] font-black uppercase text-slate-400 mb-1 tracking-[0.3em] italic leading-none`}>{log.type.replace('_', ' ')}</p>
                                       <h3 className="text-xs font-black uppercase tracking-widest text-slate-800 dark:text-slate-200 leading-none">Giorno {new Date(log.date).getDate()}</h3>
@@ -922,7 +963,7 @@ export default function App() {
                                 <div className="px-8 pb-10 pt-4 border-t border-slate-100 dark:border-slate-700/50 animate-in slide-in-from-top-4 duration-500">
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
                                        <div className="space-y-3">
-                                          <p className={`text-[10px] font-black text-${accentColor}-500 uppercase tracking-[0.2em] italic flex items-center gap-2 leading-none`}><Users size={16}/> Responsabile</p>
+                                          <p className={`text-[10px] font-black ${T.text500} uppercase tracking-[0.2em] italic flex items-center gap-2 leading-none`}><Users size={16}/> Responsabile</p>
                                           <p className="text-sm font-black pl-6 italic dark:text-slate-300 tracking-tight leading-none">{log.teamLeader || "N/A"}</p>
                                        </div>
                                        <div className="space-y-3">
@@ -936,7 +977,7 @@ export default function App() {
                     ))}
                  </div>
 
-                 <button onClick={handleDownloadRequest} className={`mt-12 w-full p-6 text-white rounded-[1.5rem] font-black uppercase text-[11px] tracking-[0.5em] flex items-center justify-center gap-4 bg-slate-900 dark:bg-${accentColor}-600 transition-all hover:scale-[1.01] active:scale-95 shadow-2xl shadow-blue-500/30 leading-none italic group`}><Download size={22} className="group-hover:translate-y-1 transition-transform" /> Genera Vault Report PDF</button>
+                 <button onClick={handleDownloadRequest} className={`mt-12 w-full p-6 text-white rounded-[1.5rem] font-black uppercase text-[11px] tracking-[0.5em] flex items-center justify-center gap-4 bg-slate-900 dark:${T.bg} transition-all hover:scale-[1.01] active:scale-95 shadow-2xl shadow-blue-500/30 leading-none italic group`}><Download size={22} className="group-hover:translate-y-1 transition-transform" /> Genera Vault Report PDF</button>
              </div>
           </div>
         )}
@@ -964,7 +1005,7 @@ export default function App() {
 
                <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-12 gap-8 relative z-10">
                   <div className="flex items-center gap-6">
-                    <div className={`p-5 rounded-[1.5rem] transition-all shadow-xl ${reminderEnabled ? `bg-${accentColor}-600 text-white shadow-${accentColor}-500/30 scale-110` : 'bg-slate-200 text-slate-400 dark:bg-slate-800 border opacity-50'}`}>
+                    <div className={`p-5 rounded-[1.5rem] transition-all shadow-xl ${reminderEnabled ? `${T.bg} text-white ${T.shadow30} scale-110` : 'bg-slate-200 text-slate-400 dark:bg-slate-800 border opacity-50'}`}>
                       {reminderEnabled ? <Bell size={28} className="animate-ring"/> : <BellOff size={28}/>}
                     </div>
                     <div className="space-y-2">
@@ -977,7 +1018,7 @@ export default function App() {
                        {notificationStatus !== 'granted' ? (
                          <button onClick={requestNotificationPermission} className="text-[10px] font-black uppercase bg-blue-600 text-white px-8 py-4 rounded-2xl shadow-2xl shadow-blue-500/30 active:scale-95 transition-all tracking-[0.2em] italic leading-none">Abilita Notifiche Native</button>
                        ) : (
-                         <button onClick={() => { setReminderEnabled(!reminderEnabled); localStorage.setItem('reminder_enabled', !reminderEnabled); }} className={`w-16 h-9 rounded-full transition-all relative border-2 ${reminderEnabled ? `bg-${accentColor}-600 border-${accentColor}-600 shadow-lg` : 'bg-slate-300 dark:bg-slate-700 border-slate-200 dark:border-slate-600'}`}>
+                         <button onClick={() => { setReminderEnabled(!reminderEnabled); localStorage.setItem('reminder_enabled', !reminderEnabled); }} className={`w-16 h-9 rounded-full transition-all relative border-2 ${reminderEnabled ? `${T.bg} ${T.border} shadow-lg` : 'bg-slate-300 dark:bg-slate-700 border-slate-200 dark:border-slate-600'}`}>
                            <div className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all shadow-md ${reminderEnabled ? 'right-1' : 'left-1'}`}></div>
                          </button>
                        )}
@@ -1081,12 +1122,12 @@ export default function App() {
     {showDownloadConfirm && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[100] flex items-center justify-center p-4 animate-in fade-in duration-200">
           <div className="bg-white dark:bg-slate-900 p-12 rounded-[4rem] shadow-2xl max-w-sm w-full text-center border-4 border-slate-50 dark:border-slate-800 animate-in zoom-in-95">
-            <div className={`w-24 h-24 bg-${accentColor}-100 dark:bg-${accentColor}-900/30 rounded-[2.5rem] flex items-center justify-center mx-auto mb-8 text-${accentColor}-600 shadow-xl transition-transform hover:rotate-12`}><Download size={40} className="animate-bounce" /></div>
+            <div className={`w-24 h-24 ${T.bg100} dark:${T.bg90030} rounded-[2.5rem] flex items-center justify-center mx-auto mb-8 ${T.text} shadow-xl transition-transform hover:rotate-12`}><Download size={40} className="animate-bounce" /></div>
             <h3 className="text-xl font-black mb-4 uppercase italic tracking-tighter text-slate-900 dark:text-white leading-none">Generare Report?</h3>
             <p className="text-xs text-slate-500 dark:text-slate-400 mb-12 font-medium italic leading-relaxed uppercase tracking-widest leading-none">Il Vault elaborerà un PDF professionale ottimizzato per la visualizzazione mobile.</p>
             <div className="grid grid-cols-2 gap-5">
               <button onClick={() => setShowDownloadConfirm(false)} className="p-6 bg-slate-100 dark:bg-slate-800 rounded-3xl font-black text-[10px] uppercase text-slate-400 tracking-widest transition-all active:scale-95 leading-none">Annulla</button>
-              <button onClick={confirmDownload} disabled={isGeneratingPDF} className={`p-6 text-white rounded-3xl font-black text-[10px] uppercase shadow-2xl bg-${accentColor}-600 flex items-center justify-center gap-3 active:scale-95 transition-all tracking-[0.2em] leading-none italic`}>
+              <button onClick={confirmDownload} disabled={isGeneratingPDF} className={`p-6 text-white rounded-3xl font-black text-[10px] uppercase shadow-2xl ${T.bg} flex items-center justify-center gap-3 active:scale-95 transition-all tracking-[0.2em] leading-none italic`}>
                  {isGeneratingPDF ? <><Loader2 className="animate-spin" size={18} /> ...</> : 'Conferma'}
               </button>
             </div>
@@ -1152,7 +1193,7 @@ export default function App() {
                  </ol>
               </div>
             </div>
-            <button onClick={() => setShowGuideModal(false)} className={`w-full mt-12 bg-slate-950 dark:bg-${accentColor}-600 text-white p-7 rounded-[2.5rem] font-black uppercase tracking-[0.5em] shadow-2xl hover:scale-105 active:scale-95 transition-all text-xs italic leading-none`}>Confermo Procedura</button>
+            <button onClick={() => setShowGuideModal(false)} className={`w-full mt-12 bg-slate-950 dark:${T.bg} text-white p-7 rounded-[2.5rem] font-black uppercase tracking-[0.5em] shadow-2xl hover:scale-105 active:scale-95 transition-all text-xs italic leading-none`}>Confermo Procedura</button>
           </div>
         </div>
     )}
