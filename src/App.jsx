@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { initializeApp } from 'firebase/app';
+import { getAnalytics } from "firebase/analytics";
 import { 
   getAuth, 
   signInWithEmailAndPassword, 
@@ -57,11 +58,13 @@ const firebaseConfig = {
   projectId: "work-time-vault",
   storageBucket: "work-time-vault.firebasestorage.app",
   messagingSenderId: "957496336579",
-  appId: "1:957496336579:web:f82df8f2d580b92ec58276"
+  appId: "1:957496336579:web:f82df8f2d580b92ec58276",
+  measurementId: "G-9PN8MRS05Q"
 };
 
 const APP_ID = "time-vault-pro";
 const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
 const auth = getAuth(app);
 const db = getFirestore(app);
 const INTERNAL_DOMAIN = "@time.vault";
