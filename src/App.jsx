@@ -13,8 +13,7 @@ import {
   browserSessionPersistence, 
   EmailAuthProvider,
   reauthenticateWithCredential,
-  deleteUser,
-  signInAnonymously
+  deleteUser
 } from 'firebase/auth';
 import { 
   getMessaging, 
@@ -61,23 +60,18 @@ const SUPER_ADMINS = [
   'danilo.cicalo@time.vault', // Sostituisci con il tuo username reale
 ];
 
-// --- CONFIGURAZIONE FIREBASE DINAMICA ---
-// Usa la configurazione dell'ambiente se disponibile per garantire i permessi corretti
-const firebaseConfig = typeof __firebase_config !== 'undefined' 
-  ? JSON.parse(__firebase_config) 
-  : {
-      apiKey: "AIzaSyDdxN05Yj1CtPOY69x3JJjuFuhEUelXWsc",
-      authDomain: "work-time-vault.firebaseapp.com",
-      projectId: "work-time-vault",
-      storageBucket: "work-time-vault.firebasestorage.app",
-      messagingSenderId: "957496336579",
-      appId: "1:957496336579:web:f82df8f2d580b92ec58276",
-      measurementId: "G-9PN8MRS05Q"
-    };
+// --- CONFIGURAZIONE FIREBASE ---
+const firebaseConfig = {
+  apiKey: "AIzaSyDdxN05Yj1CtPOY69x3JJjuFuhEUelXWsc",
+  authDomain: "work-time-vault.firebaseapp.com",
+  projectId: "work-time-vault",
+  storageBucket: "work-time-vault.firebasestorage.app",
+  messagingSenderId: "957496336579",
+  appId: "1:957496336579:web:f82df8f2d580b92ec58276",
+  measurementId: "G-9PN8MRS05Q"
+};
 
-// Usa l'ID App dinamico dell'ambiente per rispettare le regole di sicurezza Firestore
-const APP_ID = typeof __app_id !== 'undefined' ? __app_id : "time-vault-pro";
-
+const APP_ID = "time-vault-pro";
 const app = initializeApp(firebaseConfig);
 const analytics = getAnalytics(app);
 const auth = getAuth(app);
