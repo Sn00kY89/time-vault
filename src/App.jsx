@@ -271,6 +271,7 @@ export default function App() {
   const [roadmapIdeas, setRoadmapIdeas] = useState([]);
   const [newIdea, setNewIdea] = useState({ title: '', description: '' });
   const [showNewIdeaForm, setShowNewIdeaForm] = useState(false);
+  const [isPublishing, setIsPublishing] = useState(false); // NUOVO STATO
 
   // Costante per lo stile corrente (Helper per pulire il codice)
   const T = THEME_CLASSES[accentColor] || THEME_CLASSES['blue'];
@@ -734,18 +735,28 @@ export default function App() {
   const handleAddIdea = async (e) => {
     e.preventDefault();
     if (!newIdea.title.trim()) return;
+    if (!user) { alert("Sessione scaduta o utente non valido."); return; }
+
+    setIsPublishing(true);
     try {
       await addDoc(collection(db, 'artifacts', APP_ID, 'public', 'data', 'roadmap_ideas'), {
-        ...newIdea,
+        title: newIdea.title.trim(),
+        description: newIdea.description.trim(),
         status: 'pending', // pending, dev, released
         votes: [], // Array di user IDs
-        author: user.displayName,
+        author: user.displayName || user.email || 'Utente Vault', // Fallback di sicurezza
         authorId: user.uid,
         createdAt: serverTimestamp()
       });
       setNewIdea({ title: '', description: '' });
       setShowNewIdeaForm(false);
-    } catch (e) { console.error("Err idea", e); alert("Errore invio idea"); }
+      // Feedback opzionale: alert("Idea inviata con successo!");
+    } catch (e) { 
+      console.error("Err idea", e); 
+      alert(`Errore invio idea: ${e.message}`); // Messaggio dettagliato
+    } finally {
+      setIsPublishing(false);
+    }
   };
 
   const handleVote = async (idea) => {
@@ -1189,7 +1200,14 @@ export default function App() {
                        value={newIdea.description}
                        onChange={e => setNewIdea({...newIdea, description: e.target.value})}
                     />
-                    <button onClick={handleAddIdea} className={`w-full p-5 ${T.bg} text-white rounded-2xl font-black uppercase tracking-widest text-xs shadow-lg active:scale-95 transition-transform`}>Pubblica Proposta</button>
+                    <button 
+                      onClick={handleAddIdea} 
+                      disabled={isPublishing}
+                      className={`w-full p-5 ${T.bg} text-white rounded-2xl font-black uppercase tracking-widest text-xs shadow-lg active:scale-95 transition-transform flex items-center justify-center gap-2`}
+                    >
+                      {isPublishing ? <Loader2 className="animate-spin" size={16} /> : null}
+                      {isPublishing ? "Pubblicazione in corso..." : "Pubblica Proposta"}
+                    </button>
                  </div>
               )}
 
