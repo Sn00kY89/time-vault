@@ -36,7 +36,7 @@ import {
 import { 
   Clock, Plus, Trash2, Calendar as CalendarIcon, LogOut, TrendingUp, 
   Briefcase, Sun, Moon, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, ArrowLeft, CheckCircle2,
-  Menu, Home, FileText, Settings, X, Zap, Palmtree, Thermometer, AlertTriangle, Download, Eye, EyeOff, ShieldAlert, Lock, LogIn, UserPlus, Key, Copy, AlertOctagon, ShieldCheck, Unlock, RefreshCw, Users, CheckSquare, Square, User, Palette, Smartphone, Share, Search, ShieldX, Coffee, Loader2, Bell, BellOff, HelpCircle, Info, Send, Terminal, UserMinus, Lightbulb, ThumbsUp
+  Menu, Home, FileText, Settings, X, Zap, Palmtree, Thermometer, AlertTriangle, Download, Eye, EyeOff, ShieldAlert, Lock, LogIn, UserPlus, Key, Copy, AlertOctagon, ShieldCheck, Unlock, RefreshCw, Users, CheckSquare, Square, User, Palette, Smartphone, Share, Search, ShieldX, Coffee, Loader2, Bell, BellOff, HelpCircle, Info, Send, Terminal, UserMinus
 } from 'lucide-react';
 
 // -----------------------------------------------------------------------------
@@ -266,11 +266,6 @@ export default function App() {
   const [isSyncingPush, setIsSyncingPush] = useState(false);
   const [fcmTokenDisplay, setFcmTokenDisplay] = useState(''); 
   const [showTokenDebug, setShowTokenDebug] = useState(false); 
-  
-  // --- STATI ROADMAP ---
-  const [roadmapIdeas, setRoadmapIdeas] = useState([]);
-  const [newIdea, setNewIdea] = useState({ title: '', description: '' });
-  const [showNewIdeaForm, setShowNewIdeaForm] = useState(false);
 
   // Costante per lo stile corrente (Helper per pulire il codice)
   const T = THEME_CLASSES[accentColor] || THEME_CLASSES['blue'];
@@ -314,18 +309,6 @@ export default function App() {
 
     return () => unsubscribe();
   }, [user]); // Dipendenza user aggiunta
-
-  // 2.b --- FETCH ROADMAP IDEAS ---
-  useEffect(() => {
-    if (!user) return;
-    const roadmapCollection = collection(db, 'artifacts', APP_ID, 'public', 'data', 'roadmap_ideas');
-    const unsubscribe = onSnapshot(roadmapCollection, (snapshot) => {
-       const ideas = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-       // Sort in memory per evitare index Firestore (Rule 2)
-       setRoadmapIdeas(ideas.sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0)));
-    }, (error) => console.error("Roadmap fetch error:", error));
-    return () => unsubscribe();
-  }, [user]);
 
   // Funzione per sincronizzare il token FCM
   const setupFCM = async () => {
@@ -730,50 +713,6 @@ export default function App() {
     }
   };
 
-  // --- HANDLERS ROADMAP IDEAS ---
-  const handleAddIdea = async (e) => {
-    e.preventDefault();
-    if (!newIdea.title.trim()) return;
-    try {
-      await addDoc(collection(db, 'artifacts', APP_ID, 'public', 'data', 'roadmap_ideas'), {
-        ...newIdea,
-        status: 'pending', // pending, dev, released
-        votes: [], // Array di user IDs
-        author: user.displayName,
-        authorId: user.uid,
-        createdAt: serverTimestamp()
-      });
-      setNewIdea({ title: '', description: '' });
-      setShowNewIdeaForm(false);
-    } catch (e) { console.error("Err idea", e); alert("Errore invio idea"); }
-  };
-
-  const handleVote = async (idea) => {
-    if (!user) return;
-    const isVoted = idea.votes?.includes(user.uid);
-    const newVotes = isVoted 
-       ? idea.votes.filter(id => id !== user.uid)
-       : [...(idea.votes || []), user.uid];
-    
-    try {
-       await setDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'roadmap_ideas', idea.id), { votes: newVotes }, { merge: true });
-    } catch(e) { console.error("Vote err", e); }
-  };
-
-  // Funzioni Superuser per Roadmap
-  const updateIdeaStatus = async (id, status) => {
-     try {
-       await setDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'roadmap_ideas', id), { status }, { merge: true });
-     } catch(e) { console.error("Status err", e); }
-  };
-
-  const deleteIdea = async (id) => {
-     if(!window.confirm("Eliminare questa idea definitivamente?")) return;
-     try {
-       await deleteDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'roadmap_ideas', id));
-     } catch(e) { console.error("Delete err", e); }
-  };
-
   // --- MEMO STATS ---
   const currentMonthLogs = useMemo(() => {
     const targetMonth = currentMonth.getMonth(); 
@@ -929,8 +868,6 @@ export default function App() {
             <div className="absolute top-full left-0 mt-2 w-64 bg-white dark:bg-slate-900 rounded-[2rem] shadow-2xl border border-slate-100 dark:border-slate-800 p-3 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
                <button onClick={() => { setView('calendar'); setIsMenuOpen(false); }} className={`w-full flex items-center gap-3 p-4 rounded-2xl text-xs font-black uppercase tracking-widest transition-all ${view === 'calendar' ? `${T.bg} text-white` : 'hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-400'}`}><Home size={18} /> Diario</button>
                <button onClick={() => { setView('report'); setIsMenuOpen(false); }} className={`w-full flex items-center gap-3 p-4 rounded-2xl text-xs font-black uppercase tracking-widest transition-all ${view === 'report' ? `${T.bg} text-white` : 'hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-400'}`}><FileText size={18} /> Resoconto</button>
-               {/* ROADMAP MENU ITEM */}
-               <button onClick={() => { setView('roadmap'); setIsMenuOpen(false); }} className={`w-full flex items-center gap-3 p-4 rounded-2xl text-xs font-black uppercase tracking-widest transition-all ${view === 'roadmap' ? `${T.bg} text-white` : 'hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-400'}`}><Lightbulb size={18} /> Roadmap Idee</button>
                <button onClick={() => { setView('settings'); setIsMenuOpen(false); }} className={`w-full flex items-center gap-3 p-4 rounded-2xl text-xs font-black uppercase tracking-widest transition-all ${view === 'settings' ? `${T.bg} text-white` : 'hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-400'}`}><Settings size={18} /> Impostazioni</button>
                {/* SUPERUSER MENU ITEM (VISIBILE SOLO SE EMAIL NELLA LISTA) */}
                {isSuperUser && (
@@ -1161,88 +1098,6 @@ export default function App() {
 
                  <button onClick={handleDownloadRequest} className={`mt-12 w-full p-6 text-white rounded-[1.5rem] font-black uppercase text-[11px] tracking-[0.5em] flex items-center justify-center gap-4 bg-slate-900 dark:${T.bg} transition-all hover:scale-[1.01] active:scale-95 shadow-2xl shadow-blue-500/30 leading-none italic group`}><Download size={22} className="group-hover:translate-y-1 transition-transform" /> Genera Vault Report PDF</button>
              </div>
-          </div>
-        )}
-
-        {/* --- ROADMAP VIEW --- */}
-        {view === 'roadmap' && (
-          <div className="space-y-10 animate-in zoom-in duration-300 pb-20">
-              <div className="flex justify-between items-center">
-                <h2 className="text-3xl font-black italic uppercase text-slate-900 dark:text-white tracking-tighter leading-none uppercase tracking-[0.3em]">Roadmap Idee</h2>
-                <button onClick={() => setShowNewIdeaForm(!showNewIdeaForm)} className={`p-4 ${T.bg} text-white rounded-2xl shadow-xl active:scale-95 transition-all`}>
-                   {showNewIdeaForm ? <X size={20}/> : <Plus size={20}/>}
-                </button>
-              </div>
-
-              {showNewIdeaForm && (
-                 <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] shadow-xl border border-slate-200 dark:border-slate-800 animate-in slide-in-from-top">
-                    <h3 className="text-xs font-black uppercase tracking-[0.2em] mb-6 text-slate-500">Nuova Proposta</h3>
-                    <input 
-                      className="w-full p-5 mb-4 bg-slate-50 dark:bg-slate-800 rounded-2xl font-bold text-sm outline-none border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-blue-500/20 dark:text-white placeholder:italic"
-                      placeholder="Titolo (es. Tema Verde Scuro)"
-                      value={newIdea.title}
-                      onChange={e => setNewIdea({...newIdea, title: e.target.value})}
-                    />
-                    <textarea 
-                       className="w-full p-5 mb-4 bg-slate-50 dark:bg-slate-800 rounded-2xl font-medium text-sm outline-none border border-slate-200 dark:border-slate-700 min-h-[120px] focus:ring-2 focus:ring-blue-500/20 dark:text-white placeholder:italic"
-                       placeholder="Descrivi la funzionalità..."
-                       value={newIdea.description}
-                       onChange={e => setNewIdea({...newIdea, description: e.target.value})}
-                    />
-                    <button onClick={handleAddIdea} className={`w-full p-5 ${T.bg} text-white rounded-2xl font-black uppercase tracking-widest text-xs shadow-lg active:scale-95 transition-transform`}>Pubblica Proposta</button>
-                 </div>
-              )}
-
-              <div className="grid gap-6">
-                 {roadmapIdeas.map(idea => (
-                    <div key={idea.id} className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden group hover:shadow-xl transition-all">
-                       {/* Status Badge */}
-                       <div className={`absolute top-0 right-0 px-6 py-3 rounded-bl-3xl font-black text-[9px] uppercase tracking-[0.2em] italic ${
-                          idea.status === 'released' ? 'bg-emerald-500 text-white' : 
-                          idea.status === 'dev' ? 'bg-blue-500 text-white' : 
-                          'bg-amber-400 text-white'
-                       }`}>
-                          {idea.status === 'released' ? 'Rilasciato' : idea.status === 'dev' ? 'In Sviluppo' : 'In Valutazione'}
-                       </div>
-                       
-                       <h3 className="text-xl font-black italic text-slate-900 dark:text-white mb-2 pr-24 uppercase tracking-tighter">{idea.title}</h3>
-                       <p className="text-sm text-slate-500 dark:text-slate-400 font-medium mb-8 leading-relaxed italic">{idea.description}</p>
-                       
-                       <div className="flex items-center justify-between border-t border-slate-100 dark:border-slate-800 pt-6">
-                          <div className="flex items-center gap-2 text-[10px] font-black uppercase text-slate-400 tracking-widest italic">
-                             <User size={14}/> {idea.author}
-                          </div>
-                          <button 
-                            onClick={() => handleVote(idea)}
-                            className={`flex items-center gap-2 px-5 py-2.5 rounded-2xl font-black text-xs transition-all uppercase tracking-wider ${
-                                idea.votes?.includes(user.uid) 
-                                ? `${T.bg} text-white shadow-lg scale-105` 
-                                : 'bg-slate-100 dark:bg-slate-800 text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700'
-                            }`}
-                          >
-                             <ThumbsUp size={16} className={idea.votes?.includes(user.uid) ? 'fill-current' : ''}/>
-                             {idea.votes?.length || 0}
-                          </button>
-                       </div>
-
-                       {isSuperUser && (
-                          <div className="mt-6 pt-6 border-t border-slate-100 dark:border-slate-800 flex flex-wrap gap-2 animate-in fade-in">
-                             <span className="w-full text-[9px] font-black uppercase text-slate-300 mb-2 tracking-widest">Admin Control</span>
-                             <button onClick={() => updateIdeaStatus(idea.id, 'pending')} className="px-4 py-2 bg-amber-50 dark:bg-amber-900/20 text-amber-600 rounded-xl text-[10px] font-black uppercase whitespace-nowrap hover:bg-amber-100 transition-colors">Valutazione</button>
-                             <button onClick={() => updateIdeaStatus(idea.id, 'dev')} className="px-4 py-2 bg-blue-50 dark:bg-blue-900/20 text-blue-600 rounded-xl text-[10px] font-black uppercase whitespace-nowrap hover:bg-blue-100 transition-colors">Sviluppo</button>
-                             <button onClick={() => updateIdeaStatus(idea.id, 'released')} className="px-4 py-2 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 rounded-xl text-[10px] font-black uppercase whitespace-nowrap hover:bg-emerald-100 transition-colors">Rilasciato</button>
-                             <button onClick={() => deleteIdea(idea.id)} className="px-4 py-2 bg-red-50 dark:bg-red-900/20 text-red-600 rounded-xl text-[10px] font-black uppercase whitespace-nowrap ml-auto hover:bg-red-100 transition-colors"><Trash2 size={14}/></button>
-                          </div>
-                       )}
-                    </div>
-                 ))}
-                 {roadmapIdeas.length === 0 && (
-                    <div className="text-center py-20 opacity-50">
-                        <Lightbulb size={48} className="mx-auto mb-4 text-slate-300"/>
-                        <p className="text-xs font-black uppercase tracking-widest text-slate-400">Nessuna idea presente. Sii il primo!</p>
-                    </div>
-                 )}
-              </div>
           </div>
         )}
 
