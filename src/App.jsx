@@ -613,23 +613,44 @@ export default function App() {
 
   const confirmDownload = async () => {
     if (!window.html2canvas || !window.jspdf) { alert("Attendi caricamento..."); return; }
+    
+    // 1. Imposta lo stato di caricamento e forza un re-render visivo immediato
     setIsGeneratingPDF(true);
-    const reportElement = document.getElementById('report-print-area');
-    reportElement.style.display = 'block';
-    try {
-      const canvas = await html2canvas(reportElement, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
-      const imgData = canvas.toDataURL('image/png');
-      const { jsPDF } = window.jspdf;
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-      pdf.save(`Vault_Report_${monthName.replace(' ', '_')}.pdf`);
-      setShowDownloadConfirm(false);
-    } catch (err) { alert("Errore PDF."); } finally {
-      reportElement.style.display = 'none';
-      setIsGeneratingPDF(false);
-    }
+
+    // 2. Utilizza setTimeout per spostare l'operazione pesante alla fine della call stack,
+    // permettendo alla UI di aggiornarsi (mostrare lo spinner) prima che il thread si blocchi.
+    setTimeout(async () => {
+      const reportElement = document.getElementById('report-print-area');
+      // Necessario renderizzarlo per html2canvas, ma fuori viewport o z-index basso
+      reportElement.style.display = 'block'; 
+      
+      try {
+        // html2canvas è async, ma pesante
+        const canvas = await window.html2canvas(reportElement, { 
+            scale: 2, 
+            useCORS: true, 
+            backgroundColor: '#ffffff',
+            logging: false // Disabilita log per performance
+        });
+        
+        const imgData = canvas.toDataURL('image/png');
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+        
+        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+        pdf.save(`Vault_Report_${monthName.replace(' ', '_')}.pdf`);
+        
+        setShowDownloadConfirm(false);
+      } catch (err) { 
+        console.error(err);
+        alert("Errore durante la generazione del PDF."); 
+      } finally {
+        reportElement.style.display = 'none';
+        setIsGeneratingPDF(false);
+      }
+    }, 100); // 100ms di delay per garantire il render della UI
   };
 
   const requestNotificationPermission = async () => {
