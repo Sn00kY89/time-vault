@@ -36,13 +36,14 @@ import {
 import { 
   Clock, Plus, Trash2, Calendar as CalendarIcon, LogOut, TrendingUp, 
   Briefcase, Sun, Moon, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, ArrowLeft, CheckCircle2,
-  Menu, Home, FileText, Settings, X, Zap, Palmtree, Thermometer, AlertTriangle, Download, Eye, EyeOff, ShieldAlert, Lock, LogIn, UserPlus, Key, Copy, AlertOctagon, ShieldCheck, Unlock, RefreshCw, Users, CheckSquare, Square, User, Palette, Smartphone, Share, Search, ShieldX, Coffee, Loader2, Bell, BellOff, HelpCircle, Info, Send, Terminal
+  Menu, Home, FileText, Settings, X, Zap, Palmtree, Thermometer, AlertTriangle, Download, Eye, EyeOff, ShieldAlert, Lock, LogIn, UserPlus, Key, Copy, AlertOctagon, ShieldCheck, Unlock, RefreshCw, Users, CheckSquare, Square, User, Palette, Smartphone, Share, Search, ShieldX, Coffee, Loader2, Bell, BellOff, HelpCircle, Info, Send, Terminal, UserMinus
 } from 'lucide-react';
 
 // -----------------------------------------------------------------------------
-// CONFIGURAZIONE CAPISQUADRA (HARDCODED PER STABILITÀ)
+// CONFIGURAZIONE CAPISQUADRA (DEFAULT / FALLBACK)
+// Utilizzata se non esiste ancora una configurazione nel DB
 // -----------------------------------------------------------------------------
-const ACTIVE_TEAM_LEADERS = [
+const DEFAULT_TEAM_LEADERS = [
   'Sandro Sammartino',
   'Rocco Canepa',
   'Efisio Lorrai',
@@ -53,9 +54,7 @@ const ACTIVE_TEAM_LEADERS = [
 ];
 
 // -----------------------------------------------------------------------------
-// CONFIGURAZIONE SUPERUSER (NUOVA SEZIONE)
-// Inserisci qui le email che devono avere accesso al menu Superuser.
-// Formato: nome.cognome@time.vault (tutto minuscolo)
+// CONFIGURAZIONE SUPERUSER
 // -----------------------------------------------------------------------------
 const SUPER_ADMINS = [
   'danilo.cicalo@time.vault', // Sostituisci con il tuo username reale
@@ -217,11 +216,13 @@ export default function App() {
   const [showPassword, setShowPassword] = useState(false); 
   const [rememberMe, setRememberMe] = useState(false);     
 
-  // --- STATI CAPISQUADRA ---
-  const [availableLeaders] = useState(ACTIVE_TEAM_LEADERS); 
+  // --- STATI CAPISQUADRA (DINAMICI) ---
+  const [availableLeaders, setAvailableLeaders] = useState(DEFAULT_TEAM_LEADERS); 
   const [selectedLeaders, setSelectedLeaders] = useState([]); 
   const [isLeaderDropdownOpen, setIsLeaderDropdownOpen] = useState(false); 
   const leaderDropdownRef = useRef(null);
+  // Stato per l'input del nuovo caposquadra nel superuser
+  const [newLeaderInput, setNewLeaderInput] = useState('');
 
   // --- STATI PROFILO & TEMA ---
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
@@ -284,6 +285,31 @@ export default function App() {
     }
   }, []);
 
+  // 2. --- FETCH CAPISQUADRA DA FIRESTORE (FIX: AUTH CHECK) ---
+  useEffect(() => {
+    // FIX: Impedisce la query se l'utente non è autenticato per evitare errori di permessi
+    if (!user) return; 
+
+    // Ascolta il documento di configurazione pubblico per i capisquadra
+    // Path: artifacts/{APP_ID}/public/data/config/team_leaders
+    const docRef = doc(db, 'artifacts', APP_ID, 'public', 'data', 'config', 'team_leaders');
+    
+    const unsubscribe = onSnapshot(docRef, (snapshot) => {
+        if (snapshot.exists()) {
+            const data = snapshot.data();
+            if (data.list && Array.isArray(data.list)) {
+                setAvailableLeaders(data.list.sort());
+            }
+        } else {
+            // Se non esiste ancora, usiamo il default (già settato nell'inizializzazione)
+        }
+    }, (error) => {
+        console.error("Errore fetch capisquadra:", error);
+    });
+
+    return () => unsubscribe();
+  }, [user]); // Dipendenza user aggiunta
+
   // Funzione per sincronizzare il token FCM
   const setupFCM = async () => {
     if (!user) return;
@@ -316,7 +342,7 @@ export default function App() {
     if (user && notificationStatus === 'granted') setupFCM();
   }, [user, notificationStatus]);
 
-  // 2. --- INVIO IMPOSTAZIONI AL SERVICE WORKER ---
+  // 3. --- INVIO IMPOSTAZIONI AL SERVICE WORKER ---
   useEffect(() => {
     if (notificationStatus === 'granted' && navigator.serviceWorker.controller && window.location.protocol !== 'blob:') {
       navigator.serviceWorker.controller.postMessage({
@@ -607,6 +633,44 @@ export default function App() {
     } catch (e) {
        console.error("Errore permessi:", e);
        alert("Errore durante la richiesta permessi.");
+    }
+  };
+
+  // --- HANDLERS SUPERUSER (GESTIONE CAPISQUADRA) ---
+  const handleAddLeader = async () => {
+    if (!newLeaderInput.trim()) return;
+    const nameToAdd = newLeaderInput.trim();
+    if (availableLeaders.includes(nameToAdd)) {
+        alert("Caposquadra già presente.");
+        return;
+    }
+    const newList = [...availableLeaders, nameToAdd].sort();
+    try {
+        // Salva nel documento pubblico di configurazione
+        await setDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'config', 'team_leaders'), {
+            list: newList,
+            updatedAt: serverTimestamp(),
+            updatedBy: user.email
+        }, { merge: true });
+        setNewLeaderInput('');
+    } catch (e) {
+        console.error("Errore aggiunta caposquadra:", e);
+        alert("Errore salvataggio.");
+    }
+  };
+
+  const handleRemoveLeader = async (nameToRemove) => {
+    if (!window.confirm(`Sei sicuro di voler rimuovere ${nameToRemove}?`)) return;
+    const newList = availableLeaders.filter(l => l !== nameToRemove);
+    try {
+        await setDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'config', 'team_leaders'), {
+            list: newList,
+            updatedAt: serverTimestamp(),
+            updatedBy: user.email
+        }, { merge: true });
+    } catch (e) {
+        console.error("Errore rimozione caposquadra:", e);
+        alert("Errore salvataggio.");
     }
   };
 
@@ -1005,25 +1069,64 @@ export default function App() {
              <div className="bg-white dark:bg-slate-900 p-8 md:p-14 rounded-[4rem] shadow-2xl border border-slate-200 dark:border-slate-800 relative overflow-hidden">
                 <div className={`absolute top-0 right-0 p-12 opacity-5 text-slate-400 dark:text-slate-800 pointer-events-none rotate-12`}><Terminal size={200}/></div>
                 
-                <div className="relative z-10 text-center py-10">
-                   <div className={`w-24 h-24 ${T.bg100} dark:${T.bg90030} rounded-[2.5rem] flex items-center justify-center mx-auto mb-8 ${T.text} shadow-xl`}>
-                      <ShieldCheck size={48} />
+                <div className="relative z-10 py-10">
+                   <div className="text-center mb-10">
+                       <div className={`w-24 h-24 ${T.bg100} dark:${T.bg90030} rounded-[2.5rem] flex items-center justify-center mx-auto mb-8 ${T.text} shadow-xl`}>
+                          <ShieldCheck size={48} />
+                       </div>
+                       <h3 className="text-2xl font-black mb-4 uppercase italic text-slate-900 dark:text-white leading-none">Pannello di Controllo</h3>
+                       <p className="text-xs text-slate-500 dark:text-slate-400 font-medium italic leading-relaxed uppercase tracking-widest leading-none max-w-md mx-auto">
+                          Accesso consentito solo agli amministratori del sistema TimeVault.
+                       </p>
                    </div>
-                   <h3 className="text-2xl font-black mb-4 uppercase italic text-slate-900 dark:text-white leading-none">Pannello di Controllo</h3>
-                   <p className="text-xs text-slate-500 dark:text-slate-400 font-medium italic leading-relaxed uppercase tracking-widest leading-none max-w-md mx-auto">
-                      Accesso consentito solo agli amministratori del sistema TimeVault.
-                   </p>
                    
-                   <div className="mt-12 grid grid-cols-1 md:grid-cols-2 gap-6 opacity-50 pointer-events-none grayscale">
-                      {/* Placeholder per future funzioni */}
-                      <div className="p-6 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-3xl">
-                         <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Gestione Utenti</p>
+                   <div className="grid grid-cols-1 gap-8">
+                      {/* GESTIONE CAPISQUADRA */}
+                      <div className="bg-slate-50 dark:bg-slate-800/50 p-8 rounded-[2.5rem] border-2 border-slate-100 dark:border-slate-700/50">
+                          <h4 className="text-sm font-black uppercase tracking-[0.2em] mb-6 flex items-center gap-3"><Users size={18} className={T.text} /> Gestione Capisquadra</h4>
+                          
+                          <div className="flex gap-4 mb-6">
+                              <input 
+                                  type="text" 
+                                  placeholder="Nome e Cognome nuovo responsabile" 
+                                  className="flex-1 p-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 outline-none text-sm font-bold shadow-sm"
+                                  value={newLeaderInput}
+                                  onChange={(e) => setNewLeaderInput(e.target.value)}
+                              />
+                              <button 
+                                  onClick={handleAddLeader}
+                                  className={`p-4 ${T.bg} text-white rounded-2xl font-black uppercase text-xs tracking-wider hover:scale-105 active:scale-95 transition-all shadow-lg flex items-center gap-2`}
+                              >
+                                  <Plus size={18} /> Aggiungi
+                              </button>
+                          </div>
+
+                          <div className="space-y-3 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
+                              {availableLeaders.length === 0 ? (
+                                  <p className="text-slate-400 text-xs italic text-center py-4">Nessun caposquadra configurato.</p>
+                              ) : (
+                                  availableLeaders.map((leader, idx) => (
+                                      <div key={idx} className="flex items-center justify-between p-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-700 group hover:border-blue-200 dark:hover:border-blue-900 transition-colors">
+                                          <span className="text-sm font-bold text-slate-700 dark:text-slate-300 uppercase tracking-tight">{leader}</span>
+                                          <button 
+                                              onClick={() => handleRemoveLeader(leader)}
+                                              className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-all"
+                                              title="Rimuovi"
+                                          >
+                                              <UserMinus size={18} />
+                                          </button>
+                                      </div>
+                                  ))
+                              )}
+                          </div>
+                          <p className="text-[9px] text-slate-400 mt-4 italic text-center">Le modifiche sono immediatamente visibili a tutti gli utenti dell'app.</p>
                       </div>
-                      <div className="p-6 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-3xl">
-                         <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Analisi Globale</p>
+
+                      {/* ALTRI MODULI (Placeholder) */}
+                      <div className="p-6 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-[2.5rem] opacity-40">
+                         <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 text-center">Analisi Globale (In Sviluppo)</p>
                       </div>
                    </div>
-                   <p className="text-[10px] text-slate-300 mt-6 font-mono uppercase">System Ready</p>
                 </div>
              </div>
           </div>
