@@ -52,6 +52,16 @@ const ACTIVE_TEAM_LEADERS = [
   'Ignazio Cocco'
 ];
 
+// -----------------------------------------------------------------------------
+// CONFIGURAZIONE SUPERUSER (NUOVA SEZIONE)
+// Inserisci qui le email che devono avere accesso al menu Superuser.
+// Formato: nome.cognome@time.vault (tutto minuscolo)
+// -----------------------------------------------------------------------------
+const SUPER_ADMINS = [
+  'admin.user@time.vault', // Sostituisci con il tuo username reale
+  'sandro.sammartino@time.vault' // Esempio
+];
+
 // --- CONFIGURAZIONE FIREBASE ---
 const firebaseConfig = {
   apiKey: "AIzaSyDdxN05Yj1CtPOY69x3JJjuFuhEUelXWsc",
@@ -259,6 +269,9 @@ export default function App() {
 
   // Costante per lo stile corrente (Helper per pulire il codice)
   const T = THEME_CLASSES[accentColor] || THEME_CLASSES['blue'];
+  
+  // Helper per verificare se l'utente è Superuser
+  const isSuperUser = user && SUPER_ADMINS.includes(user.email);
 
   // 1. --- REGISTRAZIONE SERVICE WORKER (FIX REGISTRAZIONE SICURA) ---
   useEffect(() => {
@@ -754,6 +767,10 @@ export default function App() {
                <button onClick={() => { setView('calendar'); setIsMenuOpen(false); }} className={`w-full flex items-center gap-3 p-4 rounded-2xl text-xs font-black uppercase tracking-widest transition-all ${view === 'calendar' ? `${T.bg} text-white` : 'hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-400'}`}><Home size={18} /> Diario</button>
                <button onClick={() => { setView('report'); setIsMenuOpen(false); }} className={`w-full flex items-center gap-3 p-4 rounded-2xl text-xs font-black uppercase tracking-widest transition-all ${view === 'report' ? `${T.bg} text-white` : 'hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-400'}`}><FileText size={18} /> Resoconto</button>
                <button onClick={() => { setView('settings'); setIsMenuOpen(false); }} className={`w-full flex items-center gap-3 p-4 rounded-2xl text-xs font-black uppercase tracking-widest transition-all ${view === 'settings' ? `${T.bg} text-white` : 'hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-400'}`}><Settings size={18} /> Impostazioni</button>
+               {/* SUPERUSER MENU ITEM (VISIBILE SOLO SE EMAIL NELLA LISTA) */}
+               {isSuperUser && (
+                  <button onClick={() => { setView('superuser'); setIsMenuOpen(false); }} className={`w-full flex items-center gap-3 p-4 rounded-2xl text-xs font-black uppercase tracking-widest transition-all ${view === 'superuser' ? `${T.bg} text-white` : 'hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-400'}`}><Terminal size={18} /> Superuser Console</button>
+               )}
                <div className="mt-2 pt-2 border-t border-slate-100 dark:border-slate-800">
                   <button onClick={() => { setShowGuideModal(true); setIsMenuOpen(false); }} className="w-full flex items-center gap-3 p-4 rounded-2xl text-xs font-black uppercase tracking-widest text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/10 transition-all italic leading-none"><Smartphone size={18} /> Guida WebApp</button>
                </div>
@@ -982,6 +999,37 @@ export default function App() {
           </div>
         )}
 
+        {/* --- NUOVA VISTA: SUPERUSER CONSOLE --- */}
+        {view === 'superuser' && isSuperUser && (
+          <div className="space-y-10 animate-in zoom-in duration-300 pb-20">
+             <h2 className="text-3xl font-black italic uppercase text-slate-900 dark:text-white tracking-tighter leading-none uppercase tracking-[0.3em]">Superuser Console</h2>
+             <div className="bg-white dark:bg-slate-900 p-8 md:p-14 rounded-[4rem] shadow-2xl border border-slate-200 dark:border-slate-800 relative overflow-hidden">
+                <div className={`absolute top-0 right-0 p-12 opacity-5 text-slate-400 dark:text-slate-800 pointer-events-none rotate-12`}><Terminal size={200}/></div>
+                
+                <div className="relative z-10 text-center py-10">
+                   <div className={`w-24 h-24 ${T.bg100} dark:${T.bg90030} rounded-[2.5rem] flex items-center justify-center mx-auto mb-8 ${T.text} shadow-xl`}>
+                      <ShieldCheck size={48} />
+                   </div>
+                   <h3 className="text-2xl font-black mb-4 uppercase italic text-slate-900 dark:text-white leading-none">Pannello di Controllo</h3>
+                   <p className="text-xs text-slate-500 dark:text-slate-400 font-medium italic leading-relaxed uppercase tracking-widest leading-none max-w-md mx-auto">
+                      Accesso consentito solo agli amministratori del sistema TimeVault.
+                   </p>
+                   
+                   <div className="mt-12 grid grid-cols-1 md:grid-cols-2 gap-6 opacity-50 pointer-events-none grayscale">
+                      {/* Placeholder per future funzioni */}
+                      <div className="p-6 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-3xl">
+                         <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Gestione Utenti</p>
+                      </div>
+                      <div className="p-6 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-3xl">
+                         <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Analisi Globale</p>
+                      </div>
+                   </div>
+                   <p className="text-[10px] text-slate-300 mt-6 font-mono uppercase">System Ready</p>
+                </div>
+             </div>
+          </div>
+        )}
+
         {view === 'settings' && (
           <div className="space-y-10 animate-in zoom-in duration-300 pb-20">
             <h2 className="text-3xl font-black italic uppercase text-slate-900 dark:text-white tracking-tighter leading-none uppercase tracking-[0.3em]">Impostazioni Vault</h2>
@@ -1014,30 +1062,30 @@ export default function App() {
                     </div>
                   </div>
                   <div className="flex flex-col items-center gap-4">
-                     <div className="flex flex-wrap items-center gap-6">
-                       {notificationStatus !== 'granted' ? (
-                         <button onClick={requestNotificationPermission} className="text-[10px] font-black uppercase bg-blue-600 text-white px-8 py-4 rounded-2xl shadow-2xl shadow-blue-500/30 active:scale-95 transition-all tracking-[0.2em] italic leading-none">Abilita Notifiche Native</button>
-                       ) : (
-                         <button onClick={() => { setReminderEnabled(!reminderEnabled); localStorage.setItem('reminder_enabled', !reminderEnabled); }} className={`w-16 h-9 rounded-full transition-all relative border-2 ${reminderEnabled ? `${T.bg} ${T.border} shadow-lg` : 'bg-slate-300 dark:bg-slate-700 border-slate-200 dark:border-slate-600'}`}>
-                           <div className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all shadow-md ${reminderEnabled ? 'right-1' : 'left-1'}`}></div>
-                         </button>
-                       )}
-                     </div>
-
-                     {/* DEBUG TOKEN DISPLAY */}
-                     {fcmTokenDisplay && (
-                        <div className="w-full mt-4 animate-in fade-in">
-                          <button onClick={() => setShowTokenDebug(!showTokenDebug)} className="flex items-center gap-2 text-[10px] text-slate-400 font-mono uppercase tracking-widest hover:text-blue-500 transition-colors mx-auto italic">
-                             {showTokenDebug ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                             {showTokenDebug ? "Nascondi Token Debug" : "Mostra Token Debug"}
+                      <div className="flex flex-wrap items-center gap-6">
+                        {notificationStatus !== 'granted' ? (
+                          <button onClick={requestNotificationPermission} className="text-[10px] font-black uppercase bg-blue-600 text-white px-8 py-4 rounded-2xl shadow-2xl shadow-blue-500/30 active:scale-95 transition-all tracking-[0.2em] italic leading-none">Abilita Notifiche Native</button>
+                        ) : (
+                          <button onClick={() => { setReminderEnabled(!reminderEnabled); localStorage.setItem('reminder_enabled', !reminderEnabled); }} className={`w-16 h-9 rounded-full transition-all relative border-2 ${reminderEnabled ? `${T.bg} ${T.border} shadow-lg` : 'bg-slate-300 dark:bg-slate-700 border-slate-200 dark:border-slate-600'}`}>
+                            <div className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all shadow-md ${reminderEnabled ? 'right-1' : 'left-1'}`}></div>
                           </button>
-                          {showTokenDebug && (
-                             <div className="mt-2 p-4 bg-slate-100 dark:bg-slate-800 rounded-2xl break-all font-mono text-[10px] text-slate-500 select-all border border-slate-200 dark:border-slate-700 shadow-inner">
-                                {fcmTokenDisplay}
-                             </div>
-                          )}
-                        </div>
-                     )}
+                        )}
+                      </div>
+
+                      {/* DEBUG TOKEN DISPLAY */}
+                      {fcmTokenDisplay && (
+                         <div className="w-full mt-4 animate-in fade-in">
+                           <button onClick={() => setShowTokenDebug(!showTokenDebug)} className="flex items-center gap-2 text-[10px] text-slate-400 font-mono uppercase tracking-widest hover:text-blue-500 transition-colors mx-auto italic">
+                              {showTokenDebug ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                              {showTokenDebug ? "Nascondi Token Debug" : "Mostra Token Debug"}
+                           </button>
+                           {showTokenDebug && (
+                              <div className="mt-2 p-4 bg-slate-100 dark:bg-slate-800 rounded-2xl break-all font-mono text-[10px] text-slate-500 select-all border border-slate-200 dark:border-slate-700 shadow-inner">
+                                 {fcmTokenDisplay}
+                              </div>
+                           )}
+                         </div>
+                      )}
                   </div>
                </div>
 
