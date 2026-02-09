@@ -58,8 +58,7 @@ const ACTIVE_TEAM_LEADERS = [
 // Formato: nome.cognome@time.vault (tutto minuscolo)
 // -----------------------------------------------------------------------------
 const SUPER_ADMINS = [
-  'admin.user@time.vault', // Sostituisci con il tuo username reale
-  'sandro.sammartino@time.vault' // Esempio
+  'danilo.cicalo@time.vault', // Sostituisci con il tuo username reale
 ];
 
 // --- CONFIGURAZIONE FIREBASE ---
