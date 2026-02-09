@@ -593,6 +593,24 @@ export default function App() {
     setShowDownloadConfirm(true);
   };
 
+  // --- NUOVA FUNZIONE: RECUPERA CHIAVE ESISTENTE ---
+  const handleShowRecoveryCode = async () => {
+      if (!user) return;
+      try {
+        const docRef = doc(db, 'artifacts', APP_ID, 'users', user.uid, 'settings', 'security');
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists() && docSnap.data().recoveryCode) {
+           setGeneratedRecoveryCode(docSnap.data().recoveryCode);
+           setShowRecoveryModal(true);
+        } else {
+           alert("Codice di sicurezza non trovato. Contatta l'amministratore.");
+        }
+      } catch (e) {
+        console.error("Errore recupero codice:", e);
+        alert("Errore durante il recupero del codice.");
+      }
+  };
+
   const confirmDownload = async () => {
     if (!window.html2canvas || !window.jspdf) { alert("Attendi caricamento..."); return; }
     setIsGeneratingPDF(true);
@@ -1188,6 +1206,17 @@ export default function App() {
                            )}
                          </div>
                       )}
+                  </div>
+               </div>
+
+               {/* SEZIONE SICUREZZA AGGIUNTA */}
+               <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-12 gap-8 relative z-10">
+                  <div className="space-y-2">
+                    <h3 className="font-black text-slate-900 dark:text-white italic uppercase text-sm tracking-widest leading-none">Sicurezza Vault</h3>
+                    <p className="text-[11px] text-slate-400 italic font-medium tracking-tight leading-none">Visualizza la tua chiave di recupero</p>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-6">
+                    <button onClick={handleShowRecoveryCode} className="flex items-center gap-3 px-8 py-4 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] shadow-sm transition-all active:scale-95 italic leading-none hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700"><Key size={18}/> Mostra Chiave</button>
                   </div>
                </div>
 
