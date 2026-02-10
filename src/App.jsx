@@ -11,8 +11,6 @@ import {
   setPersistence,
   browserLocalPersistence,
   browserSessionPersistence, 
-  EmailAuthProvider,
-  reauthenticateWithCredential,
   deleteUser
 } from 'firebase/auth';
 import { 
@@ -30,19 +28,15 @@ import {
   serverTimestamp,
   getDoc,
   setDoc,
-  query,
-  where,
-  getDocs,
 } from 'firebase/firestore';
 import { 
-  Clock, Plus, Trash2, Calendar as CalendarIcon, LogOut, TrendingUp, 
+  Clock, Plus, Trash2, Calendar as CalendarIcon, LogOut, 
   Briefcase, Sun, Moon, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, ArrowLeft, CheckCircle2,
-  Menu, Home, FileText, Settings, X, Zap, Palmtree, Thermometer, AlertTriangle, Download, Eye, EyeOff, ShieldAlert, Lock, LogIn, UserPlus, Key, Copy, AlertOctagon, ShieldCheck, Unlock, RefreshCw, Users, CheckSquare, Square, User, Palette, Smartphone, Share, Search, ShieldX, Coffee, Loader2, Bell, BellOff, HelpCircle, Info, Send, Terminal, UserMinus, Pencil, Ban, Star // Aggiunta Star
+  Menu, Home, FileText, Settings, X, Zap, Palmtree, Thermometer, AlertTriangle, Download, Eye, EyeOff, ShieldAlert, LogIn, UserPlus, Key, Copy, AlertOctagon, ShieldCheck, Users, CheckSquare, User, Smartphone, Search, ShieldX, Coffee, Loader2, Bell, BellOff, HelpCircle, Terminal, UserMinus, Pencil, Ban, Star 
 } from 'lucide-react';
 
 // -----------------------------------------------------------------------------
 // CONFIGURAZIONE CAPISQUADRA (DEFAULT / FALLBACK)
-// Utilizzata se non esiste ancora una configurazione nel DB
 // -----------------------------------------------------------------------------
 const DEFAULT_TEAM_LEADERS = [
   'Sandro Sammartino',
@@ -58,7 +52,7 @@ const DEFAULT_TEAM_LEADERS = [
 // CONFIGURAZIONE SUPERUSER
 // -----------------------------------------------------------------------------
 const SUPER_ADMINS = [
-  'danilo.cicalo@time.vault', // Sostituisci con il tuo username reale
+  'danilo.cicalo@time.vault', 
 ];
 
 // --- CONFIGURAZIONE FIREBASE ---
@@ -94,7 +88,6 @@ const ACCENT_COLORS = {
   cyan: { hex: '#0891b2', label: 'Ciano' },
 };
 
-// Mappa delle classi per garantire che Tailwind le rilevi
 const THEME_CLASSES = {
   blue: {
     bg: 'bg-blue-600',
@@ -225,7 +218,6 @@ export default function App() {
   const [selectedLeaders, setSelectedLeaders] = useState([]); 
   const [isLeaderDropdownOpen, setIsLeaderDropdownOpen] = useState(false); 
   const leaderDropdownRef = useRef(null);
-  // Stato per l'input del nuovo caposquadra nel superuser
   const [newLeaderInput, setNewLeaderInput] = useState('');
 
   // --- STATI PROFILO & TEMA ---
@@ -259,7 +251,6 @@ export default function App() {
   const [reportSearchQuery, setReportSearchQuery] = useState('');
   const [expandedLogId, setExpandedLogId] = useState(null);
   const [authData, setAuthData] = useState({ username: '', password: '' });
-  // Aggiunto onCall allo stato iniziale
   const [formData, setFormData] = useState({ standardHours: 0, overtimeHours: '', notes: '', type: 'work', onCall: false });
   const [showOvertimeInput, setShowOvertimeInput] = useState(false);
   const [showNotesInput, setShowNotesInput] = useState(false); 
@@ -273,13 +264,11 @@ export default function App() {
   const [fcmTokenDisplay, setFcmTokenDisplay] = useState(''); 
   const [showTokenDebug, setShowTokenDebug] = useState(false); 
 
-  // Costante per lo stile corrente (Helper per pulire il codice)
+  // Helper stile
   const T = THEME_CLASSES[accentColor] || THEME_CLASSES['blue'];
-  
-  // Helper per verificare se l'utente è Superuser
   const isSuperUser = user && SUPER_ADMINS.includes(user.email);
 
-  // 1. --- REGISTRAZIONE SERVICE WORKER ---
+  // --- EFFETTI ---
   useEffect(() => {
     const isBlob = window.location.protocol === 'blob:';
     if ('serviceWorker' in navigator && !isBlob) {
@@ -291,28 +280,18 @@ export default function App() {
     }
   }, []);
 
-  // 2. --- FETCH CAPISQUADRA DA FIRESTORE ---
   useEffect(() => {
     if (!user) return; 
-
-    // Ascolta il documento di configurazione pubblico per i capisquadra
     const docRef = doc(db, 'artifacts', APP_ID, 'public', 'data', 'config', 'team_leaders');
-    
     const unsubscribe = onSnapshot(docRef, (snapshot) => {
         if (snapshot.exists()) {
             const data = snapshot.data();
-            if (data.list && Array.isArray(data.list)) {
-                setAvailableLeaders(data.list.sort());
-            }
+            if (data.list && Array.isArray(data.list)) setAvailableLeaders(data.list.sort());
         }
-    }, (error) => {
-        console.error("Errore fetch capisquadra:", error);
-    });
-
+    }, (error) => console.error("Errore fetch capisquadra:", error));
     return () => unsubscribe();
   }, [user]);
 
-  // Funzione per sincronizzare il token FCM
   const setupFCM = async () => {
     if (!user) return;
     if (window.location.protocol === 'blob:') {
@@ -344,7 +323,6 @@ export default function App() {
     if (user && notificationStatus === 'granted') setupFCM();
   }, [user, notificationStatus]);
 
-  // 3. --- INVIO IMPOSTAZIONI AL SERVICE WORKER ---
   useEffect(() => {
     if (notificationStatus === 'granted' && navigator.serviceWorker.controller && window.location.protocol !== 'blob:') {
       navigator.serviceWorker.controller.postMessage({
@@ -398,7 +376,6 @@ export default function App() {
       try { 
         if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
             await signInWithCustomToken(auth, __initial_auth_token);
-        } else {
         }
         await setPersistence(auth, browserLocalPersistence); 
       } catch (error) {}
@@ -413,12 +390,8 @@ export default function App() {
                signOut(auth);
                alert("Sessione scaduta per inattività (36h). Effettua nuovamente il login.");
                setUser(null);
-            } else {
-               setUser(currentUser);
-            }
-         } else {
-            setUser(null);
-         }
+            } else setUser(currentUser);
+         } else setUser(null);
       }
       setLoading(false);
     });
@@ -553,24 +526,12 @@ export default function App() {
           overtimeHours: log.overtimeHours || '',
           notes: log.notes || '',
           type: log.type,
-          onCall: log.onCall || false // Recupera lo stato onCall
+          onCall: log.onCall || false
       });
-      // Ripristina lo stato dei capisquadra selezionati
-      if (log.teamLeader) {
-          setSelectedLeaders(log.teamLeader.split(', '));
-      } else {
-          setSelectedLeaders([]);
-      }
-      
-      // Se ci sono ore straordinario, mostra l'input
-      if (log.overtimeHours > 0) {
-          setShowOvertimeInput(true);
-      }
-      
-      // Apri automaticamente la sezione note/capisquadra per facilitare la modifica
+      if (log.teamLeader) setSelectedLeaders(log.teamLeader.split(', '));
+      else setSelectedLeaders([]);
+      if (log.overtimeHours > 0) setShowOvertimeInput(true);
       setShowNotesInput(true);
-      
-      // Scrolla all'inizio del form (su mobile è utile)
       window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -588,7 +549,6 @@ export default function App() {
     setFormError('');
     const dateString = formatDateAsLocal(selectedDate);
     
-    // Controllo duplicati: se NON stiamo modificando e il giorno esiste già, blocca.
     if (!editingLogId && logs.some(l => l.date === dateString)) { 
         setFormError("Giorno già archiviato!"); 
         return; 
@@ -596,18 +556,16 @@ export default function App() {
 
     try {
       if (editingLogId) {
-          // --- LOGICA AGGIORNAMENTO (UPDATE) ---
           const logRef = doc(db, 'artifacts', APP_ID, 'users', user.uid, 'work_logs', editingLogId);
           await updateDoc(logRef, {
               ...formData,
               standardHours: Number(formData.standardHours) || 0,
               overtimeHours: Number(formData.overtimeHours) || 0,
               teamLeader: selectedLeaders.join(', '),
-              updatedAt: serverTimestamp() // Tracciamo l'aggiornamento
+              updatedAt: serverTimestamp()
           });
-          handleCancelEdit(); // Resetta il form e esce dalla modalità modifica
+          handleCancelEdit();
       } else {
-          // --- LOGICA CREAZIONE (ADD) ---
           const logsCollection = collection(db, 'artifacts', APP_ID, 'users', user.uid, 'work_logs');
           await addDoc(logsCollection, { 
             ...formData, 
@@ -619,7 +577,6 @@ export default function App() {
             userName: user.displayName, 
             createdAt: serverTimestamp() 
           });
-          // Reset post-creazione
           setFormData({ standardHours: 0, overtimeHours: '', notes: '', type: 'work', onCall: false });
           setSelectedLeaders([]); setShowOvertimeInput(false); setShowNotesInput(false);
       }
@@ -633,9 +590,7 @@ export default function App() {
   const requestDeleteLog = (id) => setLogToDelete(id);
   const confirmDelete = async () => {
     if (!logToDelete) return;
-    // Se stavo modificando proprio questo log, annullo la modifica
     if (editingLogId === logToDelete) handleCancelEdit();
-    
     try { await deleteDoc(doc(db, 'artifacts', APP_ID, 'users', user.uid, 'work_logs', logToDelete)); setLogToDelete(null); } catch (e) { console.error(e); }
   };
 
@@ -678,6 +633,7 @@ export default function App() {
       }
   };
 
+  // --- LOGICA GENERAZIONE PDF MULTI-PAGINA ---
   const confirmDownload = async () => {
     if (!window.html2canvas || !window.jspdf) { alert("Attendi caricamento..."); return; }
     
@@ -695,16 +651,30 @@ export default function App() {
             logging: false 
         });
         
-        const imgData = canvas.toDataURL('image/png');
         const { jsPDF } = window.jspdf;
         const pdf = new jsPDF('p', 'mm', 'a4');
-        const pdfWidth = pdf.internal.pageSize.getWidth();
-        const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-        
-        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+        const imgWidth = 210; // Larghezza A4 in mm
+        const pageHeight = 297; // Altezza A4 in mm
+        const imgHeight = (canvas.height * imgWidth) / canvas.width;
+        let heightLeft = imgHeight;
+        let position = 0;
+        const imgData = canvas.toDataURL('image/png');
+
+        // Prima pagina
+        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
+
+        // Pagine successive (se necessario)
+        while (heightLeft >= 0) {
+          position = heightLeft - imgHeight; // Sposta l'immagine verso l'alto per mostrare la parte successiva
+          pdf.addPage();
+          pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+          heightLeft -= pageHeight;
+        }
+
         pdf.save(`Vault_Report_${monthName.replace(' ', '_')}.pdf`);
-        
         setShowDownloadConfirm(false);
+
       } catch (err) { 
         console.error(err);
         alert("Errore durante la generazione del PDF."); 
@@ -737,7 +707,6 @@ export default function App() {
     }
   };
 
-  // --- HANDLERS SUPERUSER (GESTIONE CAPISQUADRA) ---
   const handleAddLeader = async () => {
     if (!newLeaderInput.trim()) return;
     const nameToAdd = newLeaderInput.trim();
@@ -774,7 +743,6 @@ export default function App() {
     }
   };
 
-  // --- MEMO STATS ---
   const currentMonthLogs = useMemo(() => {
     const targetMonth = currentMonth.getMonth(); 
     const targetYear = currentMonth.getFullYear();
@@ -930,7 +898,6 @@ export default function App() {
                <button onClick={() => { setView('calendar'); setIsMenuOpen(false); }} className={`w-full flex items-center gap-3 p-4 rounded-2xl text-xs font-black uppercase tracking-widest transition-all ${view === 'calendar' ? `${T.bg} text-white` : 'hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-400'}`}><Home size={18} /> Diario</button>
                <button onClick={() => { setView('report'); setIsMenuOpen(false); }} className={`w-full flex items-center gap-3 p-4 rounded-2xl text-xs font-black uppercase tracking-widest transition-all ${view === 'report' ? `${T.bg} text-white` : 'hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-400'}`}><FileText size={18} /> Resoconto</button>
                <button onClick={() => { setView('settings'); setIsMenuOpen(false); }} className={`w-full flex items-center gap-3 p-4 rounded-2xl text-xs font-black uppercase tracking-widest transition-all ${view === 'settings' ? `${T.bg} text-white` : 'hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-400'}`}><Settings size={18} /> Impostazioni</button>
-               {/* SUPERUSER MENU ITEM (VISIBILE SOLO SE EMAIL NELLA LISTA) */}
                {isSuperUser && (
                   <button onClick={() => { setView('superuser'); setIsMenuOpen(false); }} className={`w-full flex items-center gap-3 p-4 rounded-2xl text-xs font-black uppercase tracking-widest transition-all ${view === 'superuser' ? `${T.bg} text-white` : 'hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-400'}`}><Terminal size={18} /> Superuser Console</button>
                )}
@@ -1030,7 +997,6 @@ export default function App() {
                  <button type="button" onClick={() => setFormData({ standardHours: 0, overtimeHours: '', notes: 'Malattia', type: 'malattia' })} className={`p-5 rounded-3xl font-black uppercase text-[9px] flex flex-col items-center gap-3 transition-all ${formData.type === 'malattia' ? 'bg-pink-500 text-white shadow-xl scale-105 shadow-pink-500/20' : 'bg-slate-50 dark:bg-slate-800 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-100 dark:border-slate-800'}`}><Thermometer size={24} />Malattia</button>
                  <button type="button" onClick={() => setFormData({ standardHours: 0, overtimeHours: '', notes: 'Riposo Compensativo', type: 'riposo_compensativo' })} className={`p-5 rounded-3xl font-black uppercase text-[9px] flex flex-col items-center gap-3 transition-all ${formData.type === 'riposo_compensativo' ? 'bg-indigo-500 text-white shadow-xl scale-105 shadow-indigo-500/20' : 'bg-slate-50 dark:bg-slate-800 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-100 dark:border-slate-800'}`}><Coffee size={24} />Riposo Comp.</button>
                  <button type="button" onClick={() => setShowOvertimeInput(!showOvertimeInput)} className={`p-5 rounded-3xl font-black uppercase text-[9px] flex flex-col items-center gap-3 transition-all ${showOvertimeInput ? 'bg-orange-500 text-white shadow-xl scale-105 shadow-orange-500/20' : 'bg-slate-50 dark:bg-slate-800 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-100 dark:border-slate-800'}`}><Zap size={24} />Straordinario</button>
-                 {/* NUOVO TASTO REPERIBILITÀ */}
                  <button type="button" onClick={() => setFormData(p => ({ ...p, onCall: !p.onCall }))} className={`p-5 rounded-3xl font-black uppercase text-[9px] flex flex-col items-center gap-3 transition-all ${formData.onCall ? 'bg-amber-500 text-white shadow-xl scale-105 shadow-amber-500/20' : 'bg-slate-50 dark:bg-slate-800 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-100 dark:border-slate-800'}`}><Star size={24} />Reperibilità</button>
               </div>
 
@@ -1093,7 +1059,6 @@ export default function App() {
                           <span className={`text-[10px] font-black uppercase bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-xl italic tracking-[0.2em] text-slate-500 leading-none`}>{log.type.replace('_', ' ')}</span>
                           <span className="text-3xl font-black dark:text-white leading-none tracking-tighter">{log.standardHours > 0 ? log.standardHours + 'h' : ''}</span>
                           {log.overtimeHours > 0 && <span className="text-sm font-black text-orange-600 bg-orange-50 dark:bg-orange-900/20 px-3 py-1.5 rounded-xl leading-none">+{log.overtimeHours}h Extra</span>}
-                          {/* VISUALIZZAZIONE STELLA NEL DIARIO */}
                           {log.onCall && <Star size={20} className="text-amber-500 fill-amber-500" />}
                        </div>
                        {log.teamLeader && <p className={`text-[10px] font-black ${T.text500} uppercase tracking-[0.2em] flex items-center gap-2 italic leading-none`}><Users size={14}/> {log.teamLeader}</p>}
@@ -1113,9 +1078,7 @@ export default function App() {
           </div>
         )}
 
-        {/* ... Resto del codice (Report, Superuser, Settings, Modals) ... */}
         {view === 'report' && (
-          // ... Contenuto Report (invariato) ...
           <div className="space-y-10 animate-in zoom-in duration-300">
              <div className="flex flex-col sm:flex-row justify-between items-center gap-6">
                  <h2 className="text-3xl font-black italic uppercase text-slate-900 dark:text-white tracking-tighter leading-none">Resoconto Mese</h2>
@@ -1150,7 +1113,6 @@ export default function App() {
                             <div className="p-6 md:p-8 flex items-center justify-between">
                                 <div className="flex items-center gap-6">
                                    <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-lg font-black bg-white dark:bg-slate-700 border-2 shadow-sm relative ${expandedLogId === log.id ? `${T.border500} ${T.text500} rotate-12 scale-110` : 'border-slate-100 dark:border-slate-600'}`}>
-                                       {/* STELLA NEL REPORT MENSILE (SOPRA LA DATA) */}
                                        {log.onCall && <div className="absolute -top-2 -right-2"><Star size={16} className="text-amber-500 fill-amber-500" /></div>}
                                        {new Date(log.date).getDate()}
                                    </div>
@@ -1187,7 +1149,6 @@ export default function App() {
           </div>
         )}
 
-        {/* --- NUOVA VISTA: SUPERUSER CONSOLE --- */}
         {view === 'superuser' && isSuperUser && (
           <div className="space-y-10 animate-in zoom-in duration-300 pb-20">
              <h2 className="text-3xl font-black italic uppercase text-slate-900 dark:text-white tracking-tighter leading-none uppercase tracking-[0.3em]">Superuser Console</h2>
@@ -1206,7 +1167,6 @@ export default function App() {
                    </div>
                    
                    <div className="grid grid-cols-1 gap-8">
-                      {/* GESTIONE CAPISQUADRA */}
                       <div className="bg-slate-50 dark:bg-slate-800/50 p-8 rounded-[2.5rem] border-2 border-slate-100 dark:border-slate-700/50">
                           <h4 className="text-sm font-black uppercase tracking-[0.2em] mb-6 flex items-center gap-3"><Users size={18} className={T.text} /> Gestione Capisquadra</h4>
                           
@@ -1244,12 +1204,6 @@ export default function App() {
                                   ))
                               )}
                           </div>
-                          <p className="text-[9px] text-slate-400 mt-4 italic text-center">Le modifiche sono immediatamente visibili a tutti gli utenti dell'app.</p>
-                      </div>
-
-                      {/* ALTRI MODULI (Placeholder) */}
-                      <div className="p-6 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-[2.5rem] opacity-40">
-                         <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 text-center">Analisi Globale (In Sviluppo)</p>
                       </div>
                    </div>
                 </div>
@@ -1298,8 +1252,6 @@ export default function App() {
                           </button>
                         )}
                       </div>
-
-                      {/* DEBUG TOKEN DISPLAY */}
                       {fcmTokenDisplay && (
                          <div className="w-full mt-4 animate-in fade-in">
                            <button onClick={() => setShowTokenDebug(!showTokenDebug)} className="flex items-center gap-2 text-[10px] text-slate-400 font-mono uppercase tracking-widest hover:text-blue-500 transition-colors mx-auto italic">
@@ -1316,7 +1268,6 @@ export default function App() {
                   </div>
                </div>
 
-               {/* SEZIONE SICUREZZA AGGIUNTA */}
                <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-12 gap-8 relative z-10">
                   <div className="space-y-2">
                     <h3 className="font-black text-slate-900 dark:text-white italic uppercase text-sm tracking-widest leading-none">Sicurezza Vault</h3>
@@ -1352,63 +1303,60 @@ export default function App() {
       </footer>
     </div>
 
-    {/* AREA DI STAMPA NASCOSTA - CRITICA PER IL FUNZIONAMENTO DEL REPORT */}
+    {/* AREA DI STAMPA NASCOSTA - MODIFICATA PER RIDURRE INTESTAZIONE E RIMUOVERE FIRMA */}
     <div id="report-print-area" style={{ display: 'none', position: 'fixed', top: 0, left: 0, width: '210mm', padding: '20mm', backgroundColor: '#ffffff', color: '#000000', fontFamily: 'sans-serif', zIndex: -1 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', borderBottom: '6px solid #000', paddingBottom: '25px', marginBottom: '45px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', borderBottom: '6px solid #000', paddingBottom: '10px', marginBottom: '20px' }}>
            <div>
-              <h1 style={{ fontSize: '42px', fontWeight: 900, fontStyle: 'italic', margin: 0, letterSpacing: '-4px', lineHeight: 1 }}>TIMEVAULT REPORT</h1>
-              <p style={{ fontSize: '14px', fontWeight: 900, textTransform: 'uppercase', margin: '10px 0 0 0', color: '#666', letterSpacing: '4px' }}>Resoconto Personale Ore Lavorative</p>
+              <h1 style={{ fontSize: '30px', fontWeight: 900, fontStyle: 'italic', margin: 0, letterSpacing: '-2px', lineHeight: 1 }}>TIMEVAULT REPORT</h1>
+              <p style={{ fontSize: '10px', fontWeight: 900, textTransform: 'uppercase', margin: '5px 0 0 0', color: '#666', letterSpacing: '4px' }}>Resoconto Personale Ore Lavorative</p>
            </div>
            <div style={{ textAlign: 'right' }}>
-              <p style={{ fontSize: '28px', fontWeight: 900, margin: 0, textTransform: 'capitalize', fontStyle: 'italic', lineHeight: 1 }}>{monthName}</p>
-              <p style={{ fontSize: '15px', fontWeight: 900, margin: '10px 0 0 0', textTransform: 'uppercase', color: '#000' }}>Dipendente: {user?.displayName}</p>
+              <p style={{ fontSize: '20px', fontWeight: 900, margin: 0, textTransform: 'capitalize', fontStyle: 'italic', lineHeight: 1 }}>{monthName}</p>
+              <p style={{ fontSize: '12px', fontWeight: 900, margin: '5px 0 0 0', textTransform: 'uppercase', color: '#000' }}>Dipendente: {user?.displayName}</p>
            </div>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '35px', marginBottom: '45px' }}>
-           <div style={{ padding: '30px', border: '4px solid #f8f8f8', borderRadius: '30px', backgroundColor: '#fafafa', textAlign: 'center' }}>
-              <p style={{ fontSize: '12px', fontWeight: 900, textTransform: 'uppercase', margin: '0 0 12px 0', color: '#aaa', letterSpacing: '2px' }}>Presenze Totali</p>
-              <p style={{ fontSize: '48px', fontWeight: 900, margin: 0, lineHeight: 1 }}>{monthlyStats.daysWorked}</p>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '25px' }}>
+           <div style={{ padding: '15px', border: '4px solid #f8f8f8', borderRadius: '20px', backgroundColor: '#fafafa', textAlign: 'center' }}>
+              <p style={{ fontSize: '10px', fontWeight: 900, textTransform: 'uppercase', margin: '0 0 8px 0', color: '#aaa', letterSpacing: '2px' }}>Presenze Totali</p>
+              <p style={{ fontSize: '36px', fontWeight: 900, margin: 0, lineHeight: 1 }}>{monthlyStats.daysWorked}</p>
            </div>
-           <div style={{ padding: '30px', border: '4px solid #f8f8f8', borderRadius: '30px', backgroundColor: '#fafafa', textAlign: 'center' }}>
-              <p style={{ fontSize: '12px', fontWeight: 900, textTransform: 'uppercase', margin: '0 0 12px 0', color: '#aaa', letterSpacing: '2px' }}>Straordinari Totali</p>
-              <p style={{ fontSize: '48px', fontWeight: 900, margin: 0, color: '#f97316', lineHeight: 1 }}>+{monthlyStats.ext}h</p>
+           <div style={{ padding: '15px', border: '4px solid #f8f8f8', borderRadius: '20px', backgroundColor: '#fafafa', textAlign: 'center' }}>
+              <p style={{ fontSize: '10px', fontWeight: 900, textTransform: 'uppercase', margin: '0 0 8px 0', color: '#aaa', letterSpacing: '2px' }}>Straordinari Totali</p>
+              <p style={{ fontSize: '36px', fontWeight: 900, margin: 0, color: '#f97316', lineHeight: 1 }}>+{monthlyStats.ext}h</p>
            </div>
         </div>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
            <thead>
               <tr style={{ borderBottom: '4px solid #000', backgroundColor: '#000', color: '#fff' }}>
-                 <th style={{ padding: '18px 15px', fontSize: '12px', fontWeight: 900, textTransform: 'uppercase', textAlign: 'left', letterSpacing: '1px' }}>Data</th>
-                 <th style={{ padding: '18px 15px', fontSize: '12px', fontWeight: 900, textTransform: 'uppercase', textAlign: 'left', letterSpacing: '1px' }}>Tipo Attività</th>
-                 <th style={{ padding: '18px 15px', fontSize: '12px', fontWeight: 900, textTransform: 'uppercase', textAlign: 'left', letterSpacing: '1px' }}>Dettagli / Responsabile</th>
-                 <th style={{ padding: '18px 15px', fontSize: '12px', fontWeight: 900, textTransform: 'uppercase', textAlign: 'right', letterSpacing: '1px' }}>Ore Extra</th>
+                 <th style={{ padding: '12px 10px', fontSize: '10px', fontWeight: 900, textTransform: 'uppercase', textAlign: 'left', letterSpacing: '1px' }}>Data</th>
+                 <th style={{ padding: '12px 10px', fontSize: '10px', fontWeight: 900, textTransform: 'uppercase', textAlign: 'left', letterSpacing: '1px' }}>Tipo Attività</th>
+                 <th style={{ padding: '12px 10px', fontSize: '10px', fontWeight: 900, textTransform: 'uppercase', textAlign: 'left', letterSpacing: '1px' }}>Dettagli / Responsabile</th>
+                 <th style={{ padding: '12px 10px', fontSize: '10px', fontWeight: 900, textTransform: 'uppercase', textAlign: 'right', letterSpacing: '1px' }}>Ore Extra</th>
               </tr>
            </thead>
            <tbody>
               {currentMonthLogs.map(log => (
                  <tr key={log.id} style={{ borderBottom: '1px solid #eee' }}>
-                    <td style={{ padding: '18px 15px', fontSize: '14px', fontWeight: 900 }}>
+                    <td style={{ padding: '12px 10px', fontSize: '12px', fontWeight: 900 }}>
                       {formatDateIT(log.date)}
-                      {/* STELLA NELLA STAMPA PDF */}
-                      {log.onCall && <span style={{ marginLeft: '5px', fontSize: '16px' }}>★</span>}
+                      {log.onCall && <span style={{ marginLeft: '5px', fontSize: '14px' }}>★</span>}
                     </td>
-                    <td style={{ padding: '18px 15px', fontSize: '12px', fontWeight: 900, textTransform: 'uppercase', color: log.type === 'work' ? '#000' : '#888' }}>{log.type.replace('_', ' ')}</td>
-                    <td style={{ padding: '18px 15px', fontSize: '13px', fontWeight: 700 }}>
-                       <div style={{ fontWeight: 900, marginBottom: '5px' }}>{log.teamLeader || '-'}</div>
-                       <div style={{ fontSize: '11px', fontStyle: 'italic', color: '#777', fontWeight: 500 }}>{log.notes}</div>
+                    <td style={{ padding: '12px 10px', fontSize: '10px', fontWeight: 900, textTransform: 'uppercase', color: log.type === 'work' ? '#000' : '#888' }}>{log.type.replace('_', ' ')}</td>
+                    <td style={{ padding: '12px 10px', fontSize: '11px', fontWeight: 700 }}>
+                       <div style={{ fontWeight: 900, marginBottom: '2px' }}>{log.teamLeader || '-'}</div>
+                       <div style={{ fontSize: '9px', fontStyle: 'italic', color: '#777', fontWeight: 500 }}>{log.notes}</div>
                     </td>
-                    <td style={{ padding: '18px 15px', fontSize: '16px', fontWeight: 900, textAlign: 'right', color: '#f97316' }}>{log.overtimeHours > 0 ? `+${log.overtimeHours}h` : '—'}</td>
+                    <td style={{ padding: '12px 10px', fontSize: '14px', fontWeight: 900, textAlign: 'right', color: '#f97316' }}>{log.overtimeHours > 0 ? `+${log.overtimeHours}h` : '—'}</td>
                  </tr>
               ))}
            </tbody>
         </table>
-        <div style={{ marginTop: '100px', borderTop: '3px solid #000', paddingTop: '40px', textAlign: 'center' }}>
-           <div style={{ fontSize: '14px', fontWeight: 900, marginBottom: '10px', fontStyle: 'italic' }}>TIMBRO E FIRMA</div>
-           <div style={{ height: '60px', width: '200px', borderBottom: '1px solid #ccc', margin: '0 auto 20px' }}></div>
-           <p style={{ fontSize: '11px', color: '#aaa', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '6px' }}>Vault Security Protocol Enabled • Official Report • {new Date().toLocaleDateString('it-IT')}</p>
+        {/* FIRMA RIMOSSA, RIMASTO SOLO IL FOOTER DISCRETO */}
+        <div style={{ marginTop: '50px', borderTop: '1px solid #eee', paddingTop: '20px', textAlign: 'center' }}>
+           <p style={{ fontSize: '9px', color: '#ccc', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '4px' }}>Vault Security Protocol Enabled • Official Report • {new Date().toLocaleDateString('it-IT')}</p>
         </div>
     </div>
 
-    {/* MODAL DOWNLOAD */}
     {showDownloadConfirm && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[100] flex items-center justify-center p-4 animate-in fade-in duration-200">
           <div className="bg-white dark:bg-slate-900 p-12 rounded-[4rem] shadow-2xl max-w-sm w-full text-center border-4 border-slate-50 dark:border-slate-800 animate-in zoom-in-95">
@@ -1425,7 +1373,6 @@ export default function App() {
         </div>
     )}
 
-    {/* MODAL ELIMINAZIONE ACCOUNT CON CHIAVE */}
     {showDeleteRecoveryModal && (
         <div className="fixed inset-0 bg-black/85 backdrop-blur-2xl z-[120] flex items-center justify-center p-4 animate-in fade-in duration-300">
            <div className="bg-white dark:bg-slate-900 p-12 md:p-14 rounded-[4rem] w-full max-w-sm border-4 border-red-500 relative animate-in zoom-in-95 text-center shadow-2xl shadow-red-500/20">
