@@ -26,7 +26,7 @@ import {
   addDoc, 
   onSnapshot, 
   deleteDoc,
-  updateDoc, // Importato updateDoc
+  updateDoc, 
   serverTimestamp,
   getDoc,
   setDoc,
@@ -37,7 +37,7 @@ import {
 import { 
   Clock, Plus, Trash2, Calendar as CalendarIcon, LogOut, TrendingUp, 
   Briefcase, Sun, Moon, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, ArrowLeft, CheckCircle2,
-  Menu, Home, FileText, Settings, X, Zap, Palmtree, Thermometer, AlertTriangle, Download, Eye, EyeOff, ShieldAlert, Lock, LogIn, UserPlus, Key, Copy, AlertOctagon, ShieldCheck, Unlock, RefreshCw, Users, CheckSquare, Square, User, Palette, Smartphone, Share, Search, ShieldX, Coffee, Loader2, Bell, BellOff, HelpCircle, Info, Send, Terminal, UserMinus, Pencil, Ban // Importati Pencil e Ban
+  Menu, Home, FileText, Settings, X, Zap, Palmtree, Thermometer, AlertTriangle, Download, Eye, EyeOff, ShieldAlert, Lock, LogIn, UserPlus, Key, Copy, AlertOctagon, ShieldCheck, Unlock, RefreshCw, Users, CheckSquare, Square, User, Palette, Smartphone, Share, Search, ShieldX, Coffee, Loader2, Bell, BellOff, HelpCircle, Info, Send, Terminal, UserMinus, Pencil, Ban, Star // Aggiunta Star
 } from 'lucide-react';
 
 // -----------------------------------------------------------------------------
@@ -259,10 +259,10 @@ export default function App() {
   const [reportSearchQuery, setReportSearchQuery] = useState('');
   const [expandedLogId, setExpandedLogId] = useState(null);
   const [authData, setAuthData] = useState({ username: '', password: '' });
-  const [formData, setFormData] = useState({ standardHours: 0, overtimeHours: '', notes: '', type: 'work' });
+  // Aggiunto onCall allo stato iniziale
+  const [formData, setFormData] = useState({ standardHours: 0, overtimeHours: '', notes: '', type: 'work', onCall: false });
   const [showOvertimeInput, setShowOvertimeInput] = useState(false);
   const [showNotesInput, setShowNotesInput] = useState(false); 
-  // STATO PER MODIFICA
   const [editingLogId, setEditingLogId] = useState(null);
 
   // --- STATI REMINDER & FCM DEBUG ---
@@ -546,14 +546,14 @@ export default function App() {
     alert("Sbloccato! Ora riprova il login.");
   };
 
-  // --- NUOVI HANDLERS PER LA MODIFICA ---
   const handleEditRequest = (log) => {
       setEditingLogId(log.id);
       setFormData({
           standardHours: log.standardHours || 0,
           overtimeHours: log.overtimeHours || '',
           notes: log.notes || '',
-          type: log.type
+          type: log.type,
+          onCall: log.onCall || false // Recupera lo stato onCall
       });
       // Ripristina lo stato dei capisquadra selezionati
       if (log.teamLeader) {
@@ -576,7 +576,7 @@ export default function App() {
 
   const handleCancelEdit = () => {
       setEditingLogId(null);
-      setFormData({ standardHours: 0, overtimeHours: '', notes: '', type: 'work' });
+      setFormData({ standardHours: 0, overtimeHours: '', notes: '', type: 'work', onCall: false });
       setSelectedLeaders([]);
       setShowOvertimeInput(false);
       setShowNotesInput(false);
@@ -620,7 +620,7 @@ export default function App() {
             createdAt: serverTimestamp() 
           });
           // Reset post-creazione
-          setFormData({ standardHours: 0, overtimeHours: '', notes: '', type: 'work' });
+          setFormData({ standardHours: 0, overtimeHours: '', notes: '', type: 'work', onCall: false });
           setSelectedLeaders([]); setShowOvertimeInput(false); setShowNotesInput(false);
       }
     } catch (e) { console.error(e); }
@@ -1030,6 +1030,8 @@ export default function App() {
                  <button type="button" onClick={() => setFormData({ standardHours: 0, overtimeHours: '', notes: 'Malattia', type: 'malattia' })} className={`p-5 rounded-3xl font-black uppercase text-[9px] flex flex-col items-center gap-3 transition-all ${formData.type === 'malattia' ? 'bg-pink-500 text-white shadow-xl scale-105 shadow-pink-500/20' : 'bg-slate-50 dark:bg-slate-800 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-100 dark:border-slate-800'}`}><Thermometer size={24} />Malattia</button>
                  <button type="button" onClick={() => setFormData({ standardHours: 0, overtimeHours: '', notes: 'Riposo Compensativo', type: 'riposo_compensativo' })} className={`p-5 rounded-3xl font-black uppercase text-[9px] flex flex-col items-center gap-3 transition-all ${formData.type === 'riposo_compensativo' ? 'bg-indigo-500 text-white shadow-xl scale-105 shadow-indigo-500/20' : 'bg-slate-50 dark:bg-slate-800 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-100 dark:border-slate-800'}`}><Coffee size={24} />Riposo Comp.</button>
                  <button type="button" onClick={() => setShowOvertimeInput(!showOvertimeInput)} className={`p-5 rounded-3xl font-black uppercase text-[9px] flex flex-col items-center gap-3 transition-all ${showOvertimeInput ? 'bg-orange-500 text-white shadow-xl scale-105 shadow-orange-500/20' : 'bg-slate-50 dark:bg-slate-800 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-100 dark:border-slate-800'}`}><Zap size={24} />Straordinario</button>
+                 {/* NUOVO TASTO REPERIBILITÀ */}
+                 <button type="button" onClick={() => setFormData(p => ({ ...p, onCall: !p.onCall }))} className={`p-5 rounded-3xl font-black uppercase text-[9px] flex flex-col items-center gap-3 transition-all ${formData.onCall ? 'bg-amber-500 text-white shadow-xl scale-105 shadow-amber-500/20' : 'bg-slate-50 dark:bg-slate-800 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-100 dark:border-slate-800'}`}><Star size={24} />Reperibilità</button>
               </div>
 
               <form onSubmit={handleSubmitLog} className="space-y-8 animate-in fade-in duration-300 relative z-10">
@@ -1091,6 +1093,8 @@ export default function App() {
                           <span className={`text-[10px] font-black uppercase bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-xl italic tracking-[0.2em] text-slate-500 leading-none`}>{log.type.replace('_', ' ')}</span>
                           <span className="text-3xl font-black dark:text-white leading-none tracking-tighter">{log.standardHours > 0 ? log.standardHours + 'h' : ''}</span>
                           {log.overtimeHours > 0 && <span className="text-sm font-black text-orange-600 bg-orange-50 dark:bg-orange-900/20 px-3 py-1.5 rounded-xl leading-none">+{log.overtimeHours}h Extra</span>}
+                          {/* VISUALIZZAZIONE STELLA NEL DIARIO */}
+                          {log.onCall && <Star size={20} className="text-amber-500 fill-amber-500" />}
                        </div>
                        {log.teamLeader && <p className={`text-[10px] font-black ${T.text500} uppercase tracking-[0.2em] flex items-center gap-2 italic leading-none`}><Users size={14}/> {log.teamLeader}</p>}
                        {log.notes && <p className="text-sm text-slate-500 dark:text-slate-400 font-medium italic border-l-2 border-slate-100 dark:border-slate-800 pl-4 py-1 leading-relaxed">{log.notes}</p>}
@@ -1109,7 +1113,7 @@ export default function App() {
           </div>
         )}
 
-        {/* ... Resto del codice (Report, Superuser, Settings, Modals) identico ... */}
+        {/* ... Resto del codice (Report, Superuser, Settings, Modals) ... */}
         {view === 'report' && (
           // ... Contenuto Report (invariato) ...
           <div className="space-y-10 animate-in zoom-in duration-300">
@@ -1145,7 +1149,11 @@ export default function App() {
                          <div key={log.id} className={`bg-slate-50/50 dark:bg-slate-800/20 rounded-[2rem] border-2 transition-all cursor-pointer hover:bg-white dark:hover:bg-slate-800 shadow-sm ${expandedLogId === log.id ? `ring-4 ${T.ring10} ${T.border500}/30 scale-[1.02] bg-white dark:bg-slate-800` : 'border-transparent'}`} onClick={() => setExpandedLogId(expandedLogId === log.id ? null : log.id)}>
                             <div className="p-6 md:p-8 flex items-center justify-between">
                                 <div className="flex items-center gap-6">
-                                   <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-lg font-black bg-white dark:bg-slate-700 border-2 shadow-sm ${expandedLogId === log.id ? `${T.border500} ${T.text500} rotate-12 scale-110` : 'border-slate-100 dark:border-slate-600'}`}>{new Date(log.date).getDate()}</div>
+                                   <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-lg font-black bg-white dark:bg-slate-700 border-2 shadow-sm relative ${expandedLogId === log.id ? `${T.border500} ${T.text500} rotate-12 scale-110` : 'border-slate-100 dark:border-slate-600'}`}>
+                                       {/* STELLA NEL REPORT MENSILE (SOPRA LA DATA) */}
+                                       {log.onCall && <div className="absolute -top-2 -right-2"><Star size={16} className="text-amber-500 fill-amber-500" /></div>}
+                                       {new Date(log.date).getDate()}
+                                   </div>
                                    <div>
                                       <p className={`text-[10px] font-black uppercase text-slate-400 mb-1 tracking-[0.3em] italic leading-none`}>{log.type.replace('_', ' ')}</p>
                                       <h3 className="text-xs font-black uppercase tracking-widest text-slate-800 dark:text-slate-200 leading-none">Giorno {new Date(log.date).getDate()}</h3>
@@ -1378,7 +1386,11 @@ export default function App() {
            <tbody>
               {currentMonthLogs.map(log => (
                  <tr key={log.id} style={{ borderBottom: '1px solid #eee' }}>
-                    <td style={{ padding: '18px 15px', fontSize: '14px', fontWeight: 900 }}>{formatDateIT(log.date)}</td>
+                    <td style={{ padding: '18px 15px', fontSize: '14px', fontWeight: 900 }}>
+                      {formatDateIT(log.date)}
+                      {/* STELLA NELLA STAMPA PDF */}
+                      {log.onCall && <span style={{ marginLeft: '5px', fontSize: '16px' }}>★</span>}
+                    </td>
                     <td style={{ padding: '18px 15px', fontSize: '12px', fontWeight: 900, textTransform: 'uppercase', color: log.type === 'work' ? '#000' : '#888' }}>{log.type.replace('_', ' ')}</td>
                     <td style={{ padding: '18px 15px', fontSize: '13px', fontWeight: 700 }}>
                        <div style={{ fontWeight: 900, marginBottom: '5px' }}>{log.teamLeader || '-'}</div>
