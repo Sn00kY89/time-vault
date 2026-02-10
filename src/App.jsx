@@ -26,6 +26,7 @@ import {
   addDoc, 
   onSnapshot, 
   deleteDoc,
+  updateDoc, // Importato updateDoc
   serverTimestamp,
   getDoc,
   setDoc,
@@ -36,7 +37,7 @@ import {
 import { 
   Clock, Plus, Trash2, Calendar as CalendarIcon, LogOut, TrendingUp, 
   Briefcase, Sun, Moon, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, ArrowLeft, CheckCircle2,
-  Menu, Home, FileText, Settings, X, Zap, Palmtree, Thermometer, AlertTriangle, Download, Eye, EyeOff, ShieldAlert, Lock, LogIn, UserPlus, Key, Copy, AlertOctagon, ShieldCheck, Unlock, RefreshCw, Users, CheckSquare, Square, User, Palette, Smartphone, Share, Search, ShieldX, Coffee, Loader2, Bell, BellOff, HelpCircle, Info, Send, Terminal, UserMinus
+  Menu, Home, FileText, Settings, X, Zap, Palmtree, Thermometer, AlertTriangle, Download, Eye, EyeOff, ShieldAlert, Lock, LogIn, UserPlus, Key, Copy, AlertOctagon, ShieldCheck, Unlock, RefreshCw, Users, CheckSquare, Square, User, Palette, Smartphone, Share, Search, ShieldX, Coffee, Loader2, Bell, BellOff, HelpCircle, Info, Send, Terminal, UserMinus, Pencil, Ban // Importati Pencil e Ban
 } from 'lucide-react';
 
 // -----------------------------------------------------------------------------
@@ -61,17 +62,20 @@ const SUPER_ADMINS = [
 ];
 
 // --- CONFIGURAZIONE FIREBASE ---
-const firebaseConfig = {
-  apiKey: "AIzaSyDdxN05Yj1CtPOY69x3JJjuFuhEUelXWsc",
-  authDomain: "work-time-vault.firebaseapp.com",
-  projectId: "work-time-vault",
-  storageBucket: "work-time-vault.firebasestorage.app",
-  messagingSenderId: "957496336579",
-  appId: "1:957496336579:web:f82df8f2d580b92ec58276",
-  measurementId: "G-9PN8MRS05Q"
-};
+const firebaseConfig = typeof __firebase_config !== 'undefined' 
+  ? JSON.parse(__firebase_config) 
+  : {
+      apiKey: "AIzaSyDdxN05Yj1CtPOY69x3JJjuFuhEUelXWsc",
+      authDomain: "work-time-vault.firebaseapp.com",
+      projectId: "work-time-vault",
+      storageBucket: "work-time-vault.firebasestorage.app",
+      messagingSenderId: "957496336579",
+      appId: "1:957496336579:web:f82df8f2d580b92ec58276",
+      measurementId: "G-9PN8MRS05Q"
+    };
 
 const APP_ID = "time-vault-pro";
+
 const app = initializeApp(firebaseConfig);
 const analytics = getAnalytics(app);
 const auth = getAuth(app);
@@ -258,6 +262,8 @@ export default function App() {
   const [formData, setFormData] = useState({ standardHours: 0, overtimeHours: '', notes: '', type: 'work' });
   const [showOvertimeInput, setShowOvertimeInput] = useState(false);
   const [showNotesInput, setShowNotesInput] = useState(false); 
+  // STATO PER MODIFICA
+  const [editingLogId, setEditingLogId] = useState(null);
 
   // --- STATI REMINDER & FCM DEBUG ---
   const [reminderEnabled, setReminderEnabled] = useState(() => localStorage.getItem('reminder_enabled') === 'true');
@@ -273,7 +279,7 @@ export default function App() {
   // Helper per verificare se l'utente è Superuser
   const isSuperUser = user && SUPER_ADMINS.includes(user.email);
 
-  // 1. --- REGISTRAZIONE SERVICE WORKER (FIX REGISTRAZIONE SICURA) ---
+  // 1. --- REGISTRAZIONE SERVICE WORKER ---
   useEffect(() => {
     const isBlob = window.location.protocol === 'blob:';
     if ('serviceWorker' in navigator && !isBlob) {
@@ -285,13 +291,11 @@ export default function App() {
     }
   }, []);
 
-  // 2. --- FETCH CAPISQUADRA DA FIRESTORE (FIX: AUTH CHECK) ---
+  // 2. --- FETCH CAPISQUADRA DA FIRESTORE ---
   useEffect(() => {
-    // FIX: Impedisce la query se l'utente non è autenticato per evitare errori di permessi
     if (!user) return; 
 
     // Ascolta il documento di configurazione pubblico per i capisquadra
-    // Path: artifacts/{APP_ID}/public/data/config/team_leaders
     const docRef = doc(db, 'artifacts', APP_ID, 'public', 'data', 'config', 'team_leaders');
     
     const unsubscribe = onSnapshot(docRef, (snapshot) => {
@@ -300,15 +304,13 @@ export default function App() {
             if (data.list && Array.isArray(data.list)) {
                 setAvailableLeaders(data.list.sort());
             }
-        } else {
-            // Se non esiste ancora, usiamo il default (già settato nell'inizializzazione)
         }
     }, (error) => {
         console.error("Errore fetch capisquadra:", error);
     });
 
     return () => unsubscribe();
-  }, [user]); // Dipendenza user aggiunta
+  }, [user]);
 
   // Funzione per sincronizzare il token FCM
   const setupFCM = async () => {
@@ -393,7 +395,13 @@ export default function App() {
 
   useEffect(() => {
     const initAuth = async () => {
-      try { await setPersistence(auth, browserLocalPersistence); } catch (error) {}
+      try { 
+        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+            await signInWithCustomToken(auth, __initial_auth_token);
+        } else {
+        }
+        await setPersistence(auth, browserLocalPersistence); 
+      } catch (error) {}
     };
     initAuth();
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -538,26 +546,83 @@ export default function App() {
     alert("Sbloccato! Ora riprova il login.");
   };
 
+  // --- NUOVI HANDLERS PER LA MODIFICA ---
+  const handleEditRequest = (log) => {
+      setEditingLogId(log.id);
+      setFormData({
+          standardHours: log.standardHours || 0,
+          overtimeHours: log.overtimeHours || '',
+          notes: log.notes || '',
+          type: log.type
+      });
+      // Ripristina lo stato dei capisquadra selezionati
+      if (log.teamLeader) {
+          setSelectedLeaders(log.teamLeader.split(', '));
+      } else {
+          setSelectedLeaders([]);
+      }
+      
+      // Se ci sono ore straordinario, mostra l'input
+      if (log.overtimeHours > 0) {
+          setShowOvertimeInput(true);
+      }
+      
+      // Apri automaticamente la sezione note/capisquadra per facilitare la modifica
+      setShowNotesInput(true);
+      
+      // Scrolla all'inizio del form (su mobile è utile)
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleCancelEdit = () => {
+      setEditingLogId(null);
+      setFormData({ standardHours: 0, overtimeHours: '', notes: '', type: 'work' });
+      setSelectedLeaders([]);
+      setShowOvertimeInput(false);
+      setShowNotesInput(false);
+  };
+
   const handleSubmitLog = async (e) => {
     e.preventDefault();
     if (!user) return;
     setFormError('');
     const dateString = formatDateAsLocal(selectedDate);
-    if (logs.some(l => l.date === dateString)) { setFormError("Giorno già archiviato!"); return; }
+    
+    // Controllo duplicati: se NON stiamo modificando e il giorno esiste già, blocca.
+    if (!editingLogId && logs.some(l => l.date === dateString)) { 
+        setFormError("Giorno già archiviato!"); 
+        return; 
+    }
+
     try {
-      const logsCollection = collection(db, 'artifacts', APP_ID, 'users', user.uid, 'work_logs');
-      await addDoc(logsCollection, { 
-        ...formData, 
-        standardHours: Number(formData.standardHours) || 0, 
-        overtimeHours: Number(formData.overtimeHours) || 0, 
-        teamLeader: selectedLeaders.join(', '), 
-        date: dateString, 
-        userId: user.uid, 
-        userName: user.displayName, 
-        createdAt: serverTimestamp() 
-      });
-      setFormData({ standardHours: 0, overtimeHours: '', notes: '', type: 'work' });
-      setSelectedLeaders([]); setShowOvertimeInput(false); setShowNotesInput(false);
+      if (editingLogId) {
+          // --- LOGICA AGGIORNAMENTO (UPDATE) ---
+          const logRef = doc(db, 'artifacts', APP_ID, 'users', user.uid, 'work_logs', editingLogId);
+          await updateDoc(logRef, {
+              ...formData,
+              standardHours: Number(formData.standardHours) || 0,
+              overtimeHours: Number(formData.overtimeHours) || 0,
+              teamLeader: selectedLeaders.join(', '),
+              updatedAt: serverTimestamp() // Tracciamo l'aggiornamento
+          });
+          handleCancelEdit(); // Resetta il form e esce dalla modalità modifica
+      } else {
+          // --- LOGICA CREAZIONE (ADD) ---
+          const logsCollection = collection(db, 'artifacts', APP_ID, 'users', user.uid, 'work_logs');
+          await addDoc(logsCollection, { 
+            ...formData, 
+            standardHours: Number(formData.standardHours) || 0, 
+            overtimeHours: Number(formData.overtimeHours) || 0, 
+            teamLeader: selectedLeaders.join(', '), 
+            date: dateString, 
+            userId: user.uid, 
+            userName: user.displayName, 
+            createdAt: serverTimestamp() 
+          });
+          // Reset post-creazione
+          setFormData({ standardHours: 0, overtimeHours: '', notes: '', type: 'work' });
+          setSelectedLeaders([]); setShowOvertimeInput(false); setShowNotesInput(false);
+      }
     } catch (e) { console.error(e); }
   };
 
@@ -568,6 +633,9 @@ export default function App() {
   const requestDeleteLog = (id) => setLogToDelete(id);
   const confirmDelete = async () => {
     if (!logToDelete) return;
+    // Se stavo modificando proprio questo log, annullo la modifica
+    if (editingLogId === logToDelete) handleCancelEdit();
+    
     try { await deleteDoc(doc(db, 'artifacts', APP_ID, 'users', user.uid, 'work_logs', logToDelete)); setLogToDelete(null); } catch (e) { console.error(e); }
   };
 
@@ -593,7 +661,6 @@ export default function App() {
     setShowDownloadConfirm(true);
   };
 
-  // --- NUOVA FUNZIONE: RECUPERA CHIAVE ESISTENTE ---
   const handleShowRecoveryCode = async () => {
       if (!user) return;
       try {
@@ -614,23 +681,18 @@ export default function App() {
   const confirmDownload = async () => {
     if (!window.html2canvas || !window.jspdf) { alert("Attendi caricamento..."); return; }
     
-    // 1. Imposta lo stato di caricamento e forza un re-render visivo immediato
     setIsGeneratingPDF(true);
 
-    // 2. Utilizza setTimeout per spostare l'operazione pesante alla fine della call stack,
-    // permettendo alla UI di aggiornarsi (mostrare lo spinner) prima che il thread si blocchi.
     setTimeout(async () => {
       const reportElement = document.getElementById('report-print-area');
-      // Necessario renderizzarlo per html2canvas, ma fuori viewport o z-index basso
       reportElement.style.display = 'block'; 
       
       try {
-        // html2canvas è async, ma pesante
         const canvas = await window.html2canvas(reportElement, { 
             scale: 2, 
             useCORS: true, 
             backgroundColor: '#ffffff',
-            logging: false // Disabilita log per performance
+            logging: false 
         });
         
         const imgData = canvas.toDataURL('image/png');
@@ -650,7 +712,7 @@ export default function App() {
         reportElement.style.display = 'none';
         setIsGeneratingPDF(false);
       }
-    }, 100); // 100ms di delay per garantire il render della UI
+    }, 100); 
   };
 
   const requestNotificationPermission = async () => {
@@ -685,7 +747,6 @@ export default function App() {
     }
     const newList = [...availableLeaders, nameToAdd].sort();
     try {
-        // Salva nel documento pubblico di configurazione
         await setDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'config', 'team_leaders'), {
             list: newList,
             updatedAt: serverTimestamp(),
@@ -957,7 +1018,7 @@ export default function App() {
 
             <div className="bg-white dark:bg-slate-900 p-8 md:p-12 rounded-[3rem] shadow-2xl border border-slate-200 dark:border-slate-800 relative overflow-hidden">
               <div className={`absolute top-0 left-0 h-full w-2 ${T.bg}`}></div>
-              <h3 className="text-[11px] font-black mb-10 uppercase text-slate-400 tracking-[0.3em] italic leading-none border-l-4 border-blue-500 pl-4">Registrazione Attività</h3>
+              <h3 className="text-[11px] font-black mb-10 uppercase text-slate-400 tracking-[0.3em] italic leading-none border-l-4 border-blue-500 pl-4">{editingLogId ? 'Modifica Attività' : 'Registrazione Attività'}</h3>
               
               <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-10">
                  {!isWeekend && (
@@ -1007,13 +1068,23 @@ export default function App() {
                   )}
                 </div>
                 {formError && <p className="text-red-600 text-[10px] font-black italic animate-bounce leading-none mt-4 uppercase tracking-widest">{formError}</p>}
-                <button type="submit" className={`w-full p-6 rounded-[1.5rem] font-black uppercase tracking-[0.4em] text-white shadow-2xl ${T.bg} ${T.shadow40} transition-all hover:scale-[1.01] active:scale-95 flex items-center justify-center gap-4 text-xs italic leading-none`}><CheckCircle2 size={22} /> Salva Dati</button>
+                
+                <div className="flex gap-4">
+                  {editingLogId && (
+                    <button type="button" onClick={handleCancelEdit} className="p-6 rounded-[1.5rem] font-black uppercase tracking-widest text-slate-400 bg-slate-100 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 hover:text-red-500 hover:border-red-200 transition-all active:scale-95 flex items-center justify-center gap-2 text-xs italic leading-none">
+                      <Ban size={22} /> Annulla
+                    </button>
+                  )}
+                  <button type="submit" className={`flex-1 p-6 rounded-[1.5rem] font-black uppercase tracking-[0.4em] text-white shadow-2xl ${T.bg} ${T.shadow40} transition-all hover:scale-[1.01] active:scale-95 flex items-center justify-center gap-4 text-xs italic leading-none`}>
+                    <CheckCircle2 size={22} /> {editingLogId ? 'Aggiorna Modifica' : 'Salva Dati'}
+                  </button>
+                </div>
               </form>
             </div>
 
             <div className="space-y-6">
                {logs.filter(l => l.date === formatDateAsLocal(selectedDate)).map(log => (
-                 <div key={log.id} className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between shadow-lg animate-in slide-in-from-right relative group overflow-hidden">
+                 <div key={log.id} className={`bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border ${editingLogId === log.id ? `${T.border500} ring-4 ${T.ring10}` : 'border-slate-200 dark:border-slate-800'} flex flex-col sm:flex-row sm:items-center justify-between shadow-lg animate-in slide-in-from-right relative group overflow-hidden transition-all duration-300`}>
                     <div className={`absolute left-0 top-0 h-full w-2 ${T.bg}`}></div>
                     <div className="space-y-4">
                        <div className="flex flex-wrap items-center gap-3">
@@ -1024,8 +1095,13 @@ export default function App() {
                        {log.teamLeader && <p className={`text-[10px] font-black ${T.text500} uppercase tracking-[0.2em] flex items-center gap-2 italic leading-none`}><Users size={14}/> {log.teamLeader}</p>}
                        {log.notes && <p className="text-sm text-slate-500 dark:text-slate-400 font-medium italic border-l-2 border-slate-100 dark:border-slate-800 pl-4 py-1 leading-relaxed">{log.notes}</p>}
                     </div>
-                    <div className="flex justify-end mt-6 sm:mt-0">
-                       <button onClick={() => requestDeleteLog(log.id)} className="p-4 text-slate-200 hover:text-red-500 rounded-2xl transition-all hover:bg-red-50 dark:hover:bg-red-900/10"><Trash2 size={20} /></button>
+                    <div className="flex justify-end mt-6 sm:mt-0 gap-3">
+                       <button onClick={() => handleEditRequest(log)} className={`p-4 rounded-2xl transition-all ${editingLogId === log.id ? `${T.bg} text-white shadow-lg` : 'text-slate-300 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/10'}`} disabled={editingLogId === log.id}>
+                          <Pencil size={20} />
+                       </button>
+                       <button onClick={() => requestDeleteLog(log.id)} className="p-4 text-slate-200 hover:text-red-500 rounded-2xl transition-all hover:bg-red-50 dark:hover:bg-red-900/10">
+                          <Trash2 size={20} />
+                       </button>
                     </div>
                  </div>
                ))}
@@ -1033,7 +1109,9 @@ export default function App() {
           </div>
         )}
 
+        {/* ... Resto del codice (Report, Superuser, Settings, Modals) identico ... */}
         {view === 'report' && (
+          // ... Contenuto Report (invariato) ...
           <div className="space-y-10 animate-in zoom-in duration-300">
              <div className="flex flex-col sm:flex-row justify-between items-center gap-6">
                  <h2 className="text-3xl font-black italic uppercase text-slate-900 dark:text-white tracking-tighter leading-none">Resoconto Mese</h2>
