@@ -32,7 +32,7 @@ import {
 import { 
   Clock, Plus, Trash2, Calendar as CalendarIcon, LogOut, 
   Briefcase, Sun, Moon, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, ArrowLeft, CheckCircle2,
-  Menu, Home, FileText, Settings, X, Zap, Palmtree, Thermometer, AlertTriangle, Download, Eye, EyeOff, ShieldAlert, LogIn, UserPlus, Key, Copy, AlertOctagon, ShieldCheck, Users, CheckSquare, User, Smartphone, Search, ShieldX, Coffee, Loader2, Bell, BellOff, HelpCircle, Terminal, UserMinus, Pencil, Ban, Star 
+  Menu, Home, FileText, Settings, X, Zap, Palmtree, Thermometer, AlertTriangle, Download, Eye, EyeOff, ShieldAlert, LogIn, UserPlus, Key, Copy, AlertOctagon, ShieldCheck, Users, CheckSquare, User, Smartphone, Search, ShieldX, Coffee, Loader2, Bell, BellOff, HelpCircle, Terminal, UserMinus, Pencil, Ban, Star, QrCode
 } from 'lucide-react';
 
 // -----------------------------------------------------------------------------
@@ -235,6 +235,7 @@ export default function App() {
   const [showRecoveryModal, setShowRecoveryModal] = useState(false); 
   const [showDeleteRecoveryModal, setShowDeleteRecoveryModal] = useState(false); 
   const [showDeleteFinalConfirm, setShowDeleteFinalConfirm] = useState(false); 
+  const [showQRModal, setShowQRModal] = useState(false);
 
   // --- STATI SICUREZZA ---
   const [generatedRecoveryCode, setGeneratedRecoveryCode] = useState(''); 
@@ -1284,6 +1285,17 @@ export default function App() {
                   </div>
                </div>
 
+               {/* SEZIONE QR CODE PER CONDIVISIONE DINAMICA */}
+               <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-12 gap-8 relative z-10">
+                  <div className="space-y-2">
+                    <h3 className="font-black text-slate-900 dark:text-white italic uppercase text-sm tracking-widest leading-none">Condividi TimeVault</h3>
+                    <p className="text-[11px] text-slate-400 italic font-medium tracking-tight leading-none">Fai scansionare il QR ai colleghi per accedere</p>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-6">
+                    <button onClick={() => setShowQRModal(true)} className="flex items-center gap-3 px-8 py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] shadow-xl transition-all active:scale-95 italic leading-none hover:bg-slate-800 dark:hover:bg-slate-200"><QrCode size={18}/> Mostra QR Code</button>
+                  </div>
+               </div>
+
                <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-12 gap-8 relative z-10">
                   <div className="space-y-2">
                     <h3 className="font-black text-slate-900 dark:text-white italic uppercase text-sm tracking-widest leading-none">Sicurezza Vault</h3>
@@ -1315,7 +1327,7 @@ export default function App() {
             <div className="h-6 w-0.5 bg-slate-400"></div>
             <p className="text-[11px] font-black uppercase tracking-[1.2em] leading-none">TIMEVAULT</p>
          </div>
-         <p className="text-[10px] font-black text-slate-300 dark:text-slate-700 uppercase tracking-[0.6em] italic leading-none">Pro Edition v1.1.1 • HOTFIX• 2026</p>
+         <p className="text-[10px] font-black text-slate-300 dark:text-slate-700 uppercase tracking-[0.6em] italic leading-none">Pro Edition v1.0 • build/08022026 • 2026</p>
       </footer>
     </div>
 
@@ -1385,6 +1397,28 @@ export default function App() {
                  {isGeneratingPDF ? <><Loader2 className="animate-spin" size={18} /> ...</> : 'Conferma'}
               </button>
             </div>
+          </div>
+        </div>
+    )}
+
+    {/* NUOVO MODALE QR CODE DINAMICO */}
+    {showQRModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-xl z-[160] flex items-center justify-center p-4 animate-in fade-in duration-500">
+          <div className="bg-white dark:bg-slate-900 p-10 md:p-14 rounded-[4rem] w-full max-w-md shadow-2xl border-4 border-slate-50 dark:border-slate-800 relative text-center animate-in zoom-in-95">
+            <button onClick={() => setShowQRModal(false)} className="absolute top-10 right-10 p-2.5 bg-slate-100 dark:bg-slate-800 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-white transition-all active:scale-90 hover:rotate-90"><X size={24} /></button>
+            
+            <div className={`inline-flex p-6 rounded-[2rem] bg-slate-900 text-white mb-8 shadow-2xl shadow-slate-500/20`}><QrCode size={44} /></div>
+            <h2 className="text-3xl font-black italic text-slate-900 dark:text-white uppercase tracking-tighter leading-none mb-4">CONDIVIDI APP</h2>
+            <p className="text-[10px] text-slate-400 font-black uppercase tracking-[0.4em] italic leading-none mb-10">Scansiona per aprire</p>
+            
+            <div className="bg-white p-6 rounded-[2.5rem] shadow-inner border border-slate-200 inline-block mb-10">
+               {/* Generazione dinamica basata sulla posizione corrente (window.location.href) */}
+               <img src={`https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(typeof window !== 'undefined' ? window.location.href : '')}`} alt="QR Code TimeVault" className="w-48 h-48 mix-blend-multiply" />
+            </div>
+
+            <p className="text-[9px] font-mono text-slate-400 break-all bg-slate-50 dark:bg-slate-800 p-4 rounded-xl border border-slate-100 dark:border-slate-700">
+               {typeof window !== 'undefined' ? window.location.href : '...'}
+            </p>
           </div>
         </div>
     )}
