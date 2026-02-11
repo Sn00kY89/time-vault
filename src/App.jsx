@@ -1327,7 +1327,7 @@ export default function App() {
             <div className="h-6 w-0.5 bg-slate-400"></div>
             <p className="text-[11px] font-black uppercase tracking-[1.2em] leading-none">TIMEVAULT</p>
          </div>
-         <p className="text-[10px] font-black text-slate-300 dark:text-slate-700 uppercase tracking-[0.6em] italic leading-none">Pro Edition v1.0 • build/08022026 • 2026</p>
+         <p className="text-[10px] font-black text-slate-300 dark:text-slate-700 uppercase tracking-[0.6em] italic leading-none">Pro Edition v1.2 • build/11022026 • 2026</p>
       </footer>
     </div>
 
