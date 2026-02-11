@@ -264,6 +264,10 @@ export default function App() {
   const [fcmTokenDisplay, setFcmTokenDisplay] = useState(''); 
   const [showTokenDebug, setShowTokenDebug] = useState(false); 
 
+  // --- STATO CONTROLLO WEEKEND ---
+  // Aggiunto Ref per tracciare se il controllo è già avvenuto in questa sessione
+  const weekendCheckPerformed = useRef(false);
+
   // Helper stile
   const T = THEME_CLASSES[accentColor] || THEME_CLASSES['blue'];
   const isSuperUser = user && SUPER_ADMINS.includes(user.email);
@@ -279,6 +283,11 @@ export default function App() {
         console.warn("Service Worker disabilitato in modalità anteprima.");
     }
   }, []);
+
+  // Reset del controllo weekend al cambio utente
+  useEffect(() => {
+    weekendCheckPerformed.current = false;
+  }, [user]);
 
   useEffect(() => {
     if (!user) return; 
@@ -426,8 +435,13 @@ export default function App() {
     return () => unsubscribe();
   }, [user]);
 
+  // FIX WEEKEND: Modificato per eseguire il controllo UNA sola volta
   useEffect(() => {
     if (!user || loading || logs.length === 0) return;
+    
+    // Se abbiamo già controllato in questa sessione, non rifarlo
+    if (weekendCheckPerformed.current) return;
+
     const checkWeekendAutomation = async () => {
       const now = new Date();
       const dayOfWeek = now.getDay();
@@ -450,6 +464,8 @@ export default function App() {
           }
         }
       }
+      // Segna come completato per evitare loop infiniti se l'utente cancella un log
+      weekendCheckPerformed.current = true;
     };
     const timer = setTimeout(checkWeekendAutomation, 2000);
     return () => clearTimeout(timer);
@@ -1299,7 +1315,7 @@ export default function App() {
             <div className="h-6 w-0.5 bg-slate-400"></div>
             <p className="text-[11px] font-black uppercase tracking-[1.2em] leading-none">TIMEVAULT</p>
          </div>
-         <p className="text-[10px] font-black text-slate-300 dark:text-slate-700 uppercase tracking-[0.6em] italic leading-none">Pro Edition v1.1 • build/10022026 • 2026</p>
+         <p className="text-[10px] font-black text-slate-300 dark:text-slate-700 uppercase tracking-[0.6em] italic leading-none">Pro Edition v1.0 • build/08022026 • 2026</p>
       </footer>
     </div>
 
