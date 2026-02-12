@@ -36,22 +36,9 @@ import {
 } from 'lucide-react';
 import { firebaseConfig, VAPID_KEY } from './firebaseConfig.js';
 
-// ----------------------------------------------------------------------------
-// CONFIGURAZIONE CAPISQUADRA (DEFAULT / FALLBACK)
-// ----------------------------------------------------------------------------
-const DEFAULT_TEAM_LEADERS = [
-  'Sandro Sammartino',
-  'Rocco Canepa',
-  'Efisio Lorrai',
-  'Fabrizio Sanna',
-  'Renzo Picciau',
-  'Marco Lai',
-  'Ignazio Cocco'
-];
-
-// ----------------------------------------------------------------------------
+// -----------------------------------------------------------------------------
 // CONFIGURAZIONE SUPERUSER
-// ----------------------------------------------------------------------------
+// -----------------------------------------------------------------------------
 const SUPER_ADMINS = [
   'danilo.cicalo@time.vault', 
 ];
@@ -202,7 +189,7 @@ export default function App() {
   const [rememberMe, setRememberMe] = useState(false);     
 
   // --- STATI CAPISQUADRA (DINAMICI) ---
-  const [availableLeaders, setAvailableLeaders] = useState(DEFAULT_TEAM_LEADERS); 
+  const [availableLeaders, setAvailableLeaders] = useState([]); 
   const [selectedLeaders, setSelectedLeaders] = useState([]); 
   const [isLeaderDropdownOpen, setIsLeaderDropdownOpen] = useState(false); 
   const leaderDropdownRef = useRef(null);
@@ -289,29 +276,6 @@ export default function App() {
     }, (error) => console.error("Errore fetch capisquadra:", error));
     return () => unsubscribe();
   }, [user]);
-
-  useEffect(() => {
-    if (!user || !isSuperUser) return;
-
-    const seedTeamLeaders = async () => {
-      const docRef = doc(db, 'artifacts', APP_ID, 'public', 'data', 'config', 'team_leaders');
-      const docSnap = await getDoc(docRef);
-
-      if (!docSnap.exists() || !docSnap.data().list || docSnap.data().list.length === 0) {
-        try {
-          await setDoc(docRef, {
-            list: DEFAULT_TEAM_LEADERS.sort(),
-            createdAt: serverTimestamp(),
-            updatedBy: user.email
-          }, { merge: true });
-        } catch (e) {
-          console.error("Errore nel seeding dei capisquadra:", e);
-        }
-      }
-    };
-
-    seedTeamLeaders();
-  }, [user, isSuperUser]);
 
   const setupFCM = async () => {
     if (!user) return;
@@ -942,7 +906,7 @@ export default function App() {
                 <p className="text-[9px] text-slate-400 font-black uppercase mb-0.5 leading-none tracking-widest">Vault User</p>
                 <p className={`text-sm font-black ${T.text} uppercase italic leading-none transition-all group-hover:scale-105`}>{user?.displayName}</p>
               </div>
-              <div className="w-11 h-11 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center border-2 border-slate-200 dark:border-slate-700 shadow-sm transition-all group-hover:border-blue-500"><User size={22} className="text-slate-500"/></div>
+              <div className="w-11 h-11 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center border-2 border-slate-200 dark:border-slate-700 shadow-sm transition-all group-hover:border-blue-500"><User size={22} className="text-slate-500" /></div>
             </button>
             {isProfileDropdownOpen && (
               <div className="absolute top-full right-0 mt-2 w-64 bg-white dark:bg-slate-900 rounded-[2rem] shadow-2xl border border-slate-100 dark:border-slate-800 p-3 animate-in fade-in slide-in-from-top-2">
@@ -1145,7 +1109,7 @@ export default function App() {
                                        {new Date(log.date).getDate()}
                                    </div>
                                    <div>
-                                      <p className={`text-[10px] font-black uppercase text-slate-400 mb-1 tracking-[0.3em] italic leading-none`}>{log.type.replace('_', ' ')}</p>
+                                      <p className={`text-[10px] font-black uppercase text-slate-400 mb-1 tracking-[0.3em] italic leading-none`}>{log.type.replace('_', ' ')}</h6>
                                       <h3 className="text-xs font-black uppercase tracking-widest text-slate-800 dark:text-slate-200 leading-none">Giorno {new Date(log.date).getDate()}</h3>
                                    </div>
                                 </div>
