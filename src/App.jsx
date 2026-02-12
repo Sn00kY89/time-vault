@@ -34,6 +34,7 @@ import {
   Briefcase, Sun, Moon, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, ArrowLeft, CheckCircle2,
   Menu, Home, FileText, Settings, X, Zap, Palmtree, Thermometer, AlertTriangle, Download, Eye, EyeOff, ShieldAlert, LogIn, UserPlus, Key, Copy, AlertOctagon, ShieldCheck, Users, CheckSquare, User, Smartphone, Search, ShieldX, Coffee, Loader2, Bell, BellOff, HelpCircle, Terminal, UserMinus, Pencil, Ban, Star, QrCode
 } from 'lucide-react';
+import { firebaseConfig, VAPID_KEY } from './firebaseConfig.js';
 
 // -----------------------------------------------------------------------------
 // CONFIGURAZIONE CAPISQUADRA (DEFAULT / FALLBACK)
@@ -54,19 +55,6 @@ const DEFAULT_TEAM_LEADERS = [
 const SUPER_ADMINS = [
   'danilo.cicalo@time.vault', 
 ];
-
-// --- CONFIGURAZIONE FIREBASE ---
-const firebaseConfig = typeof __firebase_config !== 'undefined' 
-  ? JSON.parse(__firebase_config) 
-  : {
-      apiKey: "AIzaSyDdxN05Yj1CtPOY69x3JJjuFuhEUelXWsc",
-      authDomain: "work-time-vault.firebaseapp.com",
-      projectId: "work-time-vault",
-      storageBucket: "work-time-vault.firebasestorage.app",
-      messagingSenderId: "957496336579",
-      appId: "1:957496336579:web:f82df8f2d580b92ec58276",
-      measurementId: "G-9PN8MRS05Q"
-    };
 
 const APP_ID = "time-vault-pro";
 
@@ -313,7 +301,7 @@ export default function App() {
       const messaging = getMessaging(app);
       const registration = await navigator.serviceWorker.ready;
       const token = await getToken(messaging, { 
-        vapidKey: 'BJXBFxWqNvvIyffYPT1Z9pZCm2tqz-VNrfN5w3tU0baYLX2ilVcoD_phNZKLNZbfuS-v9KYFMS1Ls9-Ym0-QUE4',
+        vapidKey: VAPID_KEY,
         serviceWorkerRegistration: registration 
       });
       if (token) {
