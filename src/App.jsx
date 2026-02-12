@@ -32,7 +32,7 @@ import {
 import { 
   Clock, Plus, Trash2, Calendar as CalendarIcon, LogOut, 
   Briefcase, Sun, Moon, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, ArrowLeft, CheckCircle2,
-  Menu, Home, FileText, Settings, X, Zap, Palmtree, Thermometer, AlertTriangle, Download, Eye, EyeOff, ShieldAlert, LogIn, UserPlus, Key, Copy, AlertOctagon, ShieldCheck, Users, CheckSquare, User, Smartphone, Search, ShieldX, Coffee, Loader2, Bell, BellOff, HelpCircle, Terminal, UserMinus, Pencil, Ban, Star, QrCode
+  Menu, Home, FileText, Settings, X, Zap, Palmtree, Thermometer, AlertTriangle, Download, Eye, EyeOff, ShieldAlert, LogIn, UserPlus, Key, Copy, AlertOctagon, ShieldCheck, Users, CheckSquare, User, Smartphone, Search, ShieldX, Coffee, Loader2, Bell, BellOff, HelpCircle, Terminal, UserMinus, Pencil, Ban, Star, QrCode, ClipboardPaste
 } from 'lucide-react';
 import { firebaseConfig, VAPID_KEY } from './firebaseConfig.js';
 
@@ -227,8 +227,9 @@ export default function App() {
   const [reportSearchQuery, setReportSearchQuery] = useState('');
   const [expandedLogId, setExpandedLogId] = useState(null);
   const [authData, setAuthData] = useState({ username: '', password: '' });
-  const [formData, setFormData] = useState({ standardHours: 0, overtimeHours: '', notes: '', type: 'work', onCall: false });
+  const [formData, setFormData] = useState({ standardHours: 0, overtimeHours: '', leaveHours: '', notes: '', type: 'work', onCall: false });
   const [showOvertimeInput, setShowOvertimeInput] = useState(false);
+  const [showLeaveInput, setShowLeaveInput] = useState(false);
   const [showNotesInput, setShowNotesInput] = useState(false); 
   const [editingLogId, setEditingLogId] = useState(null);
 
@@ -516,6 +517,7 @@ export default function App() {
       setFormData({
           standardHours: log.standardHours || 0,
           overtimeHours: log.overtimeHours || '',
+          leaveHours: log.leaveHours || '',
           notes: log.notes || '',
           type: log.type,
           onCall: log.onCall || false
@@ -523,15 +525,17 @@ export default function App() {
       if (log.teamLeader) setSelectedLeaders(log.teamLeader.split(', '));
       else setSelectedLeaders([]);
       if (log.overtimeHours > 0) setShowOvertimeInput(true);
+      if (log.leaveHours > 0) setShowLeaveInput(true);
       setShowNotesInput(true);
       window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleCancelEdit = () => {
       setEditingLogId(null);
-      setFormData({ standardHours: 0, overtimeHours: '', notes: '', type: 'work', onCall: false });
+      setFormData({ standardHours: 0, overtimeHours: '', leaveHours: '', notes: '', type: 'work', onCall: false });
       setSelectedLeaders([]);
       setShowOvertimeInput(false);
+      setShowLeaveInput(false);
       setShowNotesInput(false);
   };
 
@@ -553,6 +557,7 @@ export default function App() {
               ...formData,
               standardHours: Number(formData.standardHours) || 0,
               overtimeHours: Number(formData.overtimeHours) || 0,
+              leaveHours: Number(formData.leaveHours) || 0,
               teamLeader: selectedLeaders.join(', '),
               updatedAt: serverTimestamp()
           });
@@ -563,14 +568,15 @@ export default function App() {
             ...formData, 
             standardHours: Number(formData.standardHours) || 0, 
             overtimeHours: Number(formData.overtimeHours) || 0, 
+            leaveHours: Number(formData.leaveHours) || 0,
             teamLeader: selectedLeaders.join(', '), 
             date: dateString, 
             userId: user.uid, 
             userName: user.displayName, 
             createdAt: serverTimestamp() 
           });
-          setFormData({ standardHours: 0, overtimeHours: '', notes: '', type: 'work', onCall: false });
-          setSelectedLeaders([]); setShowOvertimeInput(false); setShowNotesInput(false);
+          setFormData({ standardHours: 0, overtimeHours: '', leaveHours: '', notes: '', type: 'work', onCall: false });
+          setSelectedLeaders([]); setShowOvertimeInput(false); setShowLeaveInput(false); setShowNotesInput(false);
       }
     } catch (e) { console.error(e); }
   };
@@ -754,7 +760,7 @@ export default function App() {
     const uniqueDays = new Set();
     let totalOvertime = 0;
     currentMonthLogs.forEach(log => {
-        if (!['ferie', 'malattia', 'riposo', 'riposo_compensativo'].includes(log.type)) uniqueDays.add(log.date);
+        if (!['ferie', 'malattia', 'riposo', 'riposo_compensativo', 'permesso'].includes(log.type)) uniqueDays.add(log.date);
         totalOvertime += Number(log.overtimeHours || 0);
     });
     return { daysWorked: uniqueDays.size, ext: totalOvertime };
@@ -979,7 +985,7 @@ export default function App() {
               <div className={`absolute top-0 left-0 h-full w-2 ${T.bg}`}></div>
               <h3 className="text-[11px] font-black mb-10 uppercase text-slate-400 tracking-[0.3em] italic leading-none border-l-4 border-blue-500 pl-4">{editingLogId ? 'Modifica Attività' : 'Registrazione Attività'}</h3>
               
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-10">
+              <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-10">
                  {!isWeekend && (
                    <>
                      <button type="button" onClick={() => setFormData(p => ({ ...p, standardHours: STANDARD_HOURS_VALUE, type: 'work' }))} className={`p-5 rounded-3xl font-black uppercase text-[9px] flex flex-col items-center gap-3 transition-all ${formData.type === 'work' && formData.standardHours === STANDARD_HOURS_VALUE ? `${T.bg} text-white shadow-xl scale-105 ${T.shadow20}` : 'bg-slate-50 dark:bg-slate-800 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-100 dark:border-slate-800'}`}><Briefcase size={24} />Standard</button>
@@ -987,6 +993,7 @@ export default function App() {
                    </>
                  )}
                  <button type="button" onClick={() => setFormData({ standardHours: 0, overtimeHours: '', notes: 'Malattia', type: 'malattia' })} className={`p-5 rounded-3xl font-black uppercase text-[9px] flex flex-col items-center gap-3 transition-all ${formData.type === 'malattia' ? 'bg-pink-500 text-white shadow-xl scale-105 shadow-pink-500/20' : 'bg-slate-50 dark:bg-slate-800 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-100 dark:border-slate-800'}`}><Thermometer size={24} />Malattia</button>
+                 <button type="button" onClick={() => {setShowLeaveInput(true); setFormData({ standardHours: 0, overtimeHours: '', notes: 'Permesso', type: 'permesso' })}} className={`p-5 rounded-3xl font-black uppercase text-[9px] flex flex-col items-center gap-3 transition-all ${formData.type === 'permesso' ? 'bg-yellow-500 text-white shadow-xl scale-105 shadow-yellow-500/20' : 'bg-slate-50 dark:bg-slate-800 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-100 dark:border-slate-800'}`}><ClipboardPaste size={24} />Permesso</button>
                  <button type="button" onClick={() => setFormData({ standardHours: 0, overtimeHours: '', notes: 'Riposo Compensativo', type: 'riposo_compensativo' })} className={`p-5 rounded-3xl font-black uppercase text-[9px] flex flex-col items-center gap-3 transition-all ${formData.type === 'riposo_compensativo' ? 'bg-indigo-500 text-white shadow-xl scale-105 shadow-indigo-500/20' : 'bg-slate-50 dark:bg-slate-800 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-100 dark:border-slate-800'}`}><Coffee size={24} />Riposo Comp.</button>
                  <button type="button" onClick={() => setShowOvertimeInput(!showOvertimeInput)} className={`p-5 rounded-3xl font-black uppercase text-[9px] flex flex-col items-center gap-3 transition-all ${showOvertimeInput ? 'bg-orange-500 text-white shadow-xl scale-105 shadow-orange-500/20' : 'bg-slate-50 dark:bg-slate-800 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-100 dark:border-slate-800'}`}><Zap size={24} />Straordinario</button>
                  <button type="button" onClick={() => setFormData(p => ({ ...p, onCall: !p.onCall }))} className={`p-5 rounded-3xl font-black uppercase text-[9px] flex flex-col items-center gap-3 transition-all ${formData.onCall ? 'bg-amber-500 text-white shadow-xl scale-105 shadow-amber-500/20' : 'bg-slate-50 dark:bg-slate-800 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-100 dark:border-slate-800'}`}><Star size={24} />Reperibilità</button>
@@ -998,6 +1005,12 @@ export default function App() {
                      <label className="block text-[10px] font-black text-orange-500 uppercase tracking-[0.2em] mb-3 ml-1 italic leading-none">Ore Straordinario (es. 2.5)</label>
                      <input type="number" step="0.5" className="w-full p-5 bg-orange-50 dark:bg-orange-900/10 text-orange-600 dark:text-orange-400 rounded-3xl font-black text-2xl outline-none border border-orange-100 dark:border-orange-900/30 shadow-inner" placeholder="0.0" value={formData.overtimeHours} onChange={e => setFormData({...formData, overtimeHours: e.target.value})} />
                    </div>
+                )}
+                {showLeaveInput && (
+                  <div className="animate-in slide-in-from-top-2 duration-300">
+                    <label className="block text-[10px] font-black text-yellow-500 uppercase tracking-[0.2em] mb-3 ml-1 italic leading-none">Ore Permesso (es. 2.5)</label>
+                    <input type="number" step="0.5" className="w-full p-5 bg-yellow-50 dark:bg-yellow-900/10 text-yellow-600 dark:text-yellow-400 rounded-3xl font-black text-2xl outline-none border border-yellow-100 dark:border-yellow-900/30 shadow-inner" placeholder="0.0" value={formData.leaveHours} onChange={e => setFormData({...formData, leaveHours: e.target.value})} />
+                  </div>
                 )}
                 <div className="border-t border-slate-100 dark:border-slate-800 pt-8 text-center">
                   <button type="button" onClick={() => setShowNotesInput(!showNotesInput)} className="text-slate-300 dark:text-slate-600 hover:text-slate-600 p-2 flex items-center gap-2 mx-auto uppercase text-[10px] font-black tracking-[0.2em] italic leading-none">{showNotesInput ? <><ChevronUp size={16}/> Nascondi</> : <><ChevronDown size={16}/> Note e Capisquadra</>}</button>
@@ -1051,6 +1064,7 @@ export default function App() {
                           <span className={`text-[10px] font-black uppercase bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-xl italic tracking-[0.2em] text-slate-500 leading-none`}>{log.type.replace('_', ' ')}</span>
                           <span className="text-3xl font-black dark:text-white leading-none tracking-tighter">{log.standardHours > 0 ? log.standardHours + 'h' : ''}</span>
                           {log.overtimeHours > 0 && <span className="text-sm font-black text-orange-600 bg-orange-50 dark:bg-orange-900/20 px-3 py-1.5 rounded-xl leading-none">+{log.overtimeHours}h Extra</span>}
+                          {log.leaveHours > 0 && <span className="text-sm font-black text-yellow-600 bg-yellow-50 dark:bg-yellow-900/20 px-3 py-1.5 rounded-xl leading-none">+{log.leaveHours}h Permesso</span>}
                           {log.onCall && <Star size={20} className="text-amber-500 fill-amber-500" />}
                        </div>
                        {log.teamLeader && <p className={`text-[10px] font-black ${T.text500} uppercase tracking-[0.2em] flex items-center gap-2 italic leading-none`}><Users size={14}/> {log.teamLeader}</p>}
