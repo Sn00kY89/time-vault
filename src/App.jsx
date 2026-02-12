@@ -36,9 +36,9 @@ import {
 } from 'lucide-react';
 import { firebaseConfig, VAPID_KEY } from './firebaseConfig.js';
 
-// -----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
 // CONFIGURAZIONE CAPISQUADRA (DEFAULT / FALLBACK)
-// -----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
 const DEFAULT_TEAM_LEADERS = [
   'Sandro Sammartino',
   'Rocco Canepa',
@@ -49,9 +49,9 @@ const DEFAULT_TEAM_LEADERS = [
   'Ignazio Cocco'
 ];
 
-// -----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
 // CONFIGURAZIONE SUPERUSER
-// -----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
 const SUPER_ADMINS = [
   'danilo.cicalo@time.vault', 
 ];
@@ -289,6 +289,29 @@ export default function App() {
     }, (error) => console.error("Errore fetch capisquadra:", error));
     return () => unsubscribe();
   }, [user]);
+
+  useEffect(() => {
+    if (!user || !isSuperUser) return;
+
+    const seedTeamLeaders = async () => {
+      const docRef = doc(db, 'artifacts', APP_ID, 'public', 'data', 'config', 'team_leaders');
+      const docSnap = await getDoc(docRef);
+
+      if (!docSnap.exists() || !docSnap.data().list || docSnap.data().list.length === 0) {
+        try {
+          await setDoc(docRef, {
+            list: DEFAULT_TEAM_LEADERS.sort(),
+            createdAt: serverTimestamp(),
+            updatedBy: user.email
+          }, { merge: true });
+        } catch (e) {
+          console.error("Errore nel seeding dei capisquadra:", e);
+        }
+      }
+    };
+
+    seedTeamLeaders();
+  }, [user, isSuperUser]);
 
   const setupFCM = async () => {
     if (!user) return;
