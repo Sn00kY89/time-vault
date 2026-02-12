@@ -1109,7 +1109,7 @@ export default function App() {
                                        {new Date(log.date).getDate()}
                                    </div>
                                    <div>
-                                      <p className={`text-[10px] font-black uppercase text-slate-400 mb-1 tracking-[0.3em] italic leading-none`}>{log.type.replace('_', ' ')}</h6>
+                                      <p className={`text-[10px] font-black uppercase text-slate-400 mb-1 tracking-[0.3em] italic leading-none`}>{log.type.replace('_', ' ')}</p>
                                       <h3 className="text-xs font-black uppercase tracking-widest text-slate-800 dark:text-slate-200 leading-none">Giorno {new Date(log.date).getDate()}</h3>
                                    </div>
                                 </div>
