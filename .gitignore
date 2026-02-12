@@ -4,4 +4,5 @@ dist
 build
 schema.txt
 codicebackup.txt
+dev.nix
 .DS_Store
